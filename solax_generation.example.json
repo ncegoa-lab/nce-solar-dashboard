@@ -1,0 +1,15 @@
+{
+  "generated_at": "2026-07-02T00:00:00",
+  "systems": [
+    {
+      "name": "Example SolaX Plant",
+      "status": "Online",
+      "capacity_kw": 10.0,
+      "current_power_kw": 0.0,
+      "today_generation_kwh": 0.0,
+      "weekly_generation_kwh": 0.0,
+      "total_generation_kwh": 0.0,
+      "system_id": "replace-with-solax-station-id"
+    }
+  ]
+}

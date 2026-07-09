@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: nce-solar-dashboard
+    env: docker
+    plan: starter
+    autoDeploy: false
+    envVars:
+      - key: SOLAR_OUTPUT_DIR
+        value: /app/reports
+      - key: SOLAR_AUTO_REFRESH_ON_OPEN
+        value: "false"
+      - key: NCE_APP_USER
+        value: admin
+      - key: NCE_APP_PASSWORD
+        sync: false
+      - key: NCE_SESSION_SECRET
+        sync: false
+      - key: NCE_USERS_JSON
+        sync: false
+      - key: SEMS_USERNAME
+        sync: false
+      - key: SEMS_PASSWORD
+        sync: false
+      - key: FRONIUS_USERNAME
+        sync: false
+      - key: FRONIUS_PASSWORD
+        sync: false
+      - key: FIMER_USERNAME
+        sync: false
+      - key: FIMER_PASSWORD
+        sync: false
+      - key: SOLAX_USERNAME
+        sync: false
+      - key: SOLAX_PASSWORD
+        sync: false
