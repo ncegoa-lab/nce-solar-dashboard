@@ -74,6 +74,11 @@ SESSION_SECRET = (
     or os.environ.get("SOLAR_SESSION_SECRET")
     or hashlib.sha256((str(PROJECT_DIR) + AUTH_USER + AUTH_PASSWORD).encode("utf-8")).hexdigest()
 )
+UPLOAD_TOKEN = os.environ.get("SOLAR_UPLOAD_TOKEN") or os.environ.get("NCE_UPLOAD_TOKEN") or ""
+UPLOAD_GENERATION_FILES = {
+    "solis": "solis_generation.json",
+    "solax": "solax_generation.json",
+}
 
 
 def plant_key(brand: Any, site: Any) -> str:
@@ -299,8 +304,70 @@ class SolarLiveApp:
                 "message": str(exc),
             }
 
+    def rebuild_outputs(self, env: dict[str, str] | None = None) -> list[dict[str, Any]]:
+        env = env or os.environ.copy()
+        env.update(load_env_file())
+        env["PYTHONPYCACHEPREFIX"] = str(PROJECT_DIR / ".pycache")
+        report_py = report_python()
+        steps: list[dict[str, Any]] = []
+        if not self.plant_dataframe().empty:
+            steps.append(
+                self.run_step(
+                    "Rebuild master PDF",
+                    [report_py, "./solar_performance_report_app.py", "--current-project", "--output-dir", str(self.output_dir), "--plant-reports"],
+                    env,
+                )
+            )
+            steps.append(
+                self.run_step(
+                    "Rebuild dashboard app",
+                    [report_py, "./build_solar_dashboard_app.py", "--output-dir", str(self.output_dir)],
+                    env,
+                )
+            )
+        else:
+            steps.append({"label": "Load plant data", "ok": False, "message": "No plant data available after upload."})
+        return steps
+
+    def save_uploaded_generation(self, brand: str, payload: dict[str, Any]) -> dict[str, Any]:
+        key = brand.strip().lower()
+        if key not in UPLOAD_GENERATION_FILES:
+            return {"ok": False, "message": "Only Solis and SolaX generation uploads are supported."}
+        if not isinstance(payload.get("systems"), list):
+            return {"ok": False, "message": "Uploaded generation JSON must contain a systems list."}
+
+        filename = UPLOAD_GENERATION_FILES[key]
+        target = PROJECT_DIR / filename
+        payload.setdefault("uploaded_at", dt.datetime.now().replace(microsecond=0).isoformat())
+        temp = target.with_suffix(target.suffix + ".tmp")
+        temp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        temp.replace(target)
+
+        started = dt.datetime.now().isoformat(timespec="seconds")
+        self.last_refresh = {
+            "started": started,
+            "finished": None,
+            "running": True,
+            "steps": [{"label": f"{brand.title()} upload", "ok": True, "message": f"Saved {filename} with {len(payload['systems'])} systems."}],
+        }
+        for step in self.rebuild_outputs():
+            self.append_refresh_step(step)
+        self.last_refresh["finished"] = dt.datetime.now().isoformat(timespec="seconds")
+        self.last_refresh["running"] = False
+        return {"ok": True, "file": filename, "systems": len(payload["systems"]), "last_refresh": self.last_refresh}
+
     def append_refresh_step(self, step: dict[str, Any]) -> None:
         self.last_refresh.setdefault("steps", []).append(step)
+
+    def file_status_step(self, label: str, path: Path, ok_message: str, missing_message: str) -> dict[str, Any]:
+        now = dt.datetime.now().isoformat(timespec="seconds")
+        return {
+            "label": label,
+            "ok": path.exists(),
+            "started": now,
+            "finished": now,
+            "message": ok_message if path.exists() else missing_message,
+        }
 
     def refresh(self) -> dict[str, Any]:
         with self.refresh_lock:
@@ -336,14 +403,30 @@ class SolarLiveApp:
 
             if (PROJECT_DIR / "solis_network_capture.json").exists():
                 self.append_refresh_step(self.run_step("Solis import from latest capture", [refresh_py, "./solis_capture_to_generation.py"], env))
-            if (PROJECT_DIR / "solax_network_capture.json").exists():
-                self.append_refresh_step(self.run_step("SolaX backend refresh", [refresh_py, "./solax_capture_to_generation.py"], env))
-
-            if not self.plant_dataframe().empty:
-                self.append_refresh_step(self.run_step("Rebuild master PDF", [report_py, "./solar_performance_report_app.py", "--current-project", "--output-dir", str(self.output_dir), "--plant-reports"], env))
-                self.append_refresh_step(self.run_step("Rebuild dashboard app", [report_py, "./build_solar_dashboard_app.py", "--output-dir", str(self.output_dir)], env))
             else:
-                self.append_refresh_step({"label": "Load plant data", "ok": False, "message": "No plant data available after refresh. Check credential variables and Render logs."})
+                self.append_refresh_step(
+                    self.file_status_step(
+                        "Solis saved data",
+                        PROJECT_DIR / "solis_generation.json",
+                        "Using uploaded solis_generation.json. Cloud live refresh needs official Solis API access or a fresh browser capture from the Mac.",
+                        "No Solis data found. Upload solis_generation.json, or configure official Solis API access.",
+                    )
+                )
+
+            if (PROJECT_DIR / "solax_network_capture.json").exists():
+                self.append_refresh_step(self.run_step("SolaX import from latest capture", [refresh_py, "./solax_capture_to_generation.py"], env))
+            else:
+                self.append_refresh_step(
+                    self.file_status_step(
+                        "SolaX saved data",
+                        PROJECT_DIR / "solax_generation.json",
+                        "Using uploaded solax_generation.json. Cloud live refresh needs official SolaX API/backend access or a fresh browser capture from the Mac.",
+                        "No SolaX data found. Upload solax_generation.json, or configure official SolaX API/backend access.",
+                    )
+                )
+
+            for step in self.rebuild_outputs(env):
+                self.append_refresh_step(step)
 
             self.last_refresh["finished"] = dt.datetime.now().isoformat(timespec="seconds")
             self.last_refresh["running"] = False
@@ -563,6 +646,22 @@ class Handler(BaseHTTPRequestHandler):
         else:
             self.send_json({"error": "Not found"}, 404)
 
+    def handle_generation_upload(self, parsed: urllib.parse.ParseResult) -> None:
+        assert APP is not None
+        provided = self.headers.get("X-Upload-Token") or urllib.parse.parse_qs(parsed.query).get("token", [""])[0]
+        if not UPLOAD_TOKEN:
+            self.send_json({"error": "Generation upload is disabled. Set SOLAR_UPLOAD_TOKEN in Render first."}, 403)
+            return
+        if not hmac.compare_digest(provided, UPLOAD_TOKEN):
+            self.send_json({"error": "Invalid upload token"}, 403)
+            return
+        payload = self.read_json()
+        brand = str(payload.get("brand") or "").strip()
+        data = payload.get("data") if isinstance(payload.get("data"), dict) else payload
+        if not brand:
+            brand = str(data.get("brand") or data.get("source") or "").split("_")[0]
+        self.send_json(APP.save_uploaded_generation(brand, data))
+
     def do_POST(self) -> None:
         try:
             assert APP is not None
@@ -582,6 +681,10 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_header("Set-Cookie", f"{SESSION_COOKIE}={sign_session(username, expires)}; Path=/; HttpOnly;{secure} SameSite=Lax; Max-Age={SESSION_SECONDS}")
                 self.send_header("Location", "/")
                 self.end_headers()
+                return
+
+            if parsed.path == "/api/upload-generation":
+                self.handle_generation_upload(parsed)
                 return
 
             user = self.require_auth()
@@ -721,15 +824,16 @@ const todayText=()=>new Date().toISOString().slice(0,10);
 function f(v,d=2){return Number(v||0).toLocaleString('en-IN',{minimumFractionDigits:d,maximumFractionDigits:d})}
 function cls(s){s=String(s||'').toLowerCase();return (s.includes('online')||s.includes('normal'))?'online':'offline'}
 function fresh(p){return p.dataDate===todayText()}
+function staleNote(p){return !fresh(p)&&String(p.brand||'').toLowerCase()==='solis'?'Solis data is from the last saved Mac capture. Refresh Solis on the Mac to make this current.':''}
 function uniq(a){return [...new Set(a)].filter(Boolean).sort()}
 async function api(path,opt){const r=await fetch(path,opt);const text=await r.text();let data={};try{data=text?JSON.parse(text):{};}catch(e){throw new Error(`${path} returned ${r.status}: ${text.slice(0,240)||'empty response'}`)}if(!r.ok){throw new Error(data.error||`${path} returned ${r.status}`)}return data}
 function filtered(){const q=searchInput.value.toLowerCase(), b=brandFilter.value, s=statusFilter.value;return plants.filter(p=>(b==='all'||p.brand===b)&&(s==='all'||p.status===s)&&(`${p.site} ${p.brand}`.toLowerCase().includes(q)))}
 function selectedRows(){return plants.filter(p=>selected.has(p.id))}
 function renderFilters(){brandFilter.innerHTML='<option value="all">All Brands</option>'+uniq(plants.map(p=>p.brand)).map(x=>`<option>${x}</option>`).join('');statusFilter.innerHTML='<option value="all">All Status</option>'+uniq(plants.map(p=>p.status)).map(x=>`<option>${x}</option>`).join('')}
 function render(){const rows=filtered(), chosen=selectedRows();const active=chosen[0]||rows[0]||plants[0];cardsEl.innerHTML=[['Visible',rows.length],['Selected',chosen.length],['Daily',f(rows.reduce((a,p)=>a+p.daily,0))+' kWh'],['Weekly',f(rows.reduce((a,p)=>a+p.weekly,0))+' kWh'],['Capacity',f(rows.reduce((a,p)=>a+p.capacity,0))+' kW'],['Fresh',rows.filter(fresh).length+'/'+rows.length]].map(x=>`<div class="card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join('');
-rowsEl.innerHTML=rows.map(p=>`<tr><td><input type="checkbox" data-id="${p.id}" ${selected.has(p.id)?'checked':''}></td><td>${p.brand}</td><td><b>${p.site}</b></td><td class="status ${cls(p.status)}">${p.status}</td><td>${p.dataDate||''} <span class="pill ${fresh(p)?'fresh':'stale'}">${fresh(p)?'TODAY':'STALE'}</span></td><td>${f(p.daily)}</td><td>${f(p.weekly)}</td><td>${f(p.yield2026)}</td></tr>`).join('');
+rowsEl.innerHTML=rows.map(p=>`<tr><td><input type="checkbox" data-id="${p.id}" ${selected.has(p.id)?'checked':''}></td><td>${p.brand}</td><td><b>${p.site}</b></td><td class="status ${cls(p.status)}">${p.status}</td><td title="${staleNote(p)}">${p.dataDate||''} <span class="pill ${fresh(p)?'fresh':'stale'}">${fresh(p)?'TODAY':'STALE'}</span></td><td>${f(p.daily)}</td><td>${f(p.weekly)}</td><td>${f(p.yield2026)}</td></tr>`).join('');
 rowsEl.querySelectorAll('input[type=checkbox][data-id]').forEach(cb=>cb.onchange=()=>{cb.checked?selected.add(cb.dataset.id):selected.delete(cb.dataset.id);render()});
-detailEl.innerHTML=active?`<div class="plant-title">${active.site}</div><p>${active.brand} · <span class="status ${cls(active.status)}">${active.status}</span></p><div class="details"><div class="detail"><span>Data Date</span><b>${active.dataDate||'Unknown'}</b></div><div class="detail"><span>Capacity</span><b>${f(active.capacity)} kW</b></div><div class="detail"><span>Daily</span><b>${f(active.daily)} kWh</b></div><div class="detail"><span>Weekly</span><b>${f(active.weekly)} kWh</b></div><div class="detail"><span>2026/kW</span><b>${f(active.yield2026)}</b></div><div class="detail"><span>Total</span><b>${f(active.total)} MWh</b></div></div>`:'No plant';
+detailEl.innerHTML=active?`<div class="plant-title">${active.site}</div><p>${active.brand} · <span class="status ${cls(active.status)}">${active.status}</span></p>${staleNote(active)?`<p class="stale">${staleNote(active)}</p>`:''}<div class="details"><div class="detail"><span>Data Date</span><b>${active.dataDate||'Unknown'}</b></div><div class="detail"><span>Capacity</span><b>${f(active.capacity)} kW</b></div><div class="detail"><span>Daily</span><b>${f(active.daily)} kWh</b></div><div class="detail"><span>Weekly</span><b>${f(active.weekly)} kWh</b></div><div class="detail"><span>2026/kW</span><b>${f(active.yield2026)}</b></div><div class="detail"><span>Total</span><b>${f(active.total)} MWh</b></div></div>`:'No plant';
 }
 function refreshText(r){const lines=(r.steps||[]).map(s=>`${s.ok?'OK':'SKIP'} - ${s.label}: ${s.message||''}`);if(r.running)lines.push('RUNNING - Refresh still in progress...');if(r.finished)lines.push('DONE - Finished '+r.finished);return lines.join('\\n')||'Ready.'}
 async function load(){const p=await api('/api/plants');plants=p.plants;selected=new Set(plants.map(p=>p.id));renderFilters();render();const s=await api('/api/status');statusData=s;dateLineEl.textContent='Today '+todayText();mobileLineEl.textContent='iPhone: '+s.mobile_url;autoDayEl.value=s.config.auto_report_day;autoTimeEl.value=s.config.auto_report_time;logEl.textContent=refreshText(s.last_refresh||{});}

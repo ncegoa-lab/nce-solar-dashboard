@@ -1,40 +1,40 @@
 {
   "source": "solax_network_capture.json",
-  "generated_at": "2026-07-10T10:29:38",
+  "generated_at": "2026-07-10T19:12:57",
   "captured_at": "2026-07-03T10:51:56",
   "systems": [
     {
       "name": "EUFREGINO 3kw",
       "status": "Normal",
       "capacity_kw": 3.7,
-      "current_power_kw": 2.132,
-      "today_generation_kwh": 3.5,
+      "current_power_kw": null,
+      "today_generation_kwh": 15.6,
       "weekly_generation_kwh": 56.5,
-      "total_generation_kwh": 449.15,
+      "total_generation_kwh": 461.25,
       "system_id": "2061402942656770049",
-      "year_generation_kwh": 449.15
+      "year_generation_kwh": 461.25
     },
     {
       "name": "Dr Mansi & Samir",
       "status": "Normal",
       "capacity_kw": 6.38,
-      "current_power_kw": 1.823,
-      "today_generation_kwh": 5.5,
+      "current_power_kw": null,
+      "today_generation_kwh": 24.1,
       "weekly_generation_kwh": 105.4,
-      "total_generation_kwh": 6967.7,
+      "total_generation_kwh": 6986.3,
       "system_id": "1975875768776945665",
-      "year_generation_kwh": 4689.9
+      "year_generation_kwh": 4708.5
     },
     {
       "name": "Dr OWIN SPV plant 2",
       "status": "Normal",
       "capacity_kw": 12.72,
-      "current_power_kw": 7.033,
-      "today_generation_kwh": 11.8,
+      "current_power_kw": null,
+      "today_generation_kwh": 47.2,
       "weekly_generation_kwh": 181.0,
-      "total_generation_kwh": 18922.8,
+      "total_generation_kwh": 18958.2,
       "system_id": "1907684446702694402",
-      "year_generation_kwh": 8151.4
+      "year_generation_kwh": 8186.8
     }
   ],
   "notes": [
