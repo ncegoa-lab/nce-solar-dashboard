@@ -42,6 +42,7 @@ DEFAULT_OUTPUT_DIR = Path(
 CONFIG_FILE = PROJECT_DIR / "solar_live_app_config.json"
 ENV_FILE = PROJECT_DIR / ".solar_report_env"
 USERS_FILE = PROJECT_DIR / "solar_users.json"
+HISTORY_FILE = PROJECT_DIR / "solar_generation_history.json"
 BUNDLED_PYTHON = Path("/Users/sushil/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3")
 VENV_PYTHON = PROJECT_DIR / ".venv/bin/python"
 DEFAULT_CONFIG = {
@@ -50,7 +51,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-10-solis-mac-upload-v2"
+APP_VERSION = "2026-07-10-history-v3"
 PLANT_COLUMNS = [
     "App ID",
     "Brand",
@@ -84,6 +85,20 @@ UPLOAD_GENERATION_FILES = {
 
 def plant_key(brand: Any, site: Any) -> str:
     return f"{str(brand).strip()}::{str(site).strip()}"
+
+
+def parse_iso_date(value: Any) -> dt.date | None:
+    text = str(value or "").strip()
+    if len(text) >= 10:
+        try:
+            return dt.date.fromisoformat(text[:10])
+        except ValueError:
+            return None
+    return None
+
+
+def week_start(value: dt.date) -> dt.date:
+    return value - dt.timedelta(days=value.weekday())
 
 
 def hash_password(password: str, salt: str | None = None, iterations: int = 260000) -> str:
@@ -277,6 +292,102 @@ class SolarLiveApp:
             )
         return rows
 
+    def load_history(self) -> list[dict[str, Any]]:
+        if not HISTORY_FILE.exists():
+            return []
+        try:
+            data = json.loads(HISTORY_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            return []
+        return data if isinstance(data, list) else []
+
+    def save_history(self, rows: list[dict[str, Any]]) -> None:
+        temp = HISTORY_FILE.with_suffix(".json.tmp")
+        temp.write_text(json.dumps(rows, indent=2), encoding="utf-8")
+        temp.replace(HISTORY_FILE)
+
+    def record_history_snapshot(self) -> dict[str, Any]:
+        current = self.plant_payload(None)
+        if not current:
+            return {"label": "History snapshot", "ok": False, "message": "No plant data available to record."}
+
+        existing = self.load_history()
+        by_key = {
+            f"{row.get('plantKey')}::{row.get('date')}": row
+            for row in existing
+            if row.get("plantKey") and row.get("date")
+        }
+        today = dt.date.today().isoformat()
+        count = 0
+        for plant in current:
+            date_text = plant.get("dataDate") or today
+            key = f"{plant['plantKey']}::{date_text}"
+            by_key[key] = {
+                "date": date_text,
+                "brand": plant.get("brand", ""),
+                "site": plant.get("site", ""),
+                "plantKey": plant.get("plantKey", ""),
+                "status": plant.get("status", ""),
+                "capacity": plant.get("capacity", 0),
+                "daily": plant.get("daily", 0),
+                "weekly": plant.get("weekly", 0),
+                "year": plant.get("year", 0),
+                "total": plant.get("total", 0),
+                "yield2026": plant.get("yield2026", 0),
+                "timestamp": plant.get("timestamp", ""),
+                "recordedAt": dt.datetime.now().replace(microsecond=0).isoformat(),
+            }
+            count += 1
+
+        rows = sorted(by_key.values(), key=lambda row: (str(row.get("plantKey", "")), str(row.get("date", ""))))
+        self.save_history(rows)
+        return {"label": "History snapshot", "ok": True, "message": f"Saved history for {count} plants."}
+
+    def history_payload(self, plant_key_value: str, user: dict[str, Any] | None = None) -> dict[str, Any]:
+        if not user_can_access(user, plant_key_value):
+            return {"daily": [], "weekly": [], "yearly": []}
+
+        rows = [
+            row for row in self.load_history()
+            if row.get("plantKey") == plant_key_value and parse_iso_date(row.get("date"))
+        ]
+        rows.sort(key=lambda row: str(row.get("date", "")), reverse=True)
+
+        weekly: dict[str, dict[str, Any]] = {}
+        yearly: dict[str, dict[str, Any]] = {}
+        for row in rows:
+            row_date = parse_iso_date(row.get("date"))
+            if not row_date:
+                continue
+            week_start_date = week_start(row_date)
+            week_end_date = week_start_date + dt.timedelta(days=6)
+            week_label = f"{week_start_date.isoformat()} to {week_end_date.isoformat()}"
+            week_row = weekly.setdefault(
+                week_label,
+                {"week": week_label, "dailySum": 0.0, "weekly": 0.0, "days": 0, "lastDate": row_date.isoformat()},
+            )
+            week_row["dailySum"] += float(row.get("daily") or 0)
+            week_row["weekly"] = max(float(week_row.get("weekly") or 0), float(row.get("weekly") or 0))
+            week_row["days"] += 1
+            if row_date.isoformat() > week_row["lastDate"]:
+                week_row["lastDate"] = row_date.isoformat()
+
+            year_label = str(row_date.year)
+            year_row = yearly.setdefault(
+                year_label,
+                {"year": year_label, "yearKwh": 0.0, "totalMwh": 0.0, "lastDate": row_date.isoformat()},
+            )
+            if row_date.isoformat() >= year_row["lastDate"]:
+                year_row["yearKwh"] = float(row.get("year") or 0)
+                year_row["totalMwh"] = float(row.get("total") or 0)
+                year_row["lastDate"] = row_date.isoformat()
+
+        return {
+            "daily": rows[:120],
+            "weekly": sorted(weekly.values(), key=lambda row: row["lastDate"], reverse=True)[:80],
+            "yearly": sorted(yearly.values(), key=lambda row: row["year"], reverse=True),
+        }
+
     def run_step(self, label: str, command: list[str], env: dict[str, str]) -> dict[str, Any]:
         started = dt.datetime.now()
         try:
@@ -351,6 +462,7 @@ class SolarLiveApp:
             "running": True,
             "steps": [{"label": f"{brand.title()} upload", "ok": True, "message": f"Saved {filename} with {len(payload['systems'])} systems."}],
         }
+        self.append_refresh_step(self.record_history_snapshot())
         for step in self.rebuild_outputs():
             self.append_refresh_step(step)
         self.last_refresh["finished"] = dt.datetime.now().isoformat(timespec="seconds")
@@ -426,6 +538,7 @@ class SolarLiveApp:
                     )
                 )
 
+            self.append_refresh_step(self.record_history_snapshot())
             for step in self.rebuild_outputs(env):
                 self.append_refresh_step(step)
 
@@ -615,6 +728,10 @@ class Handler(BaseHTTPRequestHandler):
         assert APP is not None
         if parsed.path == "/api/plants":
             self.send_json({"plants": APP.plant_payload(user), "today": dt.date.today().isoformat()})
+        elif parsed.path == "/api/history":
+            query = urllib.parse.parse_qs(parsed.query)
+            key = (query.get("plant_key") or [""])[0]
+            self.send_json(APP.history_payload(key, user))
         elif parsed.path == "/api/status":
             self.send_json(
                 {
@@ -769,6 +886,7 @@ table{width:100%;border-collapse:collapse;font-size:12px}th{background:var(--blu
 .status{font-weight:800}.online{color:var(--green)}.offline,.stale{color:var(--red)}.fresh{color:var(--green)}.pill{display:inline-block;border-radius:999px;padding:2px 7px;font-size:10px;font-weight:800;color:white}.pill.fresh{background:var(--green);color:white}.pill.stale{background:var(--red);color:white}
 .plant-title{font-size:21px;font-weight:850}.details{display:grid;grid-template-columns:1fr 1fr;gap:8px}.detail{border:1px solid var(--line);border-radius:6px;background:#fbfdff;padding:10px}.detail span{display:block;color:var(--muted);font-size:11px;font-weight:700;margin-bottom:7px}
 .checkcell{width:34px}.report-link{font-size:12px;color:var(--muted);margin-top:8px;word-break:break-all}.log{font-family:ui-monospace,Menlo,monospace;font-size:11px;white-space:pre-wrap;max-height:180px;overflow:auto;background:#f8fafc;border:1px solid var(--line);padding:8px;border-radius:6px}
+.history-block{margin-top:12px}.history-block h3{font-size:13px;margin:10px 0 6px}.history-scroll{max-height:160px;overflow:auto;border:1px solid var(--line);border-radius:6px}.history-scroll table{font-size:11px}.history-scroll th{position:sticky;top:0}.empty-history{color:var(--muted);font-size:12px;padding:8px;border:1px solid var(--line);border-radius:6px;background:#fbfdff}
 @media(max-width:980px){header{position:static}.toolbar,.grid,.split{grid-template-columns:1fr}table{font-size:11px}th:nth-child(5),td:nth-child(5),th:nth-child(7),td:nth-child(7){display:none}}
 </style>
 </head>
@@ -805,7 +923,7 @@ table{width:100%;border-collapse:collapse;font-size:12px}th{background:var(--blu
   </div>
 </main>
 <script>
-let plants=[], selected=new Set(), statusData={};
+let plants=[], selected=new Set(), statusData={}, activePlantId=null, activeHistoryKey='';
 const searchInput=document.querySelector('#search');
 const brandFilter=document.querySelector('#brand');
 const statusFilter=document.querySelector('#status');
@@ -829,14 +947,24 @@ function cls(s){s=String(s||'').toLowerCase();return (s.includes('online')||s.in
 function fresh(p){return p.dataDate===todayText()}
 function staleNote(p){return !fresh(p)&&String(p.brand||'').toLowerCase()==='solis'?'Solis data is from the last saved Mac capture. Refresh Solis on the Mac to make this current.':''}
 function uniq(a){return [...new Set(a)].filter(Boolean).sort()}
+function h(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 async function api(path,opt){const r=await fetch(path,opt);const text=await r.text();let data={};try{data=text?JSON.parse(text):{};}catch(e){throw new Error(`${path} returned ${r.status}: ${text.slice(0,240)||'empty response'}`)}if(!r.ok){throw new Error(data.error||`${path} returned ${r.status}`)}return data}
 function filtered(){const q=searchInput.value.toLowerCase(), b=brandFilter.value, s=statusFilter.value;return plants.filter(p=>(b==='all'||p.brand===b)&&(s==='all'||p.status===s)&&(`${p.site} ${p.brand}`.toLowerCase().includes(q)))}
 function selectedRows(){return plants.filter(p=>selected.has(p.id))}
 function renderFilters(){brandFilter.innerHTML='<option value="all">All Brands</option>'+uniq(plants.map(p=>p.brand)).map(x=>`<option>${x}</option>`).join('');statusFilter.innerHTML='<option value="all">All Status</option>'+uniq(plants.map(p=>p.status)).map(x=>`<option>${x}</option>`).join('')}
-function render(){const rows=filtered(), chosen=selectedRows();const active=chosen[0]||rows[0]||plants[0];cardsEl.innerHTML=[['Visible',rows.length],['Selected',chosen.length],['Daily',f(rows.reduce((a,p)=>a+p.daily,0))+' kWh'],['Weekly',f(rows.reduce((a,p)=>a+p.weekly,0))+' kWh'],['Capacity',f(rows.reduce((a,p)=>a+p.capacity,0))+' kW'],['Fresh',rows.filter(fresh).length+'/'+rows.length]].map(x=>`<div class="card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join('');
-rowsEl.innerHTML=rows.map(p=>`<tr><td><input type="checkbox" data-id="${p.id}" ${selected.has(p.id)?'checked':''}></td><td>${p.brand}</td><td><b>${p.site}</b></td><td class="status ${cls(p.status)}">${p.status}</td><td title="${staleNote(p)}">${p.dataDate||''} <span class="pill ${fresh(p)?'fresh':'stale'}">${fresh(p)?'TODAY':'STALE'}</span></td><td>${f(p.daily)}</td><td>${f(p.weekly)}</td><td>${f(p.yield2026)}</td></tr>`).join('');
-rowsEl.querySelectorAll('input[type=checkbox][data-id]').forEach(cb=>cb.onchange=()=>{cb.checked?selected.add(cb.dataset.id):selected.delete(cb.dataset.id);render()});
-detailEl.innerHTML=active?`<div class="plant-title">${active.site}</div><p>${active.brand} · <span class="status ${cls(active.status)}">${active.status}</span></p>${staleNote(active)?`<p class="stale">${staleNote(active)}</p>`:''}<div class="details"><div class="detail"><span>Data Date</span><b>${active.dataDate||'Unknown'}</b></div><div class="detail"><span>Capacity</span><b>${f(active.capacity)} kW</b></div><div class="detail"><span>Daily</span><b>${f(active.daily)} kWh</b></div><div class="detail"><span>Weekly</span><b>${f(active.weekly)} kWh</b></div><div class="detail"><span>2026/kW</span><b>${f(active.yield2026)}</b></div><div class="detail"><span>Total</span><b>${f(active.total)} MWh</b></div></div>`:'No plant';
+function historyTable(title, rows, cols){if(!rows?.length)return `<div class="history-block"><h3>${title}</h3><div class="empty-history">No previous data yet. It will build after refreshes/uploads.</div></div>`;return `<div class="history-block"><h3>${title}</h3><div class="history-scroll"><table><thead><tr>${cols.map(c=>`<th>${c[0]}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td>${c[2]?f(r[c[1]]):h(r[c[1]])}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>`}
+function renderHistory(data){return [
+historyTable('Daily Date-wise',data.daily,[['Date','date'],['Daily kWh','daily',1],['Status','status'],['Total MWh','total',1]]),
+historyTable('Weekly Week-wise',data.weekly,[['Week','week'],['Daily Sum','dailySum',1],['Weekly kWh','weekly',1],['Days','days']]),
+historyTable('Yearly Year-wise',data.yearly,[['Year','year'],['Latest Date','lastDate'],['Year kWh','yearKwh',1],['Total MWh','totalMwh',1]])
+].join('')}
+async function loadHistory(active){const key=active?.plantKey||'';activeHistoryKey=key;const box=document.querySelector('#historyBox');if(!box||!key)return;box.innerHTML='<div class="empty-history">Loading previous data...</div>';try{const data=await api('/api/history?plant_key='+encodeURIComponent(key));if(activeHistoryKey===key)box.innerHTML=renderHistory(data);}catch(error){if(activeHistoryKey===key)box.innerHTML='<div class="empty-history">History failed: '+h(error.message)+'</div>';}}
+function renderDetail(active){if(!active){detailEl.innerHTML='No plant';return}detailEl.innerHTML=`<div class="plant-title">${h(active.site)}</div><p>${h(active.brand)} · <span class="status ${cls(active.status)}">${h(active.status)}</span></p>${staleNote(active)?`<p class="stale">${h(staleNote(active))}</p>`:''}<div class="details"><div class="detail"><span>Data Date</span><b>${h(active.dataDate||'Unknown')}</b></div><div class="detail"><span>Capacity</span><b>${f(active.capacity)} kW</b></div><div class="detail"><span>Daily</span><b>${f(active.daily)} kWh</b></div><div class="detail"><span>Weekly</span><b>${f(active.weekly)} kWh</b></div><div class="detail"><span>2026/kW</span><b>${f(active.yield2026)}</b></div><div class="detail"><span>Total</span><b>${f(active.total)} MWh</b></div></div><div id="historyBox" class="history-block"></div>`;loadHistory(active)}
+function render(){const rows=filtered(), chosen=selectedRows();const active=plants.find(p=>p.id===activePlantId)||chosen[0]||rows[0]||plants[0];if(active)activePlantId=active.id;cardsEl.innerHTML=[['Visible',rows.length],['Selected',chosen.length],['Daily',f(rows.reduce((a,p)=>a+p.daily,0))+' kWh'],['Weekly',f(rows.reduce((a,p)=>a+p.weekly,0))+' kWh'],['Capacity',f(rows.reduce((a,p)=>a+p.capacity,0))+' kW'],['Fresh',rows.filter(fresh).length+'/'+rows.length]].map(x=>`<div class="card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join('');
+rowsEl.innerHTML=rows.map(p=>`<tr data-id="${p.id}" style="cursor:pointer"><td><input type="checkbox" data-id="${p.id}" ${selected.has(p.id)?'checked':''}></td><td>${h(p.brand)}</td><td><b>${h(p.site)}</b></td><td class="status ${cls(p.status)}">${h(p.status)}</td><td title="${h(staleNote(p))}">${h(p.dataDate||'')} <span class="pill ${fresh(p)?'fresh':'stale'}">${fresh(p)?'TODAY':'STALE'}</span></td><td>${f(p.daily)}</td><td>${f(p.weekly)}</td><td>${f(p.yield2026)}</td></tr>`).join('');
+rowsEl.querySelectorAll('tr[data-id]').forEach(tr=>tr.onclick=()=>{activePlantId=tr.dataset.id;render()});
+rowsEl.querySelectorAll('input[type=checkbox][data-id]').forEach(cb=>{cb.onclick=e=>e.stopPropagation();cb.onchange=()=>{cb.checked?selected.add(cb.dataset.id):selected.delete(cb.dataset.id);render()}});
+renderDetail(active);
 }
 function refreshText(r){const lines=(r.steps||[]).map(s=>`${s.ok?'OK':'SKIP'} - ${s.label}: ${s.message||''}`);if(r.running)lines.push('RUNNING - Refresh still in progress...');if(r.finished)lines.push('DONE - Finished '+r.finished);return lines.join('\\n')||'Ready.'}
 async function load(){const p=await api('/api/plants');plants=p.plants;selected=new Set(plants.map(p=>p.id));renderFilters();render();const s=await api('/api/status');statusData=s;dateLineEl.textContent='Today '+todayText();versionLineEl.textContent='Build: '+(s.app_version||'old');mobileLineEl.textContent='iPhone: '+s.mobile_url;autoDayEl.value=s.config.auto_report_day;autoTimeEl.value=s.config.auto_report_time;logEl.textContent=refreshText(s.last_refresh||{});}
@@ -858,6 +986,7 @@ def main() -> None:
     args = parser.parse_args()
     global APP
     APP = SolarLiveApp(args.host, args.port)
+    APP.record_history_snapshot()
     if APP.config.get("auto_refresh_on_open"):
         threading.Thread(target=APP.refresh, daemon=True).start()
     threading.Thread(target=APP.maybe_auto_run, daemon=True).start()
