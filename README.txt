@@ -11,15 +11,11 @@ Keep these files on the Mac only:
 - Upload Fresh Solis To Render.command
 
 What changed:
-- iPhone plant list is collapsible by plant name.
-- Tap a plant name to expand its values.
-- Past History is compact but user-selectable:
-  - calendar-style date picker for daily history
-  - week selector for weekly history
-  - year selector for yearly history
-- Latest Reports remains limited to last 3.
-- Mac/desktop layout stays table friendly.
+- iPhone plant name boxes are thinner.
+- No plant is selected automatically.
+- Selected Plant shows "Tap a plant name to view details" until you tap one.
+- Plant cards expand only when tapped.
 
 After Render redeploys, top blue bar should show:
 
-Build: 2026-07-10-iphone-history-calendar-v10
+Build: 2026-07-10-iphone-plant-collapse-v11
