@@ -51,7 +51,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-10-iphone-report-options-v12"
+APP_VERSION = "2026-07-10-report-viewer-v13"
 PLANT_COLUMNS = [
     "App ID",
     "Brand",
@@ -558,15 +558,17 @@ class SolarLiveApp:
         threading.Thread(target=self.refresh, daemon=True).start()
         return {**self.last_refresh, "accepted": True}
 
-    def generate_selected_report(self, plant_ids: list[str], user: dict[str, Any] | None = None) -> dict[str, Any]:
+    def generate_selected_report(self, plant_ids: list[str], user: dict[str, Any] | None = None, all_plants: bool = False) -> dict[str, Any]:
         df = self.plant_dataframe()
         df["Plant Key"] = df.apply(lambda row: plant_key(row["Brand"], row["Site Name"]), axis=1)
         if user and user.get("role") != "admin":
             df = df[df["Plant Key"].apply(lambda key: user_can_access(user, key))]
-        if plant_ids:
+        if all_plants:
+            selected = df.drop(columns=["App ID"])
+        elif plant_ids:
             selected = df[df["App ID"].isin(plant_ids)].drop(columns=["App ID"])
         else:
-            selected = df.drop(columns=["App ID"])
+            return {"ok": False, "message": "No plants selected"}
         if "Plant Key" in selected:
             selected = selected.drop(columns=["Plant Key"])
         if selected.empty:
@@ -588,6 +590,7 @@ class SolarLiveApp:
             "ok": True,
             "path": str(path),
             "download_url": f"/reports/{path.relative_to(self.output_dir).as_posix()}",
+            "viewer_url": f"/view-report?file={urllib.parse.quote(path.relative_to(self.output_dir).as_posix(), safe='')}",
             "count": int(len(selected)),
         }
 
@@ -606,7 +609,8 @@ class SolarLiveApp:
             reports.append(
                 {
                     "name": path.name,
-                    "url": f"/reports/{urllib.parse.quote(relative)}",
+                    "url": f"/view-report?file={urllib.parse.quote(relative, safe='')}",
+                    "download_url": f"/reports/{urllib.parse.quote(relative)}",
                     "modified": dt.datetime.fromtimestamp(path.stat().st_mtime).isoformat(timespec="seconds"),
                     "size_kb": round(path.stat().st_size / 1024, 1),
                 }
@@ -696,6 +700,29 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def send_report_viewer(self, relative: str) -> None:
+        assert APP is not None
+        path = (APP.output_dir / relative).resolve()
+        try:
+            path.relative_to(APP.output_dir.resolve())
+        except ValueError:
+            self.send_json({"error": "Invalid report path"}, 400)
+            return
+        if not path.exists() or not path.is_file():
+            self.send_json({"error": "Report not found"}, 404)
+            return
+        download_url = f"/reports/{urllib.parse.quote(relative)}"
+        body = (
+            REPORT_VIEWER_HTML
+            .replace("__TITLE__", path.name)
+            .replace("__DOWNLOAD_URL__", download_url)
+        ).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     def send_json(self, payload: Any, status: int = 200) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
@@ -747,7 +774,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_header("Content-Length", str(len(body)))
                 self.end_headers()
                 self.wfile.write(body)
-            elif parsed.path.startswith("/api/") or parsed.path.startswith("/reports/"):
+            elif parsed.path.startswith("/api/") or parsed.path.startswith("/reports/") or parsed.path == "/view-report":
                 user = self.require_auth()
                 if load_users() and not user:
                     return
@@ -779,6 +806,10 @@ class Handler(BaseHTTPRequestHandler):
                     "mobile_url": f"http://{local_ip()}:{APP.port}",
                 }
             )
+        elif parsed.path == "/view-report":
+            query = urllib.parse.parse_qs(parsed.query)
+            relative = (query.get("file") or [""])[0]
+            self.send_report_viewer(relative)
         elif parsed.path.startswith("/reports/"):
             relative = urllib.parse.unquote(parsed.path[len("/reports/") :])
             path = (APP.output_dir / relative).resolve()
@@ -851,7 +882,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_json(APP.refresh_async())
             elif parsed.path == "/api/report":
                 payload = self.read_json()
-                self.send_json(APP.generate_selected_report(payload.get("plant_ids") or [], user))
+                self.send_json(APP.generate_selected_report(payload.get("plant_ids") or [], user, bool(payload.get("all_plants"))))
             elif parsed.path == "/api/config":
                 if not is_admin(user):
                     self.send_json({"error": "Admin access required"}, 403)
@@ -923,6 +954,38 @@ h1{font-size:24px;margin:0 0 8px;color:#174f9c}.sub{margin:0 0 18px;color:#64708
   <p class="warn">Do not upload APP_LOGIN_DETAILS_PRIVATE.txt.</p>
   <a class="btn" href="/login">Back to Login</a>
 </main>
+</body>
+</html>"""
+
+
+REPORT_VIEWER_HTML = r"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:#eef3f8;color:#1e2b3f}
+header{position:sticky;top:0;z-index:5;background:#174f9c;color:white;padding:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+h1{font-size:14px;margin:0;flex:1 1 220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+a,button{border:0;border-radius:6px;padding:9px 10px;font-weight:900;font-size:13px;text-decoration:none;cursor:pointer}
+a{background:white;color:#174f9c}button{background:#18b9d6;color:white}.print{background:#16845f}.share{background:#5c6f8b}
+iframe{display:block;width:100%;height:calc(100vh - 58px);border:0;background:white}
+@media(max-width:640px){header{display:grid;grid-template-columns:1fr 1fr;gap:6px}h1{grid-column:1 / -1}.back{grid-column:1 / -1;text-align:center}a,button{width:100%;text-align:center}iframe{height:calc(100vh - 148px)}}
+</style>
+</head>
+<body>
+<header>
+  <a class="back" href="/">Back to App</a>
+  <h1>__TITLE__</h1>
+  <a id="download" href="__DOWNLOAD_URL__" target="_blank">Download</a>
+  <button class="share" id="share">Share</button>
+  <button class="print" onclick="frames.reportFrame.focus();frames.reportFrame.print()">Print</button>
+</header>
+<iframe name="reportFrame" src="__DOWNLOAD_URL__"></iframe>
+<script>
+document.querySelector('#share').onclick=async()=>{const url=new URL('__DOWNLOAD_URL__', location.origin).href;if(navigator.share){try{await navigator.share({title:document.title,url});return}catch(e){}}navigator.clipboard?.writeText(url);alert('Report link copied.');};
+</script>
 </body>
 </html>"""
 
@@ -1077,14 +1140,14 @@ rowsEl.querySelectorAll('input[type=checkbox][data-id]').forEach(cb=>{cb.onclick
 renderDetail(active);
 }
 function refreshText(r){const lines=(r.steps||[]).map(s=>`${s.ok?'OK':'SKIP'} - ${s.label}: ${s.message||''}`);if(r.running)lines.push('RUNNING - Refresh still in progress...');if(r.finished)lines.push('DONE - Finished '+r.finished);return lines.join('\\n')||'Ready.'}
-async function loadReports(){try{const r=await api('/api/reports');reportListEl.innerHTML=(r.reports||[]).length?(r.reports||[]).map(x=>`<a class="report-item" href="${x.url}" target="_blank">${h(x.name)}<span>${h(x.modified)} · ${h(x.size_kb)} KB</span></a>`).join(''):'No reports generated yet.';}catch(error){reportListEl.textContent='Could not load reports: '+error.message;}}
-async function load(){const p=await api('/api/plants');plants=p.plants;selected=new Set(plants.map(p=>p.id));renderFilters();render();const s=await api('/api/status');statusData=s;dateLineEl.textContent='Today '+todayText();versionLineEl.textContent='Build: '+(s.app_version||'old');mobileLineEl.textContent='iPhone: '+s.mobile_url;autoDayEl.value=s.config.auto_report_day;autoTimeEl.value=s.config.auto_report_time;logEl.textContent=refreshText(s.last_refresh||{});loadReports();}
+async function loadReports(){try{const r=await api('/api/reports');reportListEl.innerHTML=(r.reports||[]).length?(r.reports||[]).map(x=>`<a class="report-item" href="${x.url}">${h(x.name)}<span>${h(x.modified)} · ${h(x.size_kb)} KB</span></a>`).join(''):'No reports generated yet.';}catch(error){reportListEl.textContent='Could not load reports: '+error.message;}}
+async function load(){const p=await api('/api/plants');plants=p.plants;selected=new Set();renderFilters();render();const s=await api('/api/status');statusData=s;dateLineEl.textContent='Today '+todayText();versionLineEl.textContent='Build: '+(s.app_version||'old');mobileLineEl.textContent='iPhone: '+s.mobile_url;autoDayEl.value=s.config.auto_report_day;autoTimeEl.value=s.config.auto_report_time;logEl.textContent=refreshText(s.last_refresh||{});loadReports();}
 async function pollRefresh(){for(let i=0;i<90;i++){const s=await api('/api/status');logEl.textContent=refreshText(s.last_refresh||{});await load();if(!s.last_refresh?.running)return;await new Promise(r=>setTimeout(r,3000));}}
 refreshBtn.onclick=async()=>{logEl.textContent='Starting background refresh...';const r=await api('/api/refresh',{method:'POST'});logEl.textContent=refreshText(r);pollRefresh().catch(error=>{logEl.textContent='Refresh status failed: '+error;});}
-async function generateReport(ids,label){reportResultEl.textContent='Generating '+label+'...';const r=await api('/api/report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plant_ids:ids})});reportResultEl.innerHTML=r.ok?`Saved ${r.count} plant report.<br><a class="download-btn" href="${r.download_url}" target="_blank">Download PDF</a>`:'Failed: '+h(r.message);if(r.ok)loadReports();}
-reportAllBtn.onclick=()=>generateReport([],'all plants report');
+async function generateReport(ids,label,all=false){reportResultEl.textContent='Generating '+label+'...';const r=await api('/api/report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plant_ids:ids,all_plants:all})});reportResultEl.innerHTML=r.ok?`Saved ${r.count} plant report.<br><a class="download-btn" href="${r.viewer_url}">Open Report</a>`:'Failed: '+h(r.message);if(r.ok)loadReports();}
+reportAllBtn.onclick=()=>generateReport([],'all plants report',true);
 reportPlantBtn.onclick=()=>{if(!activePlantId){reportResultEl.textContent='Tap a plant name first.';return}generateReport([activePlantId],'plant report')}
-reportBtn.onclick=()=>generateReport([...selected],'selected report');
+reportBtn.onclick=()=>{if(!selected.size){reportResultEl.textContent='Tick one or more plants first.';return}generateReport([...selected],'selected report')};
 selectAllBtn.onclick=()=>{const visible=filtered();const all=visible.every(p=>selected.has(p.id));visible.forEach(p=>all?selected.delete(p.id):selected.add(p.id));render()}
 saveScheduleBtn.onclick=async()=>{const r=await api('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({auto_report_day:autoDayEl.value,auto_report_time:autoTimeEl.value})});logEl.textContent='Saved schedule: '+r.config.auto_report_day+' '+r.config.auto_report_time}
 searchInput.oninput=render;brandFilter.onchange=render;statusFilter.onchange=render;load().catch(error=>{logEl.textContent='App load failed: '+error;});

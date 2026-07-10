@@ -11,15 +11,16 @@ Keep these files on the Mac only:
 - Upload Fresh Solis To Render.command
 
 What changed:
-- Tapping an already-open plant collapses it back.
-- No plant remains forced open.
-- iPhone plant name boxes are slimmer with light background.
-- Today's generation appears on the same line as plant name.
-- Report buttons now include:
-  - All Plants Report
-  - Plant Report
-  - Selected Report
+- Selected Report now generates only ticked plants.
+- No plants are ticked by default.
+- All Plants Report is separate and explicit.
+- Plant Report uses the tapped/open plant.
+- PDF reports open in an app viewer with:
+  - Back to App
+  - Download
+  - Share
+  - Print
 
 After Render redeploys, top blue bar should show:
 
-Build: 2026-07-10-iphone-report-options-v12
+Build: 2026-07-10-report-viewer-v13
