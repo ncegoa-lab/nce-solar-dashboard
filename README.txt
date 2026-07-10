@@ -3,15 +3,17 @@ Upload these files to the root of the GitHub repository:
 - solar_live_app.py
 - solar_generation_history.json
 - upload_generation_to_render.py
+- solar_users.json
 
 Keep this file on the Mac only:
 - Upload Fresh Solis To Render.command
 
-What changed:
-- Generated selected reports now show a clear green Download PDF button.
-- The dashboard now shows a Latest Reports section with recent PDF links.
-- Reports remain accessible after page refresh/reload.
+Do not upload:
+- APP_LOGIN_DETAILS_PRIVATE.txt
 
-After Render redeploys, the top blue bar should show:
+Login after Render redeploy:
+- Username is admin
+- Password is saved locally in APP_LOGIN_DETAILS_PRIVATE.txt
 
-Build: 2026-07-10-report-links-v5
+This update makes the app use solar_users.json for login, so you do not need
+to find NCE_APP_USER or NCE_APP_PASSWORD in Render.

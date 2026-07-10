@@ -1,0 +1,12 @@
+{
+  "users": [
+    {
+      "username": "admin",
+      "password_hash": "pbkdf2_sha256$260000$1f6222d5e8bd9310723160a8162ebd67$ARo6oB7nA9Rbw7aDmWtyjXMdmVMvyx3hPa+jWTbYk2M=",
+      "role": "admin",
+      "plants": [
+        "*"
+      ]
+    }
+  ]
+}
