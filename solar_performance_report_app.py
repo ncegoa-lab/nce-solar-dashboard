@@ -19,6 +19,7 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
+from zoneinfo import ZoneInfo
 from xml.sax.saxutils import escape
 
 import pandas as pd
@@ -57,6 +58,15 @@ LOGGER = logging.getLogger("solar_report")
 OUTPUT_DIR = Path("outputs/solar_performance")
 DEFAULT_LOGO = Path("assets/nce_logo.png")
 REPORT_YEAR_START = dt.date(2026, 1, 1)
+IST = ZoneInfo("Asia/Kolkata")
+
+
+def ist_now() -> dt.datetime:
+    return dt.datetime.now(IST)
+
+
+def ist_today() -> dt.date:
+    return ist_now().date()
 
 BLUE = "#1F63B5"
 GREEN = "#18B9D6"
@@ -73,14 +83,14 @@ YELLOW = "#F2C94C"
 def report_elapsed_days(today: dt.date | None = None) -> int:
     """Return inclusive days elapsed from the fixed 2026 report baseline."""
 
-    report_date = today or dt.date.today()
+    report_date = today or ist_today()
     return max((report_date - REPORT_YEAR_START).days + 1, 1)
 
 
 def completed_week_days(today: dt.date | None = None) -> int:
     """Return completed days in the current Monday-Sunday reporting week."""
 
-    report_date = today or dt.date.today()
+    report_date = today or ist_today()
     return min(report_date.weekday() + 1, 7)
 
 
@@ -97,11 +107,17 @@ class ReportAssets:
 def setup_logging() -> None:
     """Configure compact application logging."""
 
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s | %(levelname)s | %(message)s",
-        datefmt="%H:%M:%S",
-    )
+    class ISTFormatter(logging.Formatter):
+        def formatTime(self, record: logging.LogRecord, datefmt: str | None = None) -> str:
+            value = dt.datetime.fromtimestamp(record.created, IST)
+            return value.strftime(datefmt or "%Y-%m-%d %H:%M:%S")
+
+    handler = logging.StreamHandler()
+    handler.setFormatter(ISTFormatter("%(asctime)s | %(levelname)s | %(message)s", "%H:%M:%S"))
+    root = logging.getLogger()
+    root.handlers.clear()
+    root.addHandler(handler)
+    root.setLevel(logging.INFO)
 
 
 def safe_float(value: Any, default: float = 0.0) -> float:
@@ -235,7 +251,7 @@ def normalize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                 "Year Generation (kWh)": year_kwh,
                 "Year Generation Source": year_source,
                 "Total Generation (MWh)": total_mwh_value,
-                "Timestamp": str(first_available(raw, ("Timestamp", "timestamp", "captured_at"), dt.datetime.now().isoformat())),
+                "Timestamp": str(first_available(raw, ("Timestamp", "timestamp", "captured_at"), ist_now().isoformat())),
             }
         )
 
@@ -257,9 +273,9 @@ def normalize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     )
     normalized["Average Daily Yield (kWh/kW/day)"] = normalized["2026 Yield (kWh/kW)"] / report_elapsed_days()
     normalized["CUF (%)"] = normalized.apply(
-        lambda row: (row["Daily Generation (kWh)"] / (row["Plant Capacity (kW)"] * 24) * 100)
-        if row["Plant Capacity (kW)"] > 0
-        else 0,
+        lambda row: (row["Year Generation (kWh)"] / (row["Plant Capacity (kW)"] * 24 * report_elapsed_days()) * 100)
+        if row["Year Generation (kWh)"] > 0 and row["Plant Capacity (kW)"] > 0
+        else ((row["Daily Generation (kWh)"] / (row["Plant Capacity (kW)"] * 24) * 100) if row["Plant Capacity (kW)"] > 0 else 0),
         axis=1,
     )
     normalized["PR (%)"] = normalized["CUF (%)"].clip(lower=0, upper=100)
@@ -411,8 +427,7 @@ def calculate_summary(df: pd.DataFrame) -> dict[str, float]:
     status_counts = df["Current Status"].value_counts().to_dict()
     capacity_kw = float(df["Plant Capacity (kW)"].sum())
     year_kwh = float(df["Year Generation (kWh)"].sum())
-    year_yield_per_kw = year_kwh / capacity_kw if capacity_kw > 0 and year_kwh > 0 else 0.0
-    avg_daily_yield_per_kw = year_yield_per_kw / report_elapsed_days()
+    cuf_percent = year_kwh / (capacity_kw * 24 * report_elapsed_days()) * 100 if capacity_kw > 0 and year_kwh > 0 else 0.0
     return {
         "total_plants": int(len(df)),
         "online_plants": int(status_counts.get("Online", 0)),
@@ -424,8 +439,7 @@ def calculate_summary(df: pd.DataFrame) -> dict[str, float]:
         "weekly_kwh": float(df["Weekly Generation (kWh)"].sum()),
         "year_kwh": year_kwh,
         "total_mwh": float(df["Total Generation (MWh)"].sum()),
-        "avg_daily_yield_per_kw": avg_daily_yield_per_kw,
-        "year_yield_per_kw": year_yield_per_kw,
+        "cuf_percent": cuf_percent,
     }
 
 
@@ -447,13 +461,12 @@ def generate_brand_summary(df: pd.DataFrame) -> pd.DataFrame:
         .reset_index()
         .sort_values("Brand")
     )
-    summary["2026 Yield (kWh/kW)"] = summary.apply(
-        lambda row: row["Year Generation (kWh)"] / row["Installed Capacity (kW)"]
+    summary["CUF (%)"] = summary.apply(
+        lambda row: row["Year Generation (kWh)"] / (row["Installed Capacity (kW)"] * 24 * report_elapsed_days()) * 100
         if row["Installed Capacity (kW)"] > 0 and row["Year Generation (kWh)"] > 0
         else 0,
         axis=1,
     )
-    summary["Avg/day (kWh/kW/day)"] = summary["2026 Yield (kWh/kW)"] / report_elapsed_days()
     totals = {
         "Brand": "TOTAL",
         "No. of Plants": int(summary["No. of Plants"].sum()),
@@ -463,19 +476,18 @@ def generate_brand_summary(df: pd.DataFrame) -> pd.DataFrame:
         "Year Generation (kWh)": summary["Year Generation (kWh)"].sum(),
         "Total Generation (MWh)": summary["Total Generation (MWh)"].sum(),
     }
-    totals["2026 Yield (kWh/kW)"] = (
-        totals["Year Generation (kWh)"] / totals["Installed Capacity (kW)"]
+    totals["CUF (%)"] = (
+        totals["Year Generation (kWh)"] / (totals["Installed Capacity (kW)"] * 24 * report_elapsed_days()) * 100
         if totals["Installed Capacity (kW)"] > 0 and totals["Year Generation (kWh)"] > 0
         else 0
     )
-    totals["Avg/day (kWh/kW/day)"] = totals["2026 Yield (kWh/kW)"] / report_elapsed_days()
     return pd.concat([summary, pd.DataFrame([totals])], ignore_index=True)
 
 
 def calculate_best_performing(df: pd.DataFrame) -> tuple[pd.Series, pd.DataFrame]:
     """Find the highest daily-generation plant and top five plants."""
 
-    ordered = df.sort_values("2026 Yield (kWh/kW)", ascending=False).reset_index(drop=True)
+    ordered = df.sort_values("CUF (%)", ascending=False).reset_index(drop=True)
     if ordered.empty:
         raise ValueError("Cannot calculate best plant from empty data.")
     return ordered.iloc[0], ordered.head(5)
@@ -696,7 +708,7 @@ def add_header_footer(canvas, doc) -> None:
     canvas.setFont("Helvetica", 8)
     canvas.drawRightString(width - 12 * mm, height - 8 * mm, "Company Logo")
     canvas.setFillColor(colors.HexColor(MUTED))
-    canvas.drawString(12 * mm, 8 * mm, f"Generated {dt.datetime.now():%Y-%m-%d %H:%M}")
+    canvas.drawString(12 * mm, 8 * mm, f"Generated {ist_now():%Y-%m-%d %H:%M} IST")
     canvas.drawRightString(width - 12 * mm, 8 * mm, f"Page {doc.page}")
     canvas.restoreState()
 
@@ -844,10 +856,10 @@ def generate_pdf(
         logo_cell = RLImage(logo_path, width=36 * mm, height=20 * mm)
     cover_data = [
         [logo_cell],
-        [Paragraph(f"Report Date: <b>{dt.date.today():%Y-%m-%d}</b>", styles["center"])],
+        [Paragraph(f"Report Date: <b>{ist_today():%Y-%m-%d}</b>", styles["center"])],
         [Paragraph(f"Total Number of Plants: <b>{summary['total_plants']}</b>", styles["center"])],
         [Paragraph(f"Total Installed Capacity: <b>{fmt(summary['capacity_kw'])} kW</b>", styles["center"])],
-        [Paragraph(f"Report Generated On: <b>{dt.datetime.now():%Y-%m-%d %H:%M}</b>", styles["center"])],
+        [Paragraph(f"Report Generated On: <b>{ist_now():%Y-%m-%d %H:%M} IST</b>", styles["center"])],
     ]
     cover_table = Table(cover_data, colWidths=[150 * mm], rowHeights=[26 * mm, 12 * mm, 12 * mm, 12 * mm, 12 * mm])
     cover_table.setStyle(
@@ -882,8 +894,8 @@ def generate_pdf(
             metric_card("Faults", str(summary["fault_plants"]), styles),
         ],
         [
-            metric_card("Avg Yield", f"{fmt(summary['avg_daily_yield_per_kw'])} kWh/kW/day", styles),
-            metric_card("2026 Yield", f"{fmt(summary['year_yield_per_kw'])} kWh/kW", styles),
+            metric_card("Yearly Generation", f"{fmt(summary['year_kwh'])} kWh", styles),
+            metric_card("CUF", f"{fmt(summary['cuf_percent'])}%", styles),
             metric_card("Specific Yield", f"{fmt(df['Specific Yield (kWh/kWp)'].mean())} kWh/kW", styles),
         ],
     ]
@@ -902,7 +914,7 @@ def generate_pdf(
         table_from_dataframe(
             formatted_brand,
             styles,
-            [28 * mm, 18 * mm, 28 * mm, 28 * mm, 28 * mm, 28 * mm, 30 * mm, 26 * mm, 26 * mm],
+            [30 * mm, 18 * mm, 30 * mm, 30 * mm, 30 * mm, 30 * mm, 30 * mm, 26 * mm],
         )
     )
     story.append(PageBreak())
@@ -919,8 +931,7 @@ def generate_pdf(
             "Weekly Generation (kWh)",
             "Year Generation (kWh)",
             "Total Generation (MWh)",
-            "Average Daily Yield (kWh/kW/day)",
-            "2026 Yield (kWh/kW)",
+            "CUF (%)",
         ]
     ].copy()
     for col in [
@@ -929,8 +940,7 @@ def generate_pdf(
         "Weekly Generation (kWh)",
         "Year Generation (kWh)",
         "Total Generation (MWh)",
-        "Average Daily Yield (kWh/kW/day)",
-        "2026 Yield (kWh/kW)",
+        "CUF (%)",
     ]:
         table_df[col] = table_df[col].map(lambda value: fmt(value, 2))
     data = [[Paragraph(str(col), styles["small"]) for col in table_df.columns]]
@@ -939,7 +949,7 @@ def generate_pdf(
     plant_table = LongTable(
         data,
         repeatRows=1,
-        colWidths=[18 * mm, 40 * mm, 22 * mm, 20 * mm, 25 * mm, 26 * mm, 26 * mm, 26 * mm, 26 * mm, 26 * mm],
+        colWidths=[18 * mm, 46 * mm, 22 * mm, 20 * mm, 25 * mm, 26 * mm, 28 * mm, 26 * mm, 26 * mm],
     )
     plant_style = [
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(BLUE)),
@@ -989,8 +999,7 @@ def generate_pdf(
             [Paragraph(f"Weekly Generation: <b>{fmt(best['Weekly Generation (kWh)'])} kWh</b>", styles["normal"])],
             [Paragraph(f"2026 Generation: <b>{fmt(best['Year Generation (kWh)'])} kWh</b>", styles["normal"])],
             [Paragraph(f"Total Generation: <b>{fmt(best['Total Generation (MWh)'])} MWh</b>", styles["normal"])],
-            [Paragraph(f"Avg Daily Yield: <b>{fmt(best['Average Daily Yield (kWh/kW/day)'])} kWh/kW/day</b>", styles["normal"])],
-            [Paragraph(f"2026 Yield: <b>{fmt(best['2026 Yield (kWh/kW)'])} kWh/kW</b>", styles["normal"])],
+            [Paragraph(f"CUF: <b>{fmt(best['CUF (%)'])}%</b>", styles["normal"])],
             [Paragraph(f"Performance Percentage: <b>{fmt(performance_percentage)}%</b>", styles["normal"])],
         ],
         colWidths=[130 * mm],
@@ -1015,16 +1024,16 @@ def generate_pdf(
             "Site Name",
             "Plant Capacity (kW)",
             "Daily Generation (kWh)",
-            "Average Daily Yield (kWh/kW/day)",
-            "2026 Yield (kWh/kW)",
+            "Year Generation (kWh)",
+            "CUF (%)",
         ]
     ].copy()
     top5_df.insert(0, "Rank", range(1, len(top5_df) + 1))
     for col in [
         "Plant Capacity (kW)",
         "Daily Generation (kWh)",
-        "Average Daily Yield (kWh/kW/day)",
-        "2026 Yield (kWh/kW)",
+        "Year Generation (kWh)",
+        "CUF (%)",
     ]:
         top5_df[col] = top5_df[col].map(lambda value: fmt(value, 2))
     story.append(Paragraph("Top 5 Performing Plants", styles["h2"]))
@@ -1151,7 +1160,7 @@ def _compact_header_footer(logo_path: str | None):
 
         canvas.setFillColor(colors.HexColor(MUTED))
         canvas.setFont("Helvetica", 7)
-        canvas.drawString(11 * mm, 7 * mm, f"Generated {dt.datetime.now():%Y-%m-%d %H:%M}")
+        canvas.drawString(11 * mm, 7 * mm, f"Generated {ist_now():%Y-%m-%d %H:%M} IST")
         canvas.drawRightString(width - 11 * mm, 7 * mm, f"Page {doc.page} of 3")
         canvas.restoreState()
 
@@ -1184,7 +1193,7 @@ def _plant_report_header_footer(logo_path: str | None):
         canvas.drawString(title_x, height - 7.5 * mm, "Individual Solar Plant Performance Report")
         canvas.setFillColor(colors.HexColor(MUTED))
         canvas.setFont("Helvetica", 7)
-        canvas.drawString(11 * mm, 7 * mm, f"Generated {dt.datetime.now():%Y-%m-%d %H:%M}")
+        canvas.drawString(11 * mm, 7 * mm, f"Generated {ist_now():%Y-%m-%d %H:%M} IST")
         canvas.drawRightString(width - 11 * mm, 7 * mm, f"Page {doc.page}")
         canvas.restoreState()
 
@@ -1274,8 +1283,8 @@ def generate_compact_pdf(
     page1_left = [
         [logo_cell],
         [Paragraph("<b>Solar Power Plant Performance Report</b>", styles["title"])],
-        [Paragraph(f"Report Date: <b>{dt.date.today():%Y-%m-%d}</b>", styles["normal"])],
-        [Paragraph(f"Generated On: <b>{dt.datetime.now():%Y-%m-%d %H:%M}</b>", styles["normal"])],
+        [Paragraph(f"Report Date: <b>{ist_today():%Y-%m-%d}</b>", styles["normal"])],
+        [Paragraph(f"Generated On: <b>{ist_now():%Y-%m-%d %H:%M} IST</b>", styles["normal"])],
         [Paragraph(f"Year basis: <b>{REPORT_YEAR_START:%Y-%m-%d}</b> to report date. Week basis: <b>Monday-Sunday</b>.", styles["normal"])],
         [Paragraph("2026 values use portal YTD where available; otherwise estimated from the current week.", styles["normal"])],
         [Paragraph("Weather: placeholder for irradiation, temperature, wind, and humidity.", styles["normal"])],
@@ -1304,13 +1313,13 @@ def generate_compact_pdf(
             [
                 compact_metric("Daily", f"{fmt(summary['daily_kwh'])} kWh", styles),
                 compact_metric("Weekly", f"{fmt(summary['weekly_kwh'])} kWh", styles),
-                compact_metric("Lifetime", f"{fmt(summary['total_mwh'])} MWh", styles),
+                compact_metric("Yearly", f"{fmt(summary['year_kwh'])} kWh", styles),
                 compact_metric("Alerts", str(summary["warning_plants"] + summary["fault_plants"]), styles),
             ],
             [
-                compact_metric("Avg/day", f"{fmt(summary['avg_daily_yield_per_kw'])}", styles),
-                compact_metric("2026/kW", f"{fmt(summary['year_yield_per_kw'])}", styles),
-                compact_metric("Best 2026/kW", f"{fmt(best['2026 Yield (kWh/kW)'])}", styles),
+                compact_metric("Lifetime", f"{fmt(summary['total_mwh'])} MWh", styles),
+                compact_metric("CUF", f"{fmt(summary['cuf_percent'])}%", styles),
+                compact_metric("Best CUF", f"{fmt(best['CUF (%)'])}%", styles),
                 compact_metric("Avg Yield", f"{fmt(df['Specific Yield (kWh/kWp)'].mean())}", styles),
             ],
         ],
@@ -1328,7 +1337,7 @@ def generate_compact_pdf(
     for row in brand_fmt.itertuples(index=False):
         brand_data.append([Paragraph(str(value), styles["small"]) for value in row])
     story.append(Paragraph("Brand-wise Summary", styles["h1"]))
-    story.append(_compact_table(brand_data, [23 * mm, 15 * mm, 25 * mm, 24 * mm, 25 * mm, 25 * mm, 26 * mm, 23 * mm, 24 * mm]))
+    story.append(_compact_table(brand_data, [25 * mm, 15 * mm, 30 * mm, 29 * mm, 30 * mm, 30 * mm, 30 * mm, 24 * mm]))
     story.append(Spacer(1, 4 * mm))
 
     performance_percentage = (
@@ -1339,7 +1348,7 @@ def generate_compact_pdf(
     best_rows = [
         [Paragraph("<b>Best Performing Plant</b>", styles["h2"])],
         [Paragraph(f"{best['Site Name']} | {best['Brand']} | {fmt(best['Plant Capacity (kW)'])} kW", styles["normal"])],
-        [Paragraph(f"Daily {fmt(best['Daily Generation (kWh)'])} kWh | 2026 {fmt(best['Year Generation (kWh)'])} kWh | Avg {fmt(best['Average Daily Yield (kWh/kW/day)'])} kWh/kW/day | 2026/kW {fmt(best['2026 Yield (kWh/kW)'])}", styles["normal"])],
+        [Paragraph(f"Daily {fmt(best['Daily Generation (kWh)'])} kWh | Yearly {fmt(best['Year Generation (kWh)'])} kWh | CUF {fmt(best['CUF (%)'])}%", styles["normal"])],
     ]
     best_table = Table(best_rows, colWidths=[248 * mm])
     best_table.setStyle(
@@ -1366,11 +1375,10 @@ def generate_compact_pdf(
             "Weekly Generation (kWh)",
             "Year Generation (kWh)",
             "Total Generation (MWh)",
-            "Average Daily Yield (kWh/kW/day)",
-            "2026 Yield (kWh/kW)",
+            "CUF (%)",
         ]
     ].copy()
-    table_df.columns = ["Brand", "Site", "Cap", "Status", "Daily", "Weekly", "2026", "Total", "Avg/day", "2026/kW"]
+    table_df.columns = ["Brand", "Site", "Cap", "Status", "Daily", "Weekly", "Yearly", "Total", "CUF"]
     if plant_report_links:
         linked_sites = []
         for original in df[["Brand", "Site Name"]].itertuples(index=False):
@@ -1383,12 +1391,12 @@ def generate_compact_pdf(
             else:
                 linked_sites.append(pdf_markup_escape(site))
         table_df["Site"] = linked_sites
-    for col in ["Cap", "Daily", "Weekly", "2026", "Total", "Avg/day", "2026/kW"]:
+    for col in ["Cap", "Daily", "Weekly", "Yearly", "Total", "CUF"]:
         table_df[col] = table_df[col].map(lambda value: fmt(value, 2))
     data = [[Paragraph(str(col), styles["small"]) for col in table_df.columns]]
     for row in table_df.itertuples(index=False):
         data.append([Paragraph(str(value), styles["small"]) for value in row])
-    plant_table = _compact_table(data, [17 * mm, 49 * mm, 17 * mm, 18 * mm, 20 * mm, 21 * mm, 21 * mm, 21 * mm, 21 * mm, 22 * mm])
+    plant_table = _compact_table(data, [17 * mm, 56 * mm, 17 * mm, 18 * mm, 21 * mm, 22 * mm, 24 * mm, 22 * mm, 18 * mm])
     plant_style = []
     for index, status in enumerate(table_df["Status"].tolist(), start=1):
         plant_style.append(("TEXTCOLOR", (3, index), (3, index), status_color(status)))
@@ -1412,14 +1420,14 @@ def generate_compact_pdf(
             "Brand",
             "Site Name",
             "Plant Capacity (kW)",
-            "Average Daily Yield (kWh/kW/day)",
-            "2026 Yield (kWh/kW)",
+            "Year Generation (kWh)",
+            "CUF (%)",
             "Daily Generation (kWh)",
         ]
     ].copy()
     top5_df.insert(0, "Rank", range(1, len(top5_df) + 1))
-    top5_df.columns = ["Rank", "Brand", "Site", "Cap", "Avg/day", "2026/kW", "Daily"]
-    for col in ["Cap", "Avg/day", "2026/kW", "Daily"]:
+    top5_df.columns = ["Rank", "Brand", "Site", "Cap", "Yearly", "CUF", "Daily"]
+    for col in ["Cap", "Yearly", "CUF", "Daily"]:
         top5_df[col] = top5_df[col].map(lambda value: fmt(value, 1))
     top_data = [[Paragraph(str(col), styles["small"]) for col in top5_df.columns]]
     for row in top5_df.itertuples(index=False):
@@ -1430,7 +1438,7 @@ def generate_compact_pdf(
     bottom = Table(
         [
             [
-                [Paragraph("Top 5 Plants by Yield per kW", styles["h2"]), _compact_table(top_data, [10 * mm, 20 * mm, 48 * mm, 17 * mm, 20 * mm, 20 * mm, 20 * mm])],
+                [Paragraph("Top 5 Plants by CUF", styles["h2"]), _compact_table(top_data, [10 * mm, 20 * mm, 48 * mm, 17 * mm, 24 * mm, 18 * mm, 18 * mm])],
                 [Paragraph("Recommendations", styles["h2"]), Paragraph(rec_text, styles["small"])],
             ]
         ],
@@ -1448,7 +1456,7 @@ def generate_compact_pdf(
 def output_pdf_name(output_dir: Path) -> Path:
     """Return the required dated report filename."""
 
-    return output_dir / f"Solar_Performance_Report_{dt.date.today():%Y%m%d}.pdf"
+    return output_dir / f"Solar_Performance_Report_{ist_today():%Y%m%d}.pdf"
 
 
 def save_clean_inputs(df: pd.DataFrame, output_dir: Path) -> None:
@@ -1478,13 +1486,13 @@ def pdf_markup_escape(value: str) -> str:
 def individual_report_dir(output_dir: Path) -> Path:
     """Return the dated folder for one-plant reports."""
 
-    return output_dir / "Individual Plant Reports" / f"{dt.date.today():%Y%m%d}"
+    return output_dir / "Individual Plant Reports" / f"{ist_today():%Y%m%d}"
 
 
 def individual_report_path(output_dir: Path, brand: str, site: str) -> Path:
     """Return the expected one-plant report PDF path."""
 
-    return individual_report_dir(output_dir) / f"{slugify_filename(brand)}_{slugify_filename(site)}_{dt.date.today():%Y%m%d}.pdf"
+    return individual_report_dir(output_dir) / f"{slugify_filename(brand)}_{slugify_filename(site)}_{ist_today():%Y%m%d}.pdf"
 
 
 def generate_individual_plant_reports(
@@ -1524,7 +1532,7 @@ def generate_individual_plant_reports(
                 [
                     logo_cell,
                     Paragraph(f"<b>{site}</b><br/>{brand} Solar Plant Performance", styles["title"]),
-                    Paragraph(f"Report Date<br/><b>{dt.date.today():%Y-%m-%d}</b>", styles["center"]),
+                    Paragraph(f"Report Date<br/><b>{ist_today():%Y-%m-%d}</b>", styles["center"]),
                 ]
             ],
             colWidths=[38 * mm, 168 * mm, 48 * mm],
@@ -1538,8 +1546,8 @@ def generate_individual_plant_reports(
             ("Weekly Generation", f"{fmt(row['Weekly Generation (kWh)'])} kWh"),
             ("2026 Generation", f"{fmt(row['Year Generation (kWh)'])} kWh"),
             ("Total Generation", f"{fmt(row['Total Generation (MWh)'])} MWh"),
-            ("2026 Yield/kW", f"{fmt(row['2026 Yield (kWh/kW)'])} kWh/kW"),
-            ("Avg/day", f"{fmt(row['Average Daily Yield (kWh/kW/day)'])} kWh/kW/day"),
+            ("Yearly Generation", f"{fmt(row['Year Generation (kWh)'])} kWh"),
+            ("CUF", f"{fmt(row['CUF (%)'])}%"),
             ("Specific Yield Today", f"{fmt(row['Specific Yield (kWh/kWp)'])} kWh/kW"),
             ("CUF Today", f"{fmt(row['CUF (%)'])}%"),
             ("PR Today", f"{fmt(row['PR (%)'])}%"),

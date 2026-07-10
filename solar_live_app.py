@@ -26,6 +26,7 @@ import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 
@@ -51,7 +52,8 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-10-report-viewer-v13"
+APP_VERSION = "2026-07-11-plant-status-colors-v15"
+IST = ZoneInfo("Asia/Kolkata")
 PLANT_COLUMNS = [
     "App ID",
     "Brand",
@@ -85,6 +87,14 @@ UPLOAD_GENERATION_FILES = {
 
 def plant_key(brand: Any, site: Any) -> str:
     return f"{str(brand).strip()}::{str(site).strip()}"
+
+
+def ist_now() -> dt.datetime:
+    return dt.datetime.now(IST)
+
+
+def ist_today() -> dt.date:
+    return ist_now().date()
 
 
 def parse_iso_date(value: Any) -> dt.date | None:
@@ -262,7 +272,7 @@ class SolarLiveApp:
 
     def plant_payload(self, user: dict[str, Any] | None = None) -> list[dict[str, Any]]:
         df = self.plant_dataframe()
-        today = dt.date.today().isoformat()
+        today = ist_today().isoformat()
         rows = []
         for row in df.to_dict(orient="records"):
             key = plant_key(row["Brand"], row["Site Name"])
@@ -282,7 +292,7 @@ class SolarLiveApp:
                     "weekly": float(row["Weekly Generation (kWh)"] or 0),
                     "year": float(row["Year Generation (kWh)"] or 0),
                     "total": float(row["Total Generation (MWh)"] or 0),
-                    "yield2026": float(row["2026 Yield (kWh/kW)"] or 0),
+                    "cuf": float(row.get("CUF (%)") or 0),
                     "avgDay": float(row["Average Daily Yield (kWh/kW/day)"] or 0),
                     "source": row.get("Year Generation Source", ""),
                     "timestamp": timestamp,
@@ -317,7 +327,7 @@ class SolarLiveApp:
             for row in existing
             if row.get("plantKey") and row.get("date")
         }
-        today = dt.date.today().isoformat()
+        today = ist_today().isoformat()
         count = 0
         for plant in current:
             date_text = plant.get("dataDate") or today
@@ -333,9 +343,9 @@ class SolarLiveApp:
                 "weekly": plant.get("weekly", 0),
                 "year": plant.get("year", 0),
                 "total": plant.get("total", 0),
-                "yield2026": plant.get("yield2026", 0),
+                "cuf": plant.get("cuf", 0),
                 "timestamp": plant.get("timestamp", ""),
-                "recordedAt": dt.datetime.now().replace(microsecond=0).isoformat(),
+                "recordedAt": ist_now().replace(microsecond=0).isoformat(),
             }
             count += 1
 
@@ -389,7 +399,7 @@ class SolarLiveApp:
         }
 
     def run_step(self, label: str, command: list[str], env: dict[str, str]) -> dict[str, Any]:
-        started = dt.datetime.now()
+        started = ist_now()
         try:
             result = subprocess.run(
                 command,
@@ -404,7 +414,7 @@ class SolarLiveApp:
                 "label": label,
                 "ok": result.returncode == 0,
                 "started": started.isoformat(timespec="seconds"),
-                "finished": dt.datetime.now().isoformat(timespec="seconds"),
+                "finished": ist_now().isoformat(timespec="seconds"),
                 "message": (result.stdout or result.stderr or "").strip()[-1200:],
             }
         except Exception as exc:
@@ -412,7 +422,7 @@ class SolarLiveApp:
                 "label": label,
                 "ok": False,
                 "started": started.isoformat(timespec="seconds"),
-                "finished": dt.datetime.now().isoformat(timespec="seconds"),
+                "finished": ist_now().isoformat(timespec="seconds"),
                 "message": str(exc),
             }
 
@@ -450,12 +460,12 @@ class SolarLiveApp:
 
         filename = UPLOAD_GENERATION_FILES[key]
         target = PROJECT_DIR / filename
-        payload.setdefault("uploaded_at", dt.datetime.now().replace(microsecond=0).isoformat())
+        payload.setdefault("uploaded_at", ist_now().replace(microsecond=0).isoformat())
         temp = target.with_suffix(target.suffix + ".tmp")
         temp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
         temp.replace(target)
 
-        started = dt.datetime.now().isoformat(timespec="seconds")
+        started = ist_now().isoformat(timespec="seconds")
         self.last_refresh = {
             "started": started,
             "finished": None,
@@ -465,7 +475,7 @@ class SolarLiveApp:
         self.append_refresh_step(self.record_history_snapshot())
         for step in self.rebuild_outputs():
             self.append_refresh_step(step)
-        self.last_refresh["finished"] = dt.datetime.now().isoformat(timespec="seconds")
+        self.last_refresh["finished"] = ist_now().isoformat(timespec="seconds")
         self.last_refresh["running"] = False
         return {"ok": True, "file": filename, "systems": len(payload["systems"]), "last_refresh": self.last_refresh}
 
@@ -473,7 +483,7 @@ class SolarLiveApp:
         self.last_refresh.setdefault("steps", []).append(step)
 
     def file_status_step(self, label: str, path: Path, ok_message: str, missing_message: str) -> dict[str, Any]:
-        now = dt.datetime.now().isoformat(timespec="seconds")
+        now = ist_now().isoformat(timespec="seconds")
         return {
             "label": label,
             "ok": path.exists(),
@@ -484,7 +494,7 @@ class SolarLiveApp:
 
     def refresh(self) -> dict[str, Any]:
         with self.refresh_lock:
-            started = dt.datetime.now()
+            started = ist_now()
             self.last_refresh = {
                 "started": started.isoformat(timespec="seconds"),
                 "finished": None,
@@ -542,7 +552,7 @@ class SolarLiveApp:
             for step in self.rebuild_outputs(env):
                 self.append_refresh_step(step)
 
-            self.last_refresh["finished"] = dt.datetime.now().isoformat(timespec="seconds")
+            self.last_refresh["finished"] = ist_now().isoformat(timespec="seconds")
             self.last_refresh["running"] = False
             return self.last_refresh
 
@@ -550,7 +560,7 @@ class SolarLiveApp:
         if self.refresh_lock.locked():
             return {**self.last_refresh, "accepted": False, "message": "Refresh already running"}
         self.last_refresh = {
-            "started": dt.datetime.now().isoformat(timespec="seconds"),
+            "started": ist_now().isoformat(timespec="seconds"),
             "finished": None,
             "running": True,
             "steps": [{"label": "Refresh queued", "ok": True, "message": "Starting background refresh"}],
@@ -575,7 +585,7 @@ class SolarLiveApp:
             return {"ok": False, "message": "No plants selected"}
         report_dir = self.output_dir / "Selected Plant Reports"
         report_dir.mkdir(parents=True, exist_ok=True)
-        stamp = dt.datetime.now().strftime("%Y%m%d_%H%M")
+        stamp = ist_now().strftime("%Y%m%d_%H%M")
         if len(selected) == len(df):
             name = f"Solar_Report_All_Plants_{stamp}.pdf"
         elif len(selected) == 1:
@@ -611,7 +621,7 @@ class SolarLiveApp:
                     "name": path.name,
                     "url": f"/view-report?file={urllib.parse.quote(relative, safe='')}",
                     "download_url": f"/reports/{urllib.parse.quote(relative)}",
-                    "modified": dt.datetime.fromtimestamp(path.stat().st_mtime).isoformat(timespec="seconds"),
+                    "modified": dt.datetime.fromtimestamp(path.stat().st_mtime, IST).isoformat(timespec="seconds"),
                     "size_kb": round(path.stat().st_size / 1024, 1),
                 }
             )
@@ -621,7 +631,7 @@ class SolarLiveApp:
     def maybe_auto_run(self) -> None:
         while True:
             try:
-                now = dt.datetime.now()
+                now = ist_now()
                 day = self.config.get("auto_report_day", "Sunday")
                 time_text = self.config.get("auto_report_time", "20:00")
                 key = f"{now.date()}-{time_text}"
@@ -787,7 +797,7 @@ class Handler(BaseHTTPRequestHandler):
     def handle_authenticated_get(self, parsed: urllib.parse.ParseResult, user: dict[str, Any] | None) -> None:
         assert APP is not None
         if parsed.path == "/api/plants":
-            self.send_json({"plants": APP.plant_payload(user), "today": dt.date.today().isoformat()})
+            self.send_json({"plants": APP.plant_payload(user), "today": ist_today().isoformat()})
         elif parsed.path == "/api/history":
             query = urllib.parse.parse_qs(parsed.query)
             key = (query.get("plant_key") or [""])[0]
@@ -1036,7 +1046,7 @@ section.panel tr:not(.open) td:not(:first-child):not(:nth-child(3)){display:none
 section.panel tr:not(.open) td:first-child{display:none}
 section.panel tr td:nth-child(3)::after{content:'+';float:right;color:var(--blue);font-weight:900}
 section.panel tr.open td:nth-child(3)::after{content:'-'}
-.plant-line{display:flex;align-items:center;justify-content:space-between;gap:8px}.plant-line b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.plant-daily{display:inline;color:var(--green);font-size:12px;font-weight:900;white-space:nowrap;margin-right:18px}
+.plant-line{display:flex;align-items:center;justify-content:space-between;gap:8px}.plant-line b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.plant-daily{display:inline;font-size:12px;font-weight:900;white-space:nowrap;margin-right:18px}.plant-line.online b{color:#064E3B}.plant-line.online .plant-daily{color:#16A34A}.plant-line.offline b,.plant-line.offline .plant-daily{color:#111827}
 .history-picker{display:grid;grid-template-columns:1fr;gap:8px;margin-top:8px}.picked{border:1px solid var(--line);border-radius:6px;background:#fbfdff;padding:9px;margin-top:8px;font-size:12px}.picked b{font-size:15px}
 .history-scroll{max-height:220px}.history-scroll table{display:table}.history-scroll thead{display:table-header-group}.history-scroll tbody{display:table-row-group}.history-scroll tr{display:table-row;border:0;box-shadow:none;margin:0;padding:0}.history-scroll td,.history-scroll th{display:table-cell;width:auto;padding:7px;font-size:11px}.history-scroll td::before{content:none}
 .report-item{font-size:12px}.log{max-height:140px}.plant-title{font-size:18px}
@@ -1061,7 +1071,7 @@ section.panel tr.open td:nth-child(3)::after{content:'-'}
   <div class="split">
     <section class="panel">
       <h2>Plants</h2>
-      <table><thead><tr><th class="checkcell"></th><th>Brand</th><th>Plant</th><th>Status</th><th>Date</th><th>Daily</th><th>Weekly</th><th>2026/kW</th></tr></thead><tbody id="rows"></tbody></table>
+      <table><thead><tr><th class="checkcell"></th><th>Brand</th><th>Plant</th><th>Status</th><th>Date</th><th>Daily</th><th>Weekly</th><th>Yearly</th><th>CUF</th></tr></thead><tbody id="rows"></tbody></table>
     </section>
     <aside class="panel">
       <details class="fold mobile-fold" open>
@@ -1110,13 +1120,16 @@ const autoTimeEl=document.querySelector('#autoTime');
 const reportResultEl=document.querySelector('#reportResult');
 const reportListEl=document.querySelector('#reportList');
 const logEl=document.querySelector('#log');
-const todayText=()=>new Date().toISOString().slice(0,10);
+function istParts(){const values={};new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date()).forEach(p=>{values[p.type]=p.value});return values}
+function todayText(){const p=istParts();return `${p.year}-${p.month}-${p.day}`}
+function istNowText(){const p=istParts();return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute} IST`}
 function f(v,d=2){return Number(v||0).toLocaleString('en-IN',{minimumFractionDigits:d,maximumFractionDigits:d})}
 function cls(s){s=String(s||'').toLowerCase();return (s.includes('online')||s.includes('normal'))?'online':'offline'}
 function fresh(p){return p.dataDate===todayText()}
 function staleNote(p){return !fresh(p)&&String(p.brand||'').toLowerCase()==='solis'?'Solis data is from the last saved Mac capture. Refresh Solis on the Mac to make this current.':''}
 function uniq(a){return [...new Set(a)].filter(Boolean).sort()}
 function h(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function weightedCuf(rows){const cap=rows.reduce((a,p)=>a+Number(p.capacity||0),0),year=rows.reduce((a,p)=>a+Number(p.year||0),0);const p=istParts();const days=Math.max(1,Math.floor((Date.UTC(Number(p.year),Number(p.month)-1,Number(p.day))-Date.UTC(2026,0,1))/86400000)+1);return cap&&year?year/(cap*24*days)*100:0}
 async function api(path,opt){const r=await fetch(path,opt);const text=await r.text();let data={};try{data=text?JSON.parse(text):{};}catch(e){throw new Error(`${path} returned ${r.status}: ${text.slice(0,240)||'empty response'}`)}if(!r.ok){throw new Error(data.error||`${path} returned ${r.status}`)}return data}
 function filtered(){const q=searchInput.value.toLowerCase(), b=brandFilter.value, s=statusFilter.value;return plants.filter(p=>(b==='all'||p.brand===b)&&(s==='all'||p.status===s)&&(`${p.site} ${p.brand}`.toLowerCase().includes(q)))}
 function selectedRows(){return plants.filter(p=>selected.has(p.id))}
@@ -1132,16 +1145,16 @@ historyTable('All Weekly',weekly,[['Week','week'],['Daily Sum','dailySum',1],['W
 historyTable('All Yearly',yearly,[['Year','year'],['Year kWh','yearKwh',1],['Latest Date','lastDate']],false)
 ].join('')}
 async function loadHistory(active){const key=active?.plantKey||'';activeHistoryKey=key;const box=document.querySelector('#historyBox');if(!box||!key)return;box.innerHTML='<div class="empty-history">Loading previous data...</div>';try{const data=await api('/api/history?plant_key='+encodeURIComponent(key));if(activeHistoryKey===key){box.innerHTML=renderHistory(data);wireHistoryPickers(data)}}catch(error){if(activeHistoryKey===key)box.innerHTML='<div class="empty-history">History failed: '+h(error.message)+'</div>';}}
-function renderDetail(active){if(!active){detailEl.innerHTML='<div class="empty-history">Tap a plant name to view details.</div>';return}detailEl.innerHTML=`<div class="plant-title">${h(active.site)}</div><p>${h(active.brand)} · <span class="status ${cls(active.status)}">${h(active.status)}</span></p>${staleNote(active)?`<p class="stale">${h(staleNote(active))}</p>`:''}<div class="details"><div class="detail"><span>Data Date</span><b>${h(active.dataDate||'Unknown')}</b></div><div class="detail"><span>Capacity</span><b>${f(active.capacity)} kW</b></div><div class="detail"><span>Daily</span><b>${f(active.daily)} kWh</b></div><div class="detail"><span>Weekly</span><b>${f(active.weekly)} kWh</b></div><div class="detail"><span>2026/kW</span><b>${f(active.yield2026)}</b></div><div class="detail"><span>Total</span><b>${f(active.total)} MWh</b></div></div><div id="historyBox" class="history-block"></div>`;loadHistory(active)}
-function render(){const rows=filtered(), chosen=selectedRows();let active=plants.find(p=>p.id===activePlantId);if(active && !rows.some(p=>p.id===active.id)){activePlantId=null;active=null}cardsEl.innerHTML=[['Visible',rows.length],['Selected',chosen.length],['Daily',f(rows.reduce((a,p)=>a+p.daily,0))+' kWh'],['Weekly',f(rows.reduce((a,p)=>a+p.weekly,0))+' kWh'],['Capacity',f(rows.reduce((a,p)=>a+p.capacity,0))+' kW'],['Fresh',rows.filter(fresh).length+'/'+rows.length]].map(x=>`<div class="card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join('');
-rowsEl.innerHTML=rows.map(p=>`<tr data-id="${p.id}" style="cursor:pointer"><td data-label=""><input type="checkbox" data-id="${p.id}" ${selected.has(p.id)?'checked':''}></td><td data-label="Brand">${h(p.brand)}</td><td data-label="Plant"><span class="plant-line"><b>${h(p.site)}</b><span class="plant-daily">${f(p.daily)} kWh</span></span></td><td data-label="Status" class="status ${cls(p.status)}">${h(p.status)}</td><td data-label="Date" title="${h(staleNote(p))}">${h(p.dataDate||'')} <span class="pill ${fresh(p)?'fresh':'stale'}">${fresh(p)?'TODAY':'STALE'}</span></td><td data-label="Daily">${f(p.daily)}</td><td data-label="Weekly">${f(p.weekly)}</td><td data-label="2026/kW">${f(p.yield2026)}</td></tr>`).join('');
+function renderDetail(active){if(!active){detailEl.innerHTML='<div class="empty-history">Tap a plant name to view details.</div>';return}detailEl.innerHTML=`<div class="plant-title">${h(active.site)}</div><p>${h(active.brand)} · <span class="status ${cls(active.status)}">${h(active.status)}</span></p>${staleNote(active)?`<p class="stale">${h(staleNote(active))}</p>`:''}<div class="details"><div class="detail"><span>Data Date</span><b>${h(active.dataDate||'Unknown')}</b></div><div class="detail"><span>Capacity</span><b>${f(active.capacity)} kW</b></div><div class="detail"><span>Daily</span><b>${f(active.daily)} kWh</b></div><div class="detail"><span>Weekly</span><b>${f(active.weekly)} kWh</b></div><div class="detail"><span>Yearly</span><b>${f(active.year)} kWh</b></div><div class="detail"><span>CUF</span><b>${f(active.cuf)}%</b></div><div class="detail"><span>Total</span><b>${f(active.total)} MWh</b></div></div><div id="historyBox" class="history-block"></div>`;loadHistory(active)}
+function render(){const rows=filtered(), chosen=selectedRows();let active=plants.find(p=>p.id===activePlantId);if(active && !rows.some(p=>p.id===active.id)){activePlantId=null;active=null}cardsEl.innerHTML=[['Visible',rows.length],['Selected',chosen.length],['Daily',f(rows.reduce((a,p)=>a+p.daily,0))+' kWh'],['Weekly',f(rows.reduce((a,p)=>a+p.weekly,0))+' kWh'],['Yearly',f(rows.reduce((a,p)=>a+p.year,0))+' kWh'],['CUF',f(weightedCuf(rows))+' %']].map(x=>`<div class="card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join('');
+rowsEl.innerHTML=rows.map(p=>`<tr data-id="${p.id}" style="cursor:pointer"><td data-label=""><input type="checkbox" data-id="${p.id}" ${selected.has(p.id)?'checked':''}></td><td data-label="Brand">${h(p.brand)}</td><td data-label="Plant"><span class="plant-line ${cls(p.status)}"><b>${h(p.site)}</b><span class="plant-daily">${f(p.daily)} kWh</span></span></td><td data-label="Status" class="status ${cls(p.status)}">${h(p.status)}</td><td data-label="Date" title="${h(staleNote(p))}">${h(p.dataDate||'')} <span class="pill ${fresh(p)?'fresh':'stale'}">${fresh(p)?'TODAY':'STALE'}</span></td><td data-label="Daily">${f(p.daily)}</td><td data-label="Weekly">${f(p.weekly)}</td><td data-label="Yearly">${f(p.year)}</td><td data-label="CUF">${f(p.cuf)}%</td></tr>`).join('');
 rowsEl.querySelectorAll('tr[data-id]').forEach(tr=>{if(tr.dataset.id===activePlantId)tr.classList.add('open');tr.onclick=()=>{activePlantId=tr.dataset.id===activePlantId?null:tr.dataset.id;render()}});
 rowsEl.querySelectorAll('input[type=checkbox][data-id]').forEach(cb=>{cb.onclick=e=>e.stopPropagation();cb.onchange=()=>{cb.checked?selected.add(cb.dataset.id):selected.delete(cb.dataset.id);render()}});
 renderDetail(active);
 }
 function refreshText(r){const lines=(r.steps||[]).map(s=>`${s.ok?'OK':'SKIP'} - ${s.label}: ${s.message||''}`);if(r.running)lines.push('RUNNING - Refresh still in progress...');if(r.finished)lines.push('DONE - Finished '+r.finished);return lines.join('\\n')||'Ready.'}
 async function loadReports(){try{const r=await api('/api/reports');reportListEl.innerHTML=(r.reports||[]).length?(r.reports||[]).map(x=>`<a class="report-item" href="${x.url}">${h(x.name)}<span>${h(x.modified)} · ${h(x.size_kb)} KB</span></a>`).join(''):'No reports generated yet.';}catch(error){reportListEl.textContent='Could not load reports: '+error.message;}}
-async function load(){const p=await api('/api/plants');plants=p.plants;selected=new Set();renderFilters();render();const s=await api('/api/status');statusData=s;dateLineEl.textContent='Today '+todayText();versionLineEl.textContent='Build: '+(s.app_version||'old');mobileLineEl.textContent='iPhone: '+s.mobile_url;autoDayEl.value=s.config.auto_report_day;autoTimeEl.value=s.config.auto_report_time;logEl.textContent=refreshText(s.last_refresh||{});loadReports();}
+async function load(){const p=await api('/api/plants');plants=p.plants;selected=new Set();renderFilters();render();const s=await api('/api/status');statusData=s;dateLineEl.textContent=istNowText();versionLineEl.textContent='Build: '+(s.app_version||'old');mobileLineEl.textContent='iPhone: '+s.mobile_url;autoDayEl.value=s.config.auto_report_day;autoTimeEl.value=s.config.auto_report_time;logEl.textContent=refreshText(s.last_refresh||{});loadReports();}
 async function pollRefresh(){for(let i=0;i<90;i++){const s=await api('/api/status');logEl.textContent=refreshText(s.last_refresh||{});await load();if(!s.last_refresh?.running)return;await new Promise(r=>setTimeout(r,3000));}}
 refreshBtn.onclick=async()=>{logEl.textContent='Starting background refresh...';const r=await api('/api/refresh',{method:'POST'});logEl.textContent=refreshText(r);pollRefresh().catch(error=>{logEl.textContent='Refresh status failed: '+error;});}
 async function generateReport(ids,label,all=false){reportResultEl.textContent='Generating '+label+'...';const r=await api('/api/report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plant_ids:ids,all_plants:all})});reportResultEl.innerHTML=r.ok?`Saved ${r.count} plant report.<br><a class="download-btn" href="${r.viewer_url}">Open Report</a>`:'Failed: '+h(r.message);if(r.ok)loadReports();}

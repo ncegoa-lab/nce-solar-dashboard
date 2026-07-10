@@ -9,11 +9,21 @@ import datetime as dt
 import json
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from solar_performance_report_app import DEFAULT_LOGO, load_data
 
 
 DEFAULT_OUTPUT_DIR = Path("/Users/sushil/Library/Mobile Documents/com~apple~CloudDocs/Weekly Solar Plant Report")
+IST = ZoneInfo("Asia/Kolkata")
+
+
+def ist_now() -> dt.datetime:
+    return dt.datetime.now(IST)
+
+
+def ist_today() -> dt.date:
+    return ist_now().date()
 
 
 def encode_logo(path: Path | None) -> str:
@@ -66,15 +76,15 @@ def plant_rows(input_path: str | None = None) -> list[dict[str, Any]]:
 
 def dashboard_html(plants: list[dict[str, Any]], logo_data_uri: str) -> str:
     payload = json.dumps(plants, ensure_ascii=False, separators=(",", ":"))
-    generated = dt.datetime.now().strftime("%Y-%m-%d %H:%M")
-    report_date = dt.date.today().strftime("%Y-%m-%d")
+    generated = ist_now().strftime("%Y-%m-%d %H:%M IST")
+    report_date = ist_today().strftime("%Y-%m-%d")
     return HTML_TEMPLATE.replace("__PLANT_DATA__", payload).replace("__LOGO__", logo_data_uri).replace("__GENERATED__", generated).replace("__REPORT_DATE__", report_date)
 
 
 def build(input_path: str | None, output_dir: Path, logo_path: Path | None) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
     html = dashboard_html(plant_rows(input_path), encode_logo(logo_path))
-    dated = output_dir / f"Solar_Dashboard_App_{dt.date.today():%Y%m%d}.html"
+    dated = output_dir / f"Solar_Dashboard_App_{ist_today():%Y%m%d}.html"
     stable = output_dir / "Solar_Dashboard_App.html"
     dated.write_text(html, encoding="utf-8")
     stable.write_text(html, encoding="utf-8")
@@ -210,6 +220,12 @@ HTML_TEMPLATE = r"""<!doctype html>
     .status.offline { color: var(--red); }
     .status.warning { color: var(--orange); }
     .status.fault { color: var(--yellow); }
+    .plant-name { font-weight: 800; }
+    .plant-name.online { color: #064E3B; }
+    .plant-name.offline { color: #111827; }
+    .plant-today { display: block; margin-top: 3px; font-size: 11px; font-weight: 800; }
+    .plant-today.online { color: #16A34A; }
+    .plant-today.offline { color: #111827; }
     .plant-card .name { font-size: 22px; font-weight: 800; margin-bottom: 3px; }
     .plant-card .brand { color: var(--muted); font-size: 13px; margin-bottom: 14px; }
     .detail-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
@@ -315,7 +331,7 @@ HTML_TEMPLATE = r"""<!doctype html>
           <table>
             <thead>
               <tr>
-                <th>Brand</th><th>Plant</th><th>Status</th><th>Data Date</th><th>Cap kW</th><th>Daily</th><th>Weekly</th><th>2026/kW</th>
+                <th>Brand</th><th>Plant</th><th>Status</th><th>Data Date</th><th>Cap kW</th><th>Daily</th><th>Weekly</th><th>Yearly</th><th>CUF</th>
               </tr>
             </thead>
             <tbody id="plantRows"></tbody>
@@ -324,7 +340,7 @@ HTML_TEMPLATE = r"""<!doctype html>
         <aside>
           <section class="section plant-card" id="plantCard"></section>
           <section class="section charts">
-            <h2>Top Yield Plants</h2>
+            <h2>Top CUF Plants</h2>
             <div id="yieldBars"></div>
           </section>
         </aside>
@@ -404,7 +420,8 @@ HTML_TEMPLATE = r"""<!doctype html>
         ["Capacity", `${fmt(capacity)} kW`],
         ["Daily", `${fmt(sum(rows, "daily"))} kWh`],
         ["Weekly", `${fmt(sum(rows, "weekly"))} kWh`],
-        ["2026/kW", fmt(capacity ? year / capacity : 0)]
+        ["Yearly", `${fmt(year)} kWh`],
+        ["CUF", `${fmt(capacity ? rows.reduce((total, p) => total + Number(p.cuf || 0) * Number(p.capacity || 0), 0) / capacity : 0)}%`]
       ];
       kpis.innerHTML = data.map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join("");
     }
@@ -412,13 +429,14 @@ HTML_TEMPLATE = r"""<!doctype html>
       plantRows.innerHTML = rows.map(p => `
         <tr class="${p.id === selectedId ? "active" : ""}" data-id="${p.id}">
           <td>${p.brand}</td>
-          <td><strong>${p.site}</strong></td>
+          <td><span class="plant-name ${statusClass(p.status)}">${p.site}</span><span class="plant-today ${statusClass(p.status)}">${fmt(p.daily)} kWh</span></td>
           <td class="status ${statusClass(p.status)}">${p.status}</td>
           <td>${p.dataDate || ""} ${freshnessBadge(p)}</td>
           <td>${fmt(p.capacity)}</td>
           <td>${fmt(p.daily)}</td>
           <td>${fmt(p.weekly)}</td>
-          <td>${fmt(p.yield2026)}</td>
+          <td>${fmt(p.year)}</td>
+          <td>${fmt(p.cuf)}%</td>
         </tr>`).join("");
       plantRows.querySelectorAll("tr").forEach(row => {
         row.addEventListener("click", () => {
@@ -437,20 +455,21 @@ HTML_TEMPLATE = r"""<!doctype html>
           <div class="detail"><span>Data Date</span><strong>${p.dataDate || "Unknown"}</strong></div>
           <div class="detail"><span>Daily</span><strong>${fmt(p.daily)} kWh</strong></div>
           <div class="detail"><span>Weekly</span><strong>${fmt(p.weekly)} kWh</strong></div>
-          <div class="detail"><span>2026/kW</span><strong>${fmt(p.yield2026)}</strong></div>
+          <div class="detail"><span>Yearly</span><strong>${fmt(p.year)} kWh</strong></div>
+          <div class="detail"><span>CUF</span><strong>${fmt(p.cuf)}%</strong></div>
           <div class="detail"><span>Total</span><strong>${fmt(p.total)} MWh</strong></div>
           <div class="detail"><span>Avg/day</span><strong>${fmt(p.avgDay)}</strong></div>
         </div>
         <div class="note">2026 source: ${p.source || "Not available"}</div>`;
     }
     function renderBars(rows) {
-      const top = [...rows].sort((a, b) => b.yield2026 - a.yield2026).slice(0, 8);
-      const max = Math.max(1, ...top.map(p => p.yield2026));
+      const top = [...rows].sort((a, b) => b.cuf - a.cuf).slice(0, 8);
+      const max = Math.max(1, ...top.map(p => p.cuf));
       yieldBars.innerHTML = top.map(p => `
         <div class="bar-row">
           <div>${p.site}</div>
-          <div class="bar-track"><div class="bar" style="width:${Math.max(2, p.yield2026 / max * 100)}%"></div></div>
-          <strong>${fmt(p.yield2026, 1)}</strong>
+          <div class="bar-track"><div class="bar" style="width:${Math.max(2, p.cuf / max * 100)}%"></div></div>
+          <strong>${fmt(p.cuf, 1)}%</strong>
         </div>`).join("");
     }
     function renderCustomer(p) {
@@ -469,7 +488,7 @@ HTML_TEMPLATE = r"""<!doctype html>
           <div class="detail"><span>Daily Generation</span><strong>${fmt(p.daily)} kWh</strong></div>
           <div class="detail"><span>Weekly Generation</span><strong>${fmt(p.weekly)} kWh</strong></div>
           <div class="detail"><span>2026 Generation</span><strong>${fmt(p.year)} kWh</strong></div>
-          <div class="detail"><span>2026 Yield per kW</span><strong>${fmt(p.yield2026)}</strong></div>
+          <div class="detail"><span>CUF</span><strong>${fmt(p.cuf)}%</strong></div>
           <div class="detail"><span>Total Generation</span><strong>${fmt(p.total)} MWh</strong></div>
           <div class="detail"><span>Average per Day</span><strong>${fmt(p.avgDay)} kWh/kW/day</strong></div>
         </div>

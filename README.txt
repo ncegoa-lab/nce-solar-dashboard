@@ -1,26 +1,12 @@
-Upload these files to the root of the GitHub repository:
+NCE Solar Dashboard update: plant status colors
 
-- solar_live_app.py
-- solar_users.json
-- solar_generation_history.json
-- upload_generation_to_render.py
-- manage_solar_users.py
+Upload these files to the GitHub repo root, replacing the existing files.
 
-Keep these files on the Mac only:
-- Reset App Login Password.command
-- Upload Fresh Solis To Render.command
+After Render redeploys, check the header build text:
+Build: 2026-07-11-plant-status-colors-v15
 
-What changed:
-- Selected Report now generates only ticked plants.
-- No plants are ticked by default.
-- All Plants Report is separate and explicit.
-- Plant Report uses the tapped/open plant.
-- PDF reports open in an app viewer with:
-  - Back to App
-  - Download
-  - Share
-  - Print
-
-After Render redeploys, top blue bar should show:
-
-Build: 2026-07-10-report-viewer-v13
+Changes:
+- Offline plant name and today generation text are black.
+- Online plant name is dark green.
+- Online today generation text is green.
+- Keeps previous IST, Yearly, and CUF changes.
