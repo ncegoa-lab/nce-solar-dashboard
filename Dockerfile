@@ -18,4 +18,4 @@ COPY . .
 
 EXPOSE 8765
 
-CMD ["python", "solar_live_app.py", "--host", "0.0.0.0", "--port", "8765", "--no-browser"]
+CMD ["sh", "-c", "python solar_live_app.py --host 0.0.0.0 --port ${PORT:-8765} --no-browser"]

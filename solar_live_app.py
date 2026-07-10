@@ -50,6 +50,21 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
+PLANT_COLUMNS = [
+    "App ID",
+    "Brand",
+    "Site Name",
+    "Plant Capacity (kW)",
+    "Current Status",
+    "Daily Generation (kWh)",
+    "Weekly Generation (kWh)",
+    "Year Generation (kWh)",
+    "Total Generation (MWh)",
+    "2026 Yield (kWh/kW)",
+    "Average Daily Yield (kWh/kW/day)",
+    "Year Generation Source",
+    "Timestamp",
+]
 AUTH_USER = os.environ.get("NCE_APP_USER") or os.environ.get("SOLAR_APP_USER") or "admin"
 AUTH_PASSWORD = os.environ.get("NCE_APP_PASSWORD") or os.environ.get("SOLAR_APP_PASSWORD") or ""
 SESSION_COOKIE = "nce_solar_session"
@@ -216,7 +231,10 @@ class SolarLiveApp:
         return Path(self.config.get("output_dir") or DEFAULT_OUTPUT_DIR)
 
     def plant_dataframe(self) -> pd.DataFrame:
-        df = load_data(current_project=True)
+        try:
+            df = load_data(current_project=True)
+        except Exception:
+            return pd.DataFrame(columns=PLANT_COLUMNS)
         df = df.sort_values(["Brand", "Site Name"]).reset_index(drop=True)
         df.insert(0, "App ID", [f"plant_{index}" for index in range(len(df))])
         return df
@@ -444,35 +462,50 @@ class Handler(BaseHTTPRequestHandler):
             return {}
         return json.loads(self.rfile.read(length).decode("utf-8"))
 
+    def send_exception(self, exc: Exception) -> None:
+        status = 500
+        if self.path.startswith("/api/"):
+            self.send_json({"error": str(exc), "type": exc.__class__.__name__}, status)
+            return
+        body = f"Server error: {exc}".encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     def do_GET(self) -> None:
-        assert APP is not None
-        parsed = urllib.parse.urlparse(self.path)
-        if parsed.path == "/healthz":
-            self.send_json({"ok": True})
-        elif parsed.path == "/login":
-            self.send_login_page()
-        elif parsed.path == "/logout":
-            self.send_response(302)
-            self.send_header("Set-Cookie", f"{SESSION_COOKIE}=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax")
-            self.send_header("Location", "/login")
-            self.end_headers()
-        elif parsed.path == "/":
-            user = self.require_auth(html=True)
-            if load_users() and not user:
-                return
-            body = LIVE_HTML.replace("__USER__", (user or {}).get("username", "Local")).encode("utf-8")
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html; charset=utf-8")
-            self.send_header("Content-Length", str(len(body)))
-            self.end_headers()
-            self.wfile.write(body)
-        elif parsed.path.startswith("/api/") or parsed.path.startswith("/reports/"):
-            user = self.require_auth()
-            if load_users() and not user:
-                return
-            self.handle_authenticated_get(parsed, user)
-        else:
-            self.send_json({"error": "Not found"}, 404)
+        try:
+            assert APP is not None
+            parsed = urllib.parse.urlparse(self.path)
+            if parsed.path == "/healthz":
+                self.send_json({"ok": True})
+            elif parsed.path == "/login":
+                self.send_login_page()
+            elif parsed.path == "/logout":
+                self.send_response(302)
+                self.send_header("Set-Cookie", f"{SESSION_COOKIE}=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax")
+                self.send_header("Location", "/login")
+                self.end_headers()
+            elif parsed.path == "/":
+                user = self.require_auth(html=True)
+                if load_users() and not user:
+                    return
+                body = LIVE_HTML.replace("__USER__", (user or {}).get("username", "Local")).encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+            elif parsed.path.startswith("/api/") or parsed.path.startswith("/reports/"):
+                user = self.require_auth()
+                if load_users() and not user:
+                    return
+                self.handle_authenticated_get(parsed, user)
+            else:
+                self.send_json({"error": "Not found"}, 404)
+        except Exception as exc:
+            self.send_exception(exc)
 
     def handle_authenticated_get(self, parsed: urllib.parse.ParseResult, user: dict[str, Any] | None) -> None:
         assert APP is not None
@@ -511,46 +544,49 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json({"error": "Not found"}, 404)
 
     def do_POST(self) -> None:
-        assert APP is not None
-        parsed = urllib.parse.urlparse(self.path)
-        if parsed.path == "/login":
-            raw = self.rfile.read(int(self.headers.get("Content-Length") or 0)).decode("utf-8")
-            form = urllib.parse.parse_qs(raw)
-            username = (form.get("username") or [""])[0].strip()
-            password = (form.get("password") or [""])[0]
-            user = load_users().get(username)
-            if not user or not verify_password(password, user.get("password_hash", "")):
-                self.send_login_page("Invalid username or password")
+        try:
+            assert APP is not None
+            parsed = urllib.parse.urlparse(self.path)
+            if parsed.path == "/login":
+                raw = self.rfile.read(int(self.headers.get("Content-Length") or 0)).decode("utf-8")
+                form = urllib.parse.parse_qs(raw)
+                username = (form.get("username") or [""])[0].strip()
+                password = (form.get("password") or [""])[0]
+                user = load_users().get(username)
+                if not user or not verify_password(password, user.get("password_hash", "")):
+                    self.send_login_page("Invalid username or password")
+                    return
+                expires = int(time.time()) + SESSION_SECONDS
+                secure = " Secure;" if self.headers.get("X-Forwarded-Proto") == "https" else ""
+                self.send_response(302)
+                self.send_header("Set-Cookie", f"{SESSION_COOKIE}={sign_session(username, expires)}; Path=/; HttpOnly;{secure} SameSite=Lax; Max-Age={SESSION_SECONDS}")
+                self.send_header("Location", "/")
+                self.end_headers()
                 return
-            expires = int(time.time()) + SESSION_SECONDS
-            secure = " Secure;" if self.headers.get("X-Forwarded-Proto") == "https" else ""
-            self.send_response(302)
-            self.send_header("Set-Cookie", f"{SESSION_COOKIE}={sign_session(username, expires)}; Path=/; HttpOnly;{secure} SameSite=Lax; Max-Age={SESSION_SECONDS}")
-            self.send_header("Location", "/")
-            self.end_headers()
-            return
 
-        user = self.require_auth()
-        if load_users() and not user:
-            return
-        if parsed.path == "/api/refresh":
-            if not is_admin(user):
-                self.send_json({"error": "Admin access required"}, 403)
+            user = self.require_auth()
+            if load_users() and not user:
                 return
-            self.send_json(APP.refresh())
-        elif parsed.path == "/api/report":
-            payload = self.read_json()
-            self.send_json(APP.generate_selected_report(payload.get("plant_ids") or [], user))
-        elif parsed.path == "/api/config":
-            if not is_admin(user):
-                self.send_json({"error": "Admin access required"}, 403)
-                return
-            payload = self.read_json()
-            APP.config.update({key: value for key, value in payload.items() if key in DEFAULT_CONFIG})
-            save_config(APP.config)
-            self.send_json({"ok": True, "config": APP.config})
-        else:
-            self.send_json({"error": "Not found"}, 404)
+            if parsed.path == "/api/refresh":
+                if not is_admin(user):
+                    self.send_json({"error": "Admin access required"}, 403)
+                    return
+                self.send_json(APP.refresh())
+            elif parsed.path == "/api/report":
+                payload = self.read_json()
+                self.send_json(APP.generate_selected_report(payload.get("plant_ids") or [], user))
+            elif parsed.path == "/api/config":
+                if not is_admin(user):
+                    self.send_json({"error": "Admin access required"}, 403)
+                    return
+                payload = self.read_json()
+                APP.config.update({key: value for key, value in payload.items() if key in DEFAULT_CONFIG})
+                save_config(APP.config)
+                self.send_json({"ok": True, "config": APP.config})
+            else:
+                self.send_json({"error": "Not found"}, 404)
+        except Exception as exc:
+            self.send_exception(exc)
 
     def log_message(self, format: str, *args: Any) -> None:
         return
@@ -666,7 +702,7 @@ function f(v,d=2){return Number(v||0).toLocaleString('en-IN',{minimumFractionDig
 function cls(s){s=String(s||'').toLowerCase();return (s.includes('online')||s.includes('normal'))?'online':'offline'}
 function fresh(p){return p.dataDate===todayText()}
 function uniq(a){return [...new Set(a)].filter(Boolean).sort()}
-async function api(path,opt){const r=await fetch(path,opt);return await r.json()}
+async function api(path,opt){const r=await fetch(path,opt);const text=await r.text();let data={};try{data=text?JSON.parse(text):{};}catch(e){throw new Error(`${path} returned ${r.status}: ${text.slice(0,240)||'empty response'}`)}if(!r.ok){throw new Error(data.error||`${path} returned ${r.status}`)}return data}
 function filtered(){const q=searchInput.value.toLowerCase(), b=brandFilter.value, s=statusFilter.value;return plants.filter(p=>(b==='all'||p.brand===b)&&(s==='all'||p.status===s)&&(`${p.site} ${p.brand}`.toLowerCase().includes(q)))}
 function selectedRows(){return plants.filter(p=>selected.has(p.id))}
 function renderFilters(){brandFilter.innerHTML='<option value="all">All Brands</option>'+uniq(plants.map(p=>p.brand)).map(x=>`<option>${x}</option>`).join('');statusFilter.innerHTML='<option value="all">All Status</option>'+uniq(plants.map(p=>p.status)).map(x=>`<option>${x}</option>`).join('')}
