@@ -51,7 +51,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-10-history-v3"
+APP_VERSION = "2026-07-10-history-selectors-v4"
 PLANT_COLUMNS = [
     "App ID",
     "Brand",
@@ -953,12 +953,25 @@ function filtered(){const q=searchInput.value.toLowerCase(), b=brandFilter.value
 function selectedRows(){return plants.filter(p=>selected.has(p.id))}
 function renderFilters(){brandFilter.innerHTML='<option value="all">All Brands</option>'+uniq(plants.map(p=>p.brand)).map(x=>`<option>${x}</option>`).join('');statusFilter.innerHTML='<option value="all">All Status</option>'+uniq(plants.map(p=>p.status)).map(x=>`<option>${x}</option>`).join('')}
 function historyTable(title, rows, cols){if(!rows?.length)return `<div class="history-block"><h3>${title}</h3><div class="empty-history">No previous data yet. It will build after refreshes/uploads.</div></div>`;return `<div class="history-block"><h3>${title}</h3><div class="history-scroll"><table><thead><tr>${cols.map(c=>`<th>${c[0]}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td>${c[2]?f(r[c[1]]):h(r[c[1]])}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>`}
-function renderHistory(data){return [
-historyTable('Daily Date-wise',data.daily,[['Date','date'],['Daily kWh','daily',1],['Status','status'],['Total MWh','total',1]]),
-historyTable('Weekly Week-wise',data.weekly,[['Week','week'],['Daily Sum','dailySum',1],['Weekly kWh','weekly',1],['Days','days']]),
-historyTable('Yearly Year-wise',data.yearly,[['Year','year'],['Latest Date','lastDate'],['Year kWh','yearKwh',1],['Total MWh','totalMwh',1]])
+function selectorOptions(rows,key){return (rows||[]).map((r,i)=>`<option value="${i}">${h(r[key]||'')}</option>`).join('')}
+function selectedSummary(type,row){if(!row)return '<div class="empty-history">No data for this selection yet.</div>';if(type==='daily')return `<div class="details"><div class="detail"><span>Date</span><b>${h(row.date)}</b></div><div class="detail"><span>Daily</span><b>${f(row.daily)} kWh</b></div><div class="detail"><span>Status</span><b>${h(row.status)}</b></div><div class="detail"><span>Total</span><b>${f(row.total)} MWh</b></div></div>`;if(type==='weekly')return `<div class="details"><div class="detail"><span>Week</span><b>${h(row.week)}</b></div><div class="detail"><span>Daily Sum</span><b>${f(row.dailySum)} kWh</b></div><div class="detail"><span>Weekly</span><b>${f(row.weekly)} kWh</b></div><div class="detail"><span>Days Stored</span><b>${h(row.days)}</b></div></div>`;return `<div class="details"><div class="detail"><span>Year</span><b>${h(row.year)}</b></div><div class="detail"><span>Latest Date</span><b>${h(row.lastDate)}</b></div><div class="detail"><span>Year Generation</span><b>${f(row.yearKwh)} kWh</b></div><div class="detail"><span>Total</span><b>${f(row.totalMwh)} MWh</b></div></div>`}
+function renderHistory(data){return `<div class="history-block">
+<h3>Select Previous Data</h3>
+<div class="details">
+  <div><label>Daily Date</label><select id="dailyPick">${selectorOptions(data.daily,'date')}</select></div>
+  <div><label>Week</label><select id="weekPick">${selectorOptions(data.weekly,'week')}</select></div>
+  <div><label>Year</label><select id="yearPick">${selectorOptions(data.yearly,'year')}</select></div>
+</div>
+<div id="pickedDaily" class="history-block"></div>
+<div id="pickedWeekly" class="history-block"></div>
+<div id="pickedYearly" class="history-block"></div>
+</div>`+[
+historyTable('All Daily Date-wise',data.daily,[['Date','date'],['Daily kWh','daily',1],['Status','status'],['Total MWh','total',1]]),
+historyTable('All Weekly Week-wise',data.weekly,[['Week','week'],['Daily Sum','dailySum',1],['Weekly kWh','weekly',1],['Days','days']]),
+historyTable('All Yearly Year-wise',data.yearly,[['Year','year'],['Latest Date','lastDate'],['Year kWh','yearKwh',1],['Total MWh','totalMwh',1]])
 ].join('')}
-async function loadHistory(active){const key=active?.plantKey||'';activeHistoryKey=key;const box=document.querySelector('#historyBox');if(!box||!key)return;box.innerHTML='<div class="empty-history">Loading previous data...</div>';try{const data=await api('/api/history?plant_key='+encodeURIComponent(key));if(activeHistoryKey===key)box.innerHTML=renderHistory(data);}catch(error){if(activeHistoryKey===key)box.innerHTML='<div class="empty-history">History failed: '+h(error.message)+'</div>';}}
+function wireHistorySelectors(data){const daily=document.querySelector('#dailyPick'), week=document.querySelector('#weekPick'), year=document.querySelector('#yearPick');const renderPicked=()=>{const d=data.daily?.[Number(daily?.value||0)], w=data.weekly?.[Number(week?.value||0)], y=data.yearly?.[Number(year?.value||0)];document.querySelector('#pickedDaily').innerHTML='<h3>Selected Daily</h3>'+selectedSummary('daily',d);document.querySelector('#pickedWeekly').innerHTML='<h3>Selected Week</h3>'+selectedSummary('weekly',w);document.querySelector('#pickedYearly').innerHTML='<h3>Selected Year</h3>'+selectedSummary('yearly',y)};[daily,week,year].forEach(el=>{if(el)el.onchange=renderPicked});renderPicked()}
+async function loadHistory(active){const key=active?.plantKey||'';activeHistoryKey=key;const box=document.querySelector('#historyBox');if(!box||!key)return;box.innerHTML='<div class="empty-history">Loading previous data...</div>';try{const data=await api('/api/history?plant_key='+encodeURIComponent(key));if(activeHistoryKey===key){box.innerHTML=renderHistory(data);wireHistorySelectors(data)}}catch(error){if(activeHistoryKey===key)box.innerHTML='<div class="empty-history">History failed: '+h(error.message)+'</div>';}}
 function renderDetail(active){if(!active){detailEl.innerHTML='No plant';return}detailEl.innerHTML=`<div class="plant-title">${h(active.site)}</div><p>${h(active.brand)} · <span class="status ${cls(active.status)}">${h(active.status)}</span></p>${staleNote(active)?`<p class="stale">${h(staleNote(active))}</p>`:''}<div class="details"><div class="detail"><span>Data Date</span><b>${h(active.dataDate||'Unknown')}</b></div><div class="detail"><span>Capacity</span><b>${f(active.capacity)} kW</b></div><div class="detail"><span>Daily</span><b>${f(active.daily)} kWh</b></div><div class="detail"><span>Weekly</span><b>${f(active.weekly)} kWh</b></div><div class="detail"><span>2026/kW</span><b>${f(active.yield2026)}</b></div><div class="detail"><span>Total</span><b>${f(active.total)} MWh</b></div></div><div id="historyBox" class="history-block"></div>`;loadHistory(active)}
 function render(){const rows=filtered(), chosen=selectedRows();const active=plants.find(p=>p.id===activePlantId)||chosen[0]||rows[0]||plants[0];if(active)activePlantId=active.id;cardsEl.innerHTML=[['Visible',rows.length],['Selected',chosen.length],['Daily',f(rows.reduce((a,p)=>a+p.daily,0))+' kWh'],['Weekly',f(rows.reduce((a,p)=>a+p.weekly,0))+' kWh'],['Capacity',f(rows.reduce((a,p)=>a+p.capacity,0))+' kW'],['Fresh',rows.filter(fresh).length+'/'+rows.length]].map(x=>`<div class="card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join('');
 rowsEl.innerHTML=rows.map(p=>`<tr data-id="${p.id}" style="cursor:pointer"><td><input type="checkbox" data-id="${p.id}" ${selected.has(p.id)?'checked':''}></td><td>${h(p.brand)}</td><td><b>${h(p.site)}</b></td><td class="status ${cls(p.status)}">${h(p.status)}</td><td title="${h(staleNote(p))}">${h(p.dataDate||'')} <span class="pill ${fresh(p)?'fresh':'stale'}">${fresh(p)?'TODAY':'STALE'}</span></td><td>${f(p.daily)}</td><td>${f(p.weekly)}</td><td>${f(p.yield2026)}</td></tr>`).join('');
