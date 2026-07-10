@@ -11,11 +11,15 @@ Keep these files on the Mac only:
 - Upload Fresh Solis To Render.command
 
 What changed:
-- iPhone plant name boxes are thinner.
-- No plant is selected automatically.
-- Selected Plant shows "Tap a plant name to view details" until you tap one.
-- Plant cards expand only when tapped.
+- Tapping an already-open plant collapses it back.
+- No plant remains forced open.
+- iPhone plant name boxes are slimmer with light background.
+- Today's generation appears on the same line as plant name.
+- Report buttons now include:
+  - All Plants Report
+  - Plant Report
+  - Selected Report
 
 After Render redeploys, top blue bar should show:
 
-Build: 2026-07-10-iphone-plant-collapse-v11
+Build: 2026-07-10-iphone-report-options-v12
