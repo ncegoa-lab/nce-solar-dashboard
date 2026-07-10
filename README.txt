@@ -11,14 +11,13 @@ Keep these files on the Mac only:
 - Upload Fresh Solis To Render.command
 
 What changed:
-- Mac/desktop dashboard stays as it is.
-- iPhone layout becomes touch friendly:
-  - compact header
-  - stacked filters and buttons
-  - two-column summary cards
-  - plant table becomes tap-friendly cards
-  - selected plant/history/reports stack cleanly
+- iPhone view is shorter and collapsible.
+- Selected Plant, Auto Report Time, Latest Reports, and Refresh Log are collapsible.
+- Latest Reports shows only last 3 reports.
+- History no longer shows selected date/week/year controls.
+- History shows latest daily, latest week, and latest year only.
+- Mac/desktop layout remains dashboard/table friendly.
 
 After Render redeploys, top blue bar should show:
 
-Build: 2026-07-10-iphone-layout-v8
+Build: 2026-07-10-iphone-compact-v9

@@ -51,7 +51,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-10-iphone-layout-v8"
+APP_VERSION = "2026-07-10-iphone-compact-v9"
 PLANT_COLUMNS = [
     "App ID",
     "Brand",
@@ -591,7 +591,7 @@ class SolarLiveApp:
             "count": int(len(selected)),
         }
 
-    def latest_reports(self, limit: int = 12) -> list[dict[str, Any]]:
+    def latest_reports(self, limit: int = 3) -> list[dict[str, Any]]:
         root = self.output_dir
         if not root.exists():
             return []
@@ -949,7 +949,7 @@ table{width:100%;border-collapse:collapse;font-size:12px}th{background:var(--blu
 .status{font-weight:800}.online{color:var(--green)}.offline,.stale{color:var(--red)}.fresh{color:var(--green)}.pill{display:inline-block;border-radius:999px;padding:2px 7px;font-size:10px;font-weight:800;color:white}.pill.fresh{background:var(--green);color:white}.pill.stale{background:var(--red);color:white}
 .plant-title{font-size:21px;font-weight:850}.details{display:grid;grid-template-columns:1fr 1fr;gap:8px}.detail{border:1px solid var(--line);border-radius:6px;background:#fbfdff;padding:10px}.detail span{display:block;color:var(--muted);font-size:11px;font-weight:700;margin-bottom:7px}
 .checkcell{width:34px}.report-link{font-size:12px;color:var(--muted);margin-top:8px;word-break:break-all}.download-btn{display:inline-block;margin-top:8px;background:var(--green);color:white;text-decoration:none;border-radius:6px;padding:9px 12px;font-weight:900}.report-list{margin-top:8px;display:grid;gap:6px}.report-item{display:block;border:1px solid var(--line);border-radius:6px;background:#fbfdff;padding:8px;color:var(--blue);text-decoration:none;font-weight:800}.report-item span{display:block;color:var(--muted);font-size:11px;font-weight:700;margin-top:3px}.log{font-family:ui-monospace,Menlo,monospace;font-size:11px;white-space:pre-wrap;max-height:180px;overflow:auto;background:#f8fafc;border:1px solid var(--line);padding:8px;border-radius:6px}
-.history-block{margin-top:12px}.history-block h3{font-size:13px;margin:10px 0 6px}.history-scroll{max-height:160px;overflow:auto;border:1px solid var(--line);border-radius:6px}.history-scroll table{font-size:11px}.history-scroll th{position:sticky;top:0}.empty-history{color:var(--muted);font-size:12px;padding:8px;border:1px solid var(--line);border-radius:6px;background:#fbfdff}
+.history-block{margin-top:12px}.history-block h3{font-size:13px;margin:10px 0 6px}.history-scroll{max-height:160px;overflow:auto;border:1px solid var(--line);border-radius:6px}.history-scroll table{font-size:11px}.history-scroll th{position:sticky;top:0}.empty-history{color:var(--muted);font-size:12px;padding:8px;border:1px solid var(--line);border-radius:6px;background:#fbfdff}.fold{border-top:1px solid var(--line);padding-top:10px;margin-top:12px}.fold summary{cursor:pointer;font-weight:900;color:var(--blue);list-style:none}.fold summary::-webkit-details-marker{display:none}.fold summary::after{content:'+';float:right}.fold[open] summary::after{content:'-'}
 @media(max-width:980px){header{position:static}.toolbar,.grid,.split{grid-template-columns:1fr}table{font-size:11px}th:nth-child(5),td:nth-child(5),th:nth-child(7),td:nth-child(7){display:none}}
 @media(max-width:640px){
 body{background:#f3f7fb}
@@ -970,6 +970,7 @@ section.panel td:first-child::before{content:''}
 section.panel td:nth-child(3){font-size:14px}.checkcell{width:auto}
 .history-scroll{max-height:220px}.history-scroll table{display:table}.history-scroll thead{display:table-header-group}.history-scroll tbody{display:table-row-group}.history-scroll tr{display:table-row;border:0;box-shadow:none;margin:0;padding:0}.history-scroll td,.history-scroll th{display:table-cell;width:auto;padding:7px;font-size:11px}.history-scroll td::before{content:none}
 .report-item{font-size:12px}.log{max-height:140px}.plant-title{font-size:18px}
+.mobile-fold{display:block}.mobile-fold:not([open]){padding-bottom:10px}.mobile-fold summary{font-size:14px}
 }
 </style>
 </head>
@@ -991,19 +992,27 @@ section.panel td:nth-child(3){font-size:14px}.checkcell{width:auto}
       <table><thead><tr><th class="checkcell"></th><th>Brand</th><th>Plant</th><th>Status</th><th>Date</th><th>Daily</th><th>Weekly</th><th>2026/kW</th></tr></thead><tbody id="rows"></tbody></table>
     </section>
     <aside class="panel">
-      <h2>Selected Plant</h2>
-      <div id="detail"></div>
-      <h2 style="margin-top:14px">Auto Report Time</h2>
-      <div class="details">
-        <div><label>Day</label><select id="autoDay"><option>Sunday</option><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option></select></div>
-        <div><label>Time</label><input id="autoTime" type="time"></div>
-      </div>
-      <button id="saveSchedule" style="margin-top:10px">Save Schedule</button>
+      <details class="fold mobile-fold" open>
+        <summary>Selected Plant</summary>
+        <div id="detail"></div>
+      </details>
+      <details class="fold mobile-fold">
+        <summary>Auto Report Time</summary>
+        <div class="details">
+          <div><label>Day</label><select id="autoDay"><option>Sunday</option><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option></select></div>
+          <div><label>Time</label><input id="autoTime" type="time"></div>
+        </div>
+        <button id="saveSchedule" style="margin-top:10px">Save Schedule</button>
+      </details>
       <div class="report-link" id="reportResult"></div>
-      <h2 style="margin-top:14px">Latest Reports</h2>
-      <div class="report-list" id="reportList">No reports loaded.</div>
-      <h2 style="margin-top:14px">Refresh Log</h2>
-      <div class="log" id="log">Ready.</div>
+      <details class="fold mobile-fold">
+        <summary>Latest Reports</summary>
+        <div class="report-list" id="reportList">No reports loaded.</div>
+      </details>
+      <details class="fold mobile-fold">
+        <summary>Refresh Log</summary>
+        <div class="log" id="log">Ready.</div>
+      </details>
     </aside>
   </div>
 </main>
@@ -1038,26 +1047,13 @@ async function api(path,opt){const r=await fetch(path,opt);const text=await r.te
 function filtered(){const q=searchInput.value.toLowerCase(), b=brandFilter.value, s=statusFilter.value;return plants.filter(p=>(b==='all'||p.brand===b)&&(s==='all'||p.status===s)&&(`${p.site} ${p.brand}`.toLowerCase().includes(q)))}
 function selectedRows(){return plants.filter(p=>selected.has(p.id))}
 function renderFilters(){brandFilter.innerHTML='<option value="all">All Brands</option>'+uniq(plants.map(p=>p.brand)).map(x=>`<option>${x}</option>`).join('');statusFilter.innerHTML='<option value="all">All Status</option>'+uniq(plants.map(p=>p.status)).map(x=>`<option>${x}</option>`).join('')}
-function historyTable(title, rows, cols){if(!rows?.length)return `<div class="history-block"><h3>${title}</h3><div class="empty-history">No previous data yet. It will build after refreshes/uploads.</div></div>`;return `<div class="history-block"><h3>${title}</h3><div class="history-scroll"><table><thead><tr>${cols.map(c=>`<th>${c[0]}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td>${c[2]?f(r[c[1]]):h(r[c[1]])}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>`}
-function selectorOptions(rows,key){return (rows||[]).map((r,i)=>`<option value="${i}">${h(r[key]||'')}</option>`).join('')}
-function selectedSummary(type,row){if(!row)return '<div class="empty-history">No data for this selection yet.</div>';if(type==='daily')return `<div class="details"><div class="detail"><span>Date</span><b>${h(row.date)}</b></div><div class="detail"><span>Daily</span><b>${f(row.daily)} kWh</b></div><div class="detail"><span>Status</span><b>${h(row.status)}</b></div><div class="detail"><span>Total</span><b>${f(row.total)} MWh</b></div></div>`;if(type==='weekly')return `<div class="details"><div class="detail"><span>Week</span><b>${h(row.week)}</b></div><div class="detail"><span>Daily Sum</span><b>${f(row.dailySum)} kWh</b></div><div class="detail"><span>Weekly</span><b>${f(row.weekly)} kWh</b></div><div class="detail"><span>Days Stored</span><b>${h(row.days)}</b></div></div>`;return `<div class="details"><div class="detail"><span>Year</span><b>${h(row.year)}</b></div><div class="detail"><span>Latest Date</span><b>${h(row.lastDate)}</b></div><div class="detail"><span>Year Generation</span><b>${f(row.yearKwh)} kWh</b></div><div class="detail"><span>Total</span><b>${f(row.totalMwh)} MWh</b></div></div>`}
-function renderHistory(data){return `<div class="history-block">
-<h3>Select Previous Data</h3>
-<div class="details">
-  <div><label>Daily Date</label><select id="dailyPick">${selectorOptions(data.daily,'date')}</select></div>
-  <div><label>Week</label><select id="weekPick">${selectorOptions(data.weekly,'week')}</select></div>
-  <div><label>Year</label><select id="yearPick">${selectorOptions(data.yearly,'year')}</select></div>
-</div>
-<div id="pickedDaily" class="history-block"></div>
-<div id="pickedWeekly" class="history-block"></div>
-<div id="pickedYearly" class="history-block"></div>
-</div>`+[
-historyTable('All Daily Date-wise',data.daily,[['Date','date'],['Daily kWh','daily',1],['Status','status'],['Total MWh','total',1]]),
-historyTable('All Weekly Week-wise',data.weekly,[['Week','week'],['Daily Sum','dailySum',1],['Weekly kWh','weekly',1],['Days','days']]),
-historyTable('All Yearly Year-wise',data.yearly,[['Year','year'],['Latest Date','lastDate'],['Year kWh','yearKwh',1],['Total MWh','totalMwh',1]])
+function historyTable(title, rows, cols, open=false){if(!rows?.length)return `<details class="fold history-block"><summary>${title}</summary><div class="empty-history">No previous data yet. It will build after refreshes/uploads.</div></details>`;return `<details class="fold history-block" ${open?'open':''}><summary>${title}</summary><div class="history-scroll"><table><thead><tr>${cols.map(c=>`<th>${c[0]}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td>${c[2]?f(r[c[1]]):h(r[c[1]])}</td>`).join('')}</tr>`).join('')}</tbody></table></div></details>`}
+function renderHistory(data){const daily=(data.daily||[]).slice(0,1), weekly=(data.weekly||[]).slice(0,1), yearly=(data.yearly||[]).slice(0,1);return [
+historyTable('Today / Latest Daily',daily,[['Date','date'],['Daily kWh','daily',1],['Status','status']],true),
+historyTable('Current / Latest Week',weekly,[['Week','week'],['Daily Sum','dailySum',1],['Weekly kWh','weekly',1]],false),
+historyTable('Current / Latest Year',yearly,[['Year','year'],['Year kWh','yearKwh',1],['Latest Date','lastDate']],false)
 ].join('')}
-function wireHistorySelectors(data){const daily=document.querySelector('#dailyPick'), week=document.querySelector('#weekPick'), year=document.querySelector('#yearPick');const renderPicked=()=>{const d=data.daily?.[Number(daily?.value||0)], w=data.weekly?.[Number(week?.value||0)], y=data.yearly?.[Number(year?.value||0)];document.querySelector('#pickedDaily').innerHTML='<h3>Selected Daily</h3>'+selectedSummary('daily',d);document.querySelector('#pickedWeekly').innerHTML='<h3>Selected Week</h3>'+selectedSummary('weekly',w);document.querySelector('#pickedYearly').innerHTML='<h3>Selected Year</h3>'+selectedSummary('yearly',y)};[daily,week,year].forEach(el=>{if(el)el.onchange=renderPicked});renderPicked()}
-async function loadHistory(active){const key=active?.plantKey||'';activeHistoryKey=key;const box=document.querySelector('#historyBox');if(!box||!key)return;box.innerHTML='<div class="empty-history">Loading previous data...</div>';try{const data=await api('/api/history?plant_key='+encodeURIComponent(key));if(activeHistoryKey===key){box.innerHTML=renderHistory(data);wireHistorySelectors(data)}}catch(error){if(activeHistoryKey===key)box.innerHTML='<div class="empty-history">History failed: '+h(error.message)+'</div>';}}
+async function loadHistory(active){const key=active?.plantKey||'';activeHistoryKey=key;const box=document.querySelector('#historyBox');if(!box||!key)return;box.innerHTML='<div class="empty-history">Loading previous data...</div>';try{const data=await api('/api/history?plant_key='+encodeURIComponent(key));if(activeHistoryKey===key){box.innerHTML=renderHistory(data)}}catch(error){if(activeHistoryKey===key)box.innerHTML='<div class="empty-history">History failed: '+h(error.message)+'</div>';}}
 function renderDetail(active){if(!active){detailEl.innerHTML='No plant';return}detailEl.innerHTML=`<div class="plant-title">${h(active.site)}</div><p>${h(active.brand)} · <span class="status ${cls(active.status)}">${h(active.status)}</span></p>${staleNote(active)?`<p class="stale">${h(staleNote(active))}</p>`:''}<div class="details"><div class="detail"><span>Data Date</span><b>${h(active.dataDate||'Unknown')}</b></div><div class="detail"><span>Capacity</span><b>${f(active.capacity)} kW</b></div><div class="detail"><span>Daily</span><b>${f(active.daily)} kWh</b></div><div class="detail"><span>Weekly</span><b>${f(active.weekly)} kWh</b></div><div class="detail"><span>2026/kW</span><b>${f(active.yield2026)}</b></div><div class="detail"><span>Total</span><b>${f(active.total)} MWh</b></div></div><div id="historyBox" class="history-block"></div>`;loadHistory(active)}
 function render(){const rows=filtered(), chosen=selectedRows();const active=plants.find(p=>p.id===activePlantId)||chosen[0]||rows[0]||plants[0];if(active)activePlantId=active.id;cardsEl.innerHTML=[['Visible',rows.length],['Selected',chosen.length],['Daily',f(rows.reduce((a,p)=>a+p.daily,0))+' kWh'],['Weekly',f(rows.reduce((a,p)=>a+p.weekly,0))+' kWh'],['Capacity',f(rows.reduce((a,p)=>a+p.capacity,0))+' kW'],['Fresh',rows.filter(fresh).length+'/'+rows.length]].map(x=>`<div class="card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join('');
 rowsEl.innerHTML=rows.map(p=>`<tr data-id="${p.id}" style="cursor:pointer"><td data-label=""><input type="checkbox" data-id="${p.id}" ${selected.has(p.id)?'checked':''}></td><td data-label="Brand">${h(p.brand)}</td><td data-label="Plant"><b>${h(p.site)}</b></td><td data-label="Status" class="status ${cls(p.status)}">${h(p.status)}</td><td data-label="Date" title="${h(staleNote(p))}">${h(p.dataDate||'')} <span class="pill ${fresh(p)?'fresh':'stale'}">${fresh(p)?'TODAY':'STALE'}</span></td><td data-label="Daily">${f(p.daily)}</td><td data-label="Weekly">${f(p.weekly)}</td><td data-label="2026/kW">${f(p.yield2026)}</td></tr>`).join('');
