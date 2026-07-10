@@ -1,0 +1,431 @@
+{
+  "plants": {
+    "status": 200,
+    "body": [
+      {
+        "configuration": {
+          "installDate": "2022-05-08T18:30:00Z",
+          "firstReportedDate": "2022-04-30T08:19:04Z",
+          "panelsNominalPower": 100.0,
+          "monitoringOrganizationName": "Birla campus"
+        },
+        "description": "Primary Residence",
+        "entityID": 31841757,
+        "fields": [
+          "Derating",
+          "VoltageBC",
+          "GenerationPower",
+          "EarliestCommunicationTime",
+          "GenerationEnergy",
+          "DeviceTemp",
+          "EarliestDate",
+          "EarliestSampleTime",
+          "EarliestDataReceiptTime",
+          "PVPower",
+          "RatedCapacity",
+          "Voltage",
+          "LatestDataUpdateTime",
+          "RenewablePower",
+          "DCVoltage",
+          "PVEnergy",
+          "InverterDirectPower",
+          "VoltageAB",
+          "VoltageCA",
+          "LatestDate",
+          "LatestCommunicationTime",
+          "LineFrequency",
+          "3PhaseVoltage",
+          "LatestDataReceiptTime",
+          "LatestSampleTime",
+          "DCGenerationPower",
+          "InverterDirectEnergy",
+          "Current",
+          "RenewableEnergy"
+        ],
+        "kpis": [],
+        "location": {
+          "city": "goa",
+          "country": "India",
+          "countryEntityID": 1787352,
+          "elevation": 103.0730819702148,
+          "latitude": 15.2993265,
+          "longitude": 74.12399599999999,
+          "postalCode": "403726",
+          "region": "Goa",
+          "regionEntityID": 1787363,
+          "street1": "Birla campus goa",
+          "timeZone": "Asia/Kolkata",
+          "timeZoneOffset": 19800000
+        },
+        "name": "Birla campus goa",
+        "performanceProfiles": [],
+        "state": "ACTIVE",
+        "publicViewEnabled": false
+      },
+      {
+        "configuration": {
+          "installDate": "2023-04-11T12:00:00Z",
+          "firstReportedDate": "2023-06-20T07:05:03Z",
+          "panelsNominalPower": 50.0
+        },
+        "description": "Birla Campus Goa C-mess 50kw",
+        "entityID": 35553890,
+        "fields": [
+          "Derating",
+          "VoltageBC",
+          "GenerationPower",
+          "EarliestCommunicationTime",
+          "DeviceTemp",
+          "GenerationEnergy",
+          "EarliestDate",
+          "EarliestSampleTime",
+          "EarliestDataReceiptTime",
+          "PVPower",
+          "RatedCapacity",
+          "LatestDataUpdateTime",
+          "Voltage",
+          "RenewablePower",
+          "DCVoltage",
+          "PVEnergy",
+          "InverterDirectPower",
+          "VoltageAB",
+          "VoltageCA",
+          "LatestDate",
+          "LatestCommunicationTime",
+          "LineFrequency",
+          "3PhaseVoltage",
+          "LatestDataReceiptTime",
+          "LatestSampleTime",
+          "DCGenerationPower",
+          "InverterDirectEnergy",
+          "Current",
+          "RenewableEnergy"
+        ],
+        "kpis": [],
+        "location": {
+          "city": "Sancoale",
+          "country": "India",
+          "countryEntityID": 1787352,
+          "latitude": 15.2993265,
+          "longitude": 74.1236,
+          "postalCode": "403726",
+          "region": "Goa",
+          "regionEntityID": 1787363,
+          "street1": "Birla Campus Goa",
+          "timeZone": "Asia/Kolkata",
+          "timeZoneOffset": 19800000
+        },
+        "name": "Birla Campus Goa C-mess 50kw",
+        "performanceProfiles": [],
+        "state": "ACTIVE",
+        "publicViewEnabled": false
+      }
+    ]
+  },
+  "energy": [
+    {
+      "key": "today",
+      "value": {
+        "status": 200,
+        "body": [
+          {
+            "value": 143.979999999938,
+            "units": "kilowatt-hours",
+            "start": "2026-07-09T18:30:00Z",
+            "end": "2026-07-10T04:59:08.065Z"
+          }
+        ]
+      }
+    },
+    {
+      "key": "week",
+      "value": {
+        "status": 200,
+        "body": [
+          {
+            "value": 1794.835999999996,
+            "units": "kilowatt-hours",
+            "start": "2026-07-05T18:30:00Z",
+            "end": "2026-07-10T04:59:08.065Z"
+          }
+        ]
+      }
+    },
+    {
+      "key": "month",
+      "value": {
+        "status": 200,
+        "body": [
+          {
+            "value": 3213.359999999993,
+            "units": "kilowatt-hours",
+            "start": "2026-06-30T18:30:00Z",
+            "end": "2026-07-10T04:59:08.065Z"
+          }
+        ]
+      }
+    },
+    {
+      "key": "year",
+      "value": {
+        "status": 200,
+        "body": [
+          {
+            "value": 109783.91799999999,
+            "units": "kilowatt-hours",
+            "start": "2025-12-31T18:30:00Z",
+            "end": "2026-07-10T04:59:08.065Z"
+          }
+        ]
+      }
+    }
+  ],
+  "now": "2026-07-10T04:59:08.065Z",
+  "rangeStarts": {
+    "today": "2026-07-09T18:30:00.000Z",
+    "week": "2026-07-05T18:30:00.000Z",
+    "month": "2026-06-30T18:30:00.000Z",
+    "year": "2025-12-31T18:30:00.000Z"
+  },
+  "login": {
+    "status": 200
+  },
+  "plantEnergy": [
+    {
+      "plant": {
+        "configuration": {
+          "installDate": "2022-05-08T18:30:00Z",
+          "firstReportedDate": "2022-04-30T08:19:04Z",
+          "panelsNominalPower": 100.0,
+          "monitoringOrganizationName": "Birla campus"
+        },
+        "description": "Primary Residence",
+        "entityID": 31841757,
+        "fields": [
+          "Derating",
+          "VoltageBC",
+          "GenerationPower",
+          "EarliestCommunicationTime",
+          "GenerationEnergy",
+          "DeviceTemp",
+          "EarliestDate",
+          "EarliestSampleTime",
+          "EarliestDataReceiptTime",
+          "PVPower",
+          "RatedCapacity",
+          "Voltage",
+          "LatestDataUpdateTime",
+          "RenewablePower",
+          "DCVoltage",
+          "PVEnergy",
+          "InverterDirectPower",
+          "VoltageAB",
+          "VoltageCA",
+          "LatestDate",
+          "LatestCommunicationTime",
+          "LineFrequency",
+          "3PhaseVoltage",
+          "LatestDataReceiptTime",
+          "LatestSampleTime",
+          "DCGenerationPower",
+          "InverterDirectEnergy",
+          "Current",
+          "RenewableEnergy"
+        ],
+        "kpis": [],
+        "location": {
+          "city": "goa",
+          "country": "India",
+          "countryEntityID": 1787352,
+          "elevation": 103.0730819702148,
+          "latitude": 15.2993265,
+          "longitude": 74.12399599999999,
+          "postalCode": "403726",
+          "region": "Goa",
+          "regionEntityID": 1787363,
+          "street1": "Birla campus goa",
+          "timeZone": "Asia/Kolkata",
+          "timeZoneOffset": 19800000
+        },
+        "name": "Birla campus goa",
+        "performanceProfiles": [],
+        "state": "ACTIVE",
+        "publicViewEnabled": false
+      },
+      "values": {
+        "today": {
+          "status": 200,
+          "body": [
+            {
+              "value": 86.015999999945,
+              "units": "kilowatt-hours",
+              "start": "2026-07-09T18:30:00Z",
+              "end": "2026-07-10T04:59:08.065Z"
+            }
+          ]
+        },
+        "week": {
+          "status": 200,
+          "body": [
+            {
+              "value": 1128,
+              "units": "kilowatt-hours",
+              "start": "2026-07-05T18:30:00Z",
+              "end": "2026-07-10T04:59:08.065Z"
+            }
+          ]
+        },
+        "month": {
+          "status": 200,
+          "body": [
+            {
+              "value": 2020,
+              "units": "kilowatt-hours",
+              "start": "2026-06-30T18:30:00Z",
+              "end": "2026-07-10T04:59:08.065Z"
+            }
+          ]
+        },
+        "year": {
+          "status": 200,
+          "body": [
+            {
+              "value": 70846.016,
+              "units": "kilowatt-hours",
+              "start": "2025-12-31T18:30:00Z",
+              "end": "2026-07-10T04:59:08.065Z"
+            }
+          ]
+        },
+        "total": {
+          "status": 200,
+          "body": [
+            {
+              "value": 130076,
+              "units": "kilowatt-hours",
+              "start": "2022-05-08T18:30:00Z",
+              "end": "2026-07-10T04:59:08.065Z"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "plant": {
+        "configuration": {
+          "installDate": "2023-04-11T12:00:00Z",
+          "firstReportedDate": "2023-06-20T07:05:03Z",
+          "panelsNominalPower": 50.0
+        },
+        "description": "Birla Campus Goa C-mess 50kw",
+        "entityID": 35553890,
+        "fields": [
+          "Derating",
+          "VoltageBC",
+          "GenerationPower",
+          "EarliestCommunicationTime",
+          "DeviceTemp",
+          "GenerationEnergy",
+          "EarliestDate",
+          "EarliestSampleTime",
+          "EarliestDataReceiptTime",
+          "PVPower",
+          "RatedCapacity",
+          "LatestDataUpdateTime",
+          "Voltage",
+          "RenewablePower",
+          "DCVoltage",
+          "PVEnergy",
+          "InverterDirectPower",
+          "VoltageAB",
+          "VoltageCA",
+          "LatestDate",
+          "LatestCommunicationTime",
+          "LineFrequency",
+          "3PhaseVoltage",
+          "LatestDataReceiptTime",
+          "LatestSampleTime",
+          "DCGenerationPower",
+          "InverterDirectEnergy",
+          "Current",
+          "RenewableEnergy"
+        ],
+        "kpis": [],
+        "location": {
+          "city": "Sancoale",
+          "country": "India",
+          "countryEntityID": 1787352,
+          "latitude": 15.2993265,
+          "longitude": 74.1236,
+          "postalCode": "403726",
+          "region": "Goa",
+          "regionEntityID": 1787363,
+          "street1": "Birla Campus Goa",
+          "timeZone": "Asia/Kolkata",
+          "timeZoneOffset": 19800000
+        },
+        "name": "Birla Campus Goa C-mess 50kw",
+        "performanceProfiles": [],
+        "state": "ACTIVE",
+        "publicViewEnabled": false
+      },
+      "values": {
+        "today": {
+          "status": 200,
+          "body": [
+            {
+              "value": 57.963999999993,
+              "units": "kilowatt-hours",
+              "start": "2026-07-09T18:30:00Z",
+              "end": "2026-07-10T04:59:08.065Z"
+            }
+          ]
+        },
+        "week": {
+          "status": 200,
+          "body": [
+            {
+              "value": 666.835999999996,
+              "units": "kilowatt-hours",
+              "start": "2026-07-05T18:30:00Z",
+              "end": "2026-07-10T04:59:08.065Z"
+            }
+          ]
+        },
+        "month": {
+          "status": 200,
+          "body": [
+            {
+              "value": 1193.359999999993,
+              "units": "kilowatt-hours",
+              "start": "2026-06-30T18:30:00Z",
+              "end": "2026-07-10T04:59:08.065Z"
+            }
+          ]
+        },
+        "year": {
+          "status": 200,
+          "body": [
+            {
+              "value": 38937.901999999995,
+              "units": "kilowatt-hours",
+              "start": "2025-12-31T18:30:00Z",
+              "end": "2026-07-10T04:59:08.065Z"
+            }
+          ]
+        },
+        "total": {
+          "status": 200,
+          "body": [
+            {
+              "value": 45894.20399999998,
+              "units": "kilowatt-hours",
+              "start": "2023-04-11T12:00:00Z",
+              "end": "2026-07-10T04:59:08.065Z"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

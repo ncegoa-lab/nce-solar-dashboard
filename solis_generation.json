@@ -1,0 +1,67 @@
+{
+  "source": "solis_network_capture.json",
+  "generated_at": "2026-07-10T10:29:24",
+  "captured_at": "2026-07-09T12:52:03",
+  "systems": [
+    {
+      "name": "ELVIS GOMES",
+      "status": "Online",
+      "capacity_kw": 15.37,
+      "current_power_kw": 10.03,
+      "today_generation_kwh": 40.4,
+      "weekly_generation_kwh": null,
+      "month_generation_kwh": 358.9,
+      "year_generation_kwh": 11204.7,
+      "total_generation_kwh": 19941.0,
+      "system_id": "1298491919450193072",
+      "source_sno": "296faa",
+      "data_timestamp": "09/07/2026 12:49:28 (UTC+05:30)"
+    },
+    {
+      "name": "Manjula Nanavati",
+      "status": "Online",
+      "capacity_kw": 6.27,
+      "current_power_kw": 2.59,
+      "today_generation_kwh": 11.1,
+      "weekly_generation_kwh": null,
+      "month_generation_kwh": 99.2,
+      "year_generation_kwh": 3504.2,
+      "total_generation_kwh": 6830.0,
+      "system_id": "1298491919450046073",
+      "source_sno": "271b25",
+      "data_timestamp": "09/07/2026 12:49:18 (UTC+05:30)"
+    },
+    {
+      "name": "BITS CARPORT",
+      "status": "Offline",
+      "capacity_kw": 100.44,
+      "current_power_kw": 0,
+      "today_generation_kwh": 0.0,
+      "weekly_generation_kwh": null,
+      "month_generation_kwh": 0.0,
+      "year_generation_kwh": 454.4,
+      "total_generation_kwh": 3829.4,
+      "system_id": "1298491919450009610",
+      "source_sno": "2687cd",
+      "data_timestamp": "16/06/2026 16:59:50 (UTC+05:30)"
+    },
+    {
+      "name": "Bits Pilani C-Wing 100Kw",
+      "status": "Offline",
+      "capacity_kw": 100.44,
+      "current_power_kw": 0,
+      "today_generation_kwh": 0.0,
+      "weekly_generation_kwh": null,
+      "month_generation_kwh": 0.0,
+      "year_generation_kwh": 0.0,
+      "total_generation_kwh": 0.0,
+      "system_id": "1298491919449960934",
+      "source_sno": "25c115",
+      "data_timestamp": "16/06/2026 18:04:17 (UTC+05:30)"
+    }
+  ],
+  "notes": [
+    "SolisCloud station list provides today, month, year, total, and current power.",
+    "Weekly generation is left blank until a weekly SolisCloud endpoint is captured."
+  ]
+}

@@ -1,0 +1,699 @@
+{
+  "generated_at": "2026-07-10T10:28:06",
+  "api_base": "https://hk.semsportal.com/api/",
+  "stations": [
+    {
+      "powerstation_id": "86fb1f8e-cd25-453f-b72e-b8e66eb62430",
+      "powercontrol_status": 0,
+      "stationname": "Rajesh Shirodkar 10kw",
+      "first_letter": "",
+      "adcode": "017100100028",
+      "location": "Shrikunj, Alto chicalim, Vasco Goa",
+      "status": -1,
+      "pac": 0.0,
+      "capacity": 10.0,
+      "eday": 0.0,
+      "emonth": 0.0,
+      "eday_income": 0.0,
+      "etotal": 14.2,
+      "powerstation_type": "Residential",
+      "pre_org_id": null,
+      "org_id": null,
+      "longitude": "73.8165668",
+      "latitude": "15.3889087",
+      "pac_kw": 0.0,
+      "to_hour": 0.0,
+      "weather": {
+        "HeWeather6": [
+          {
+            "basic": {
+              "cid": null,
+              "location": null,
+              "parent_city": null,
+              "admin_area": null,
+              "cnty": null,
+              "lat": null,
+              "lon": null,
+              "tz": null
+            },
+            "update": {
+              "loc": null,
+              "utc": null
+            },
+            "status": "ok",
+            "now": {
+              "cloud": "20",
+              "cond_code": "501",
+              "cond_txt": "Fog",
+              "fl": "3",
+              "hum": "88",
+              "pcpn": "0.0",
+              "pres": "1010",
+              "tmp": "28",
+              "vis": "5",
+              "wind_deg": "270",
+              "wind_dir": "W",
+              "wind_sc": "3",
+              "wind_spd": "13"
+            }
+          }
+        ]
+      },
+      "currency": "INR",
+      "yield_rate": 7.0,
+      "is_stored": false,
+      "org_code": "G10056482",
+      "org_name": "N C ENTERPRISES"
+    },
+    {
+      "powerstation_id": "66677b01-ec5d-4e74-8b14-12e9435bcce1",
+      "powercontrol_status": 0,
+      "stationname": "Salkar 10kw Bicholim",
+      "first_letter": "",
+      "adcode": "017100100038",
+      "location": "Mulga",
+      "status": -1,
+      "pac": 0.0,
+      "capacity": 10.0,
+      "eday": 0.0,
+      "emonth": 0.0,
+      "eday_income": 0.0,
+      "etotal": 3.8,
+      "powerstation_type": "Residential",
+      "pre_org_id": null,
+      "org_id": null,
+      "longitude": "73.9266053",
+      "latitude": "15.6151193",
+      "pac_kw": 0.0,
+      "to_hour": 0.0,
+      "weather": {
+        "HeWeather6": [
+          {
+            "basic": {
+              "cid": null,
+              "location": null,
+              "parent_city": null,
+              "admin_area": null,
+              "cnty": null,
+              "lat": null,
+              "lon": null,
+              "tz": null
+            },
+            "update": {
+              "loc": null,
+              "utc": null
+            },
+            "status": "ok",
+            "now": {
+              "cloud": "99",
+              "cond_code": "151",
+              "cond_txt": "Cloudy",
+              "fl": "2",
+              "hum": "88",
+              "pcpn": "0.0",
+              "pres": "1010",
+              "tmp": "27",
+              "vis": "8",
+              "wind_deg": "270",
+              "wind_dir": "W",
+              "wind_sc": "2",
+              "wind_spd": "11"
+            }
+          }
+        ]
+      },
+      "currency": "INR",
+      "yield_rate": 6.0,
+      "is_stored": false,
+      "org_code": "G10056482",
+      "org_name": "N C ENTERPRISES"
+    },
+    {
+      "powerstation_id": "b59dcdbb-22f7-46e1-9bef-c7a1fdd1b417",
+      "powercontrol_status": 0,
+      "stationname": "Balkusht Lotlicar 10kw",
+      "first_letter": "",
+      "adcode": "040400360003",
+      "location": "Sapana Solitaire, villa1, Colva Goa\n",
+      "status": 1,
+      "pac": 5083.0,
+      "capacity": 10.0,
+      "eday": 7.4,
+      "emonth": 210.8,
+      "eday_income": 1.6280000000000001,
+      "etotal": 4316.3,
+      "powerstation_type": "Residential",
+      "pre_org_id": null,
+      "org_id": null,
+      "longitude": "73.9117496",
+      "latitude": "15.2908882",
+      "pac_kw": 0.5083,
+      "to_hour": 0.74,
+      "weather": {
+        "HeWeather6": [
+          {
+            "basic": {
+              "cid": null,
+              "location": null,
+              "parent_city": null,
+              "admin_area": null,
+              "cnty": null,
+              "lat": null,
+              "lon": null,
+              "tz": null
+            },
+            "update": {
+              "loc": null,
+              "utc": null
+            },
+            "status": "ok",
+            "now": {
+              "cloud": "99",
+              "cond_code": "305",
+              "cond_txt": "Light Rain",
+              "fl": "4",
+              "hum": "86",
+              "pcpn": "3.8",
+              "pres": "1008",
+              "tmp": "27",
+              "vis": "5",
+              "wind_deg": "248",
+              "wind_dir": "WSW",
+              "wind_sc": "4",
+              "wind_spd": "26"
+            }
+          }
+        ]
+      },
+      "currency": "USD",
+      "yield_rate": 0.22,
+      "is_stored": false,
+      "org_code": "G10056482",
+      "org_name": "N C ENTERPRISES"
+    },
+    {
+      "powerstation_id": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "powercontrol_status": 0,
+      "stationname": "MIRANDA 6kw",
+      "first_letter": "",
+      "adcode": "017100100032",
+      "location": "Colva",
+      "status": 1,
+      "pac": 3561.0,
+      "capacity": 6.0,
+      "eday": 6.2,
+      "emonth": 144.89999999999998,
+      "eday_income": 45.26,
+      "etotal": 5787.1,
+      "powerstation_type": "Residential",
+      "pre_org_id": null,
+      "org_id": null,
+      "longitude": "73.9139183",
+      "latitude": "15.2811065",
+      "pac_kw": 0.5935,
+      "to_hour": 1.0333333333333334,
+      "weather": {
+        "HeWeather6": [
+          {
+            "basic": {
+              "cid": null,
+              "location": null,
+              "parent_city": null,
+              "admin_area": null,
+              "cnty": null,
+              "lat": null,
+              "lon": null,
+              "tz": null
+            },
+            "update": {
+              "loc": null,
+              "utc": null
+            },
+            "status": "ok",
+            "now": {
+              "cloud": "100",
+              "cond_code": "151",
+              "cond_txt": "Cloudy",
+              "fl": "2",
+              "hum": "91",
+              "pcpn": "0.0",
+              "pres": "1010",
+              "tmp": "26",
+              "vis": "8",
+              "wind_deg": "270",
+              "wind_dir": "W",
+              "wind_sc": "2",
+              "wind_spd": "11"
+            }
+          }
+        ]
+      },
+      "currency": "INR",
+      "yield_rate": 7.3,
+      "is_stored": false,
+      "org_code": "G10056482",
+      "org_name": "N C ENTERPRISES"
+    },
+    {
+      "powerstation_id": "1682adc7-1329-47d0-aa35-56248df3a671",
+      "powercontrol_status": 0,
+      "stationname": "Mark Revlon 10kw Chandor",
+      "first_letter": "",
+      "adcode": "017100100035",
+      "location": "Guirdolim Chandor",
+      "status": 1,
+      "pac": 3360.0,
+      "capacity": 10.0,
+      "eday": 5.0,
+      "emonth": 134.8,
+      "eday_income": 1.1,
+      "etotal": 7141.2,
+      "powerstation_type": "Residential",
+      "pre_org_id": null,
+      "org_id": null,
+      "longitude": "74.0468901",
+      "latitude": "15.2663903",
+      "pac_kw": 0.33599999999999997,
+      "to_hour": 0.5,
+      "weather": {
+        "HeWeather6": [
+          {
+            "basic": {
+              "cid": null,
+              "location": null,
+              "parent_city": null,
+              "admin_area": null,
+              "cnty": null,
+              "lat": null,
+              "lon": null,
+              "tz": null
+            },
+            "update": {
+              "loc": null,
+              "utc": null
+            },
+            "status": "ok",
+            "now": {
+              "cloud": "100",
+              "cond_code": "151",
+              "cond_txt": "Cloudy",
+              "fl": "2",
+              "hum": "91",
+              "pcpn": "0.0",
+              "pres": "1010",
+              "tmp": "26",
+              "vis": "8",
+              "wind_deg": "270",
+              "wind_dir": "W",
+              "wind_sc": "2",
+              "wind_spd": "11"
+            }
+          }
+        ]
+      },
+      "currency": "INR",
+      "yield_rate": 0.22,
+      "is_stored": false,
+      "org_code": "G10056482",
+      "org_name": "N C ENTERPRISES"
+    },
+    {
+      "powerstation_id": "47e29482-8c18-4f32-9ef0-98bd96056118",
+      "powercontrol_status": 0,
+      "stationname": "NIKHIL 10kw",
+      "first_letter": "",
+      "adcode": "017100100033",
+      "location": "H.no-02, Gauthan, Khandepar, Ponda 403406 Goa",
+      "status": 1,
+      "pac": 2280.0,
+      "capacity": 10.53,
+      "eday": 9.0,
+      "emonth": 197.8,
+      "eday_income": 1.98,
+      "etotal": 2908.3,
+      "powerstation_type": "Residential",
+      "pre_org_id": null,
+      "org_id": null,
+      "longitude": "74.0382991",
+      "latitude": "15.4355232",
+      "pac_kw": 0.21652421652421652,
+      "to_hour": 0.8547008547008548,
+      "weather": {
+        "HeWeather6": [
+          {
+            "basic": {
+              "cid": null,
+              "location": null,
+              "parent_city": null,
+              "admin_area": null,
+              "cnty": null,
+              "lat": null,
+              "lon": null,
+              "tz": null
+            },
+            "update": {
+              "loc": null,
+              "utc": null
+            },
+            "status": "ok",
+            "now": {
+              "cloud": "100",
+              "cond_code": "151",
+              "cond_txt": "Cloudy",
+              "fl": "2",
+              "hum": "91",
+              "pcpn": "0.0",
+              "pres": "1010",
+              "tmp": "26",
+              "vis": "8",
+              "wind_deg": "270",
+              "wind_dir": "W",
+              "wind_sc": "2",
+              "wind_spd": "11"
+            }
+          }
+        ]
+      },
+      "currency": "USD",
+      "yield_rate": 0.22,
+      "is_stored": false,
+      "org_code": "G10056482",
+      "org_name": "N C ENTERPRISES"
+    },
+    {
+      "powerstation_id": "3f57f7e3-f32e-4f5b-a732-8457212bf993",
+      "powercontrol_status": 0,
+      "stationname": "Ravish 10kw",
+      "first_letter": "",
+      "adcode": "017100100020",
+      "location": "Ravish Narvekar\nNear Saibaba Mandir, Piligao, Bicholim",
+      "status": 1,
+      "pac": 4412.0,
+      "capacity": 10.71,
+      "eday": 7.1,
+      "emonth": 181.7,
+      "eday_income": 1.5619999999999998,
+      "etotal": 1453.9,
+      "powerstation_type": "Residential",
+      "pre_org_id": null,
+      "org_id": null,
+      "longitude": "73.9490223",
+      "latitude": "15.5512691",
+      "pac_kw": 0.4119514472455649,
+      "to_hour": 0.6629318394024275,
+      "weather": {
+        "HeWeather6": [
+          {
+            "basic": {
+              "cid": null,
+              "location": null,
+              "parent_city": null,
+              "admin_area": null,
+              "cnty": null,
+              "lat": null,
+              "lon": null,
+              "tz": null
+            },
+            "update": {
+              "loc": null,
+              "utc": null
+            },
+            "status": "ok",
+            "now": {
+              "cloud": "99",
+              "cond_code": "151",
+              "cond_txt": "Cloudy",
+              "fl": "2",
+              "hum": "88",
+              "pcpn": "0.0",
+              "pres": "1010",
+              "tmp": "27",
+              "vis": "8",
+              "wind_deg": "270",
+              "wind_dir": "W",
+              "wind_sc": "2",
+              "wind_spd": "11"
+            }
+          }
+        ]
+      },
+      "currency": "USD",
+      "yield_rate": 0.22,
+      "is_stored": false,
+      "org_code": "G10056482",
+      "org_name": "N C ENTERPRISES"
+    },
+    {
+      "powerstation_id": "9a2a0ff0-d7a0-466b-afb4-efb7b324fd82",
+      "powercontrol_status": 0,
+      "stationname": "Raymond Franco 10kw Pomburpa",
+      "first_letter": "",
+      "adcode": "017100100031",
+      "location": "Pomburpa Goa",
+      "status": 1,
+      "pac": 4961.0,
+      "capacity": 10.0,
+      "eday": 7.0,
+      "emonth": 182.9,
+      "eday_income": 51.1,
+      "etotal": 8546.2,
+      "powerstation_type": "Residential",
+      "pre_org_id": null,
+      "org_id": null,
+      "longitude": "73.8657652",
+      "latitude": "15.5493088",
+      "pac_kw": 0.49610000000000004,
+      "to_hour": 0.7,
+      "weather": {
+        "HeWeather6": [
+          {
+            "basic": {
+              "cid": null,
+              "location": null,
+              "parent_city": null,
+              "admin_area": null,
+              "cnty": null,
+              "lat": null,
+              "lon": null,
+              "tz": null
+            },
+            "update": {
+              "loc": null,
+              "utc": null
+            },
+            "status": "ok",
+            "now": {
+              "cloud": "99",
+              "cond_code": "151",
+              "cond_txt": "Cloudy",
+              "fl": "2",
+              "hum": "88",
+              "pcpn": "0.0",
+              "pres": "1010",
+              "tmp": "27",
+              "vis": "8",
+              "wind_deg": "270",
+              "wind_dir": "W",
+              "wind_sc": "2",
+              "wind_spd": "11"
+            }
+          }
+        ]
+      },
+      "currency": "INR",
+      "yield_rate": 7.3,
+      "is_stored": false,
+      "org_code": "G10056482",
+      "org_name": "N C ENTERPRISES"
+    },
+    {
+      "powerstation_id": "60450185-fe34-489b-a694-431cfa0a23d1",
+      "powercontrol_status": 0,
+      "stationname": "SANJIV LOTLICAR 10kw",
+      "first_letter": "",
+      "adcode": "017100100030",
+      "location": "Yashoda Sadan, near Donbosco, Fatorda Goa",
+      "status": 1,
+      "pac": 6847.0,
+      "capacity": 10.7,
+      "eday": 9.3,
+      "emonth": 264.0,
+      "eday_income": 2.0460000000000003,
+      "etotal": 3565.6,
+      "powerstation_type": "Residential",
+      "pre_org_id": null,
+      "org_id": null,
+      "longitude": "73.9690846",
+      "latitude": "15.291974",
+      "pac_kw": 0.6399065420560749,
+      "to_hour": 0.869158878504673,
+      "weather": {
+        "HeWeather6": [
+          {
+            "basic": {
+              "cid": null,
+              "location": null,
+              "parent_city": null,
+              "admin_area": null,
+              "cnty": null,
+              "lat": null,
+              "lon": null,
+              "tz": null
+            },
+            "update": {
+              "loc": null,
+              "utc": null
+            },
+            "status": "ok",
+            "now": {
+              "cloud": "100",
+              "cond_code": "151",
+              "cond_txt": "Cloudy",
+              "fl": "2",
+              "hum": "91",
+              "pcpn": "0.0",
+              "pres": "1010",
+              "tmp": "26",
+              "vis": "8",
+              "wind_deg": "270",
+              "wind_dir": "W",
+              "wind_sc": "2",
+              "wind_spd": "11"
+            }
+          }
+        ]
+      },
+      "currency": "USD",
+      "yield_rate": 0.22,
+      "is_stored": false,
+      "org_code": "G10056482",
+      "org_name": "N C ENTERPRISES"
+    },
+    {
+      "powerstation_id": "f4512b2a-3f13-4037-9f9b-4513f0b3715f",
+      "powercontrol_status": 0,
+      "stationname": "Vikas 10Kw",
+      "first_letter": "",
+      "adcode": "017100100030",
+      "location": "Shantai Niwas, lane-3, New colony, Mondop Navelim Goa",
+      "status": 1,
+      "pac": 8038.0,
+      "capacity": 10.0,
+      "eday": 10.4,
+      "emonth": 247.1,
+      "eday_income": 78.0,
+      "etotal": 7834.9,
+      "powerstation_type": "Residential",
+      "pre_org_id": null,
+      "org_id": null,
+      "longitude": "73.977407",
+      "latitude": "15.2589651",
+      "pac_kw": 0.8038000000000001,
+      "to_hour": 1.04,
+      "weather": {
+        "HeWeather6": [
+          {
+            "basic": {
+              "cid": null,
+              "location": null,
+              "parent_city": null,
+              "admin_area": null,
+              "cnty": null,
+              "lat": null,
+              "lon": null,
+              "tz": null
+            },
+            "update": {
+              "loc": null,
+              "utc": null
+            },
+            "status": "ok",
+            "now": {
+              "cloud": "100",
+              "cond_code": "151",
+              "cond_txt": "Cloudy",
+              "fl": "2",
+              "hum": "91",
+              "pcpn": "0.0",
+              "pres": "1010",
+              "tmp": "26",
+              "vis": "8",
+              "wind_deg": "270",
+              "wind_dir": "W",
+              "wind_sc": "2",
+              "wind_spd": "11"
+            }
+          }
+        ]
+      },
+      "currency": "INR",
+      "yield_rate": 7.5,
+      "is_stored": false,
+      "org_code": "G10056482",
+      "org_name": "N C ENTERPRISES"
+    },
+    {
+      "powerstation_id": "a1a7b0fb-df8a-4e60-94cd-bd58ed994994",
+      "powercontrol_status": 0,
+      "stationname": "kunal 10kw",
+      "first_letter": "",
+      "adcode": "017100100030",
+      "location": "H.no. 259/1,\nMandop, Shantinagar, Goa",
+      "status": 1,
+      "pac": 2761.0,
+      "capacity": 10.7,
+      "eday": 8.4,
+      "emonth": 257.8,
+      "eday_income": 1.848,
+      "etotal": 3061.4,
+      "powerstation_type": "Residential",
+      "pre_org_id": null,
+      "org_id": null,
+      "longitude": "73.9806627",
+      "latitude": "15.2616388",
+      "pac_kw": 0.25803738317757013,
+      "to_hour": 0.7850467289719627,
+      "weather": {
+        "HeWeather6": [
+          {
+            "basic": {
+              "cid": null,
+              "location": null,
+              "parent_city": null,
+              "admin_area": null,
+              "cnty": null,
+              "lat": null,
+              "lon": null,
+              "tz": null
+            },
+            "update": {
+              "loc": null,
+              "utc": null
+            },
+            "status": "ok",
+            "now": {
+              "cloud": "100",
+              "cond_code": "151",
+              "cond_txt": "Cloudy",
+              "fl": "2",
+              "hum": "91",
+              "pcpn": "0.0",
+              "pres": "1010",
+              "tmp": "26",
+              "vis": "8",
+              "wind_deg": "270",
+              "wind_dir": "W",
+              "wind_sc": "2",
+              "wind_spd": "11"
+            }
+          }
+        ]
+      },
+      "currency": "USD",
+      "yield_rate": 0.22,
+      "is_stored": false,
+      "org_code": "G10056482",
+      "org_name": "N C ENTERPRISES"
+    }
+  ]
+}

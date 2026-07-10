@@ -222,7 +222,7 @@ class SolarLiveApp:
         self.host = host
         self.port = port
         self.config = load_config()
-        self.last_refresh: dict[str, Any] = {"started": None, "finished": None, "steps": []}
+        self.last_refresh: dict[str, Any] = {"started": None, "finished": None, "running": False, "steps": []}
         self.refresh_lock = threading.Lock()
         self.last_auto_key = ""
 
@@ -299,47 +299,67 @@ class SolarLiveApp:
                 "message": str(exc),
             }
 
+    def append_refresh_step(self, step: dict[str, Any]) -> None:
+        self.last_refresh.setdefault("steps", []).append(step)
+
     def refresh(self) -> dict[str, Any]:
         with self.refresh_lock:
             started = dt.datetime.now()
+            self.last_refresh = {
+                "started": started.isoformat(timespec="seconds"),
+                "finished": None,
+                "running": True,
+                "steps": [],
+            }
             env = os.environ.copy()
             env.update(load_env_file())
             env["PYTHONPYCACHEPREFIX"] = str(PROJECT_DIR / ".pycache")
             refresh_py = refresh_python()
             report_py = report_python()
-            steps: list[dict[str, Any]] = []
 
             if env.get("SEMS_USERNAME") and env.get("SEMS_PASSWORD"):
-                steps.append(self.run_step("GoodWe station refresh", [refresh_py, "./sems_export_json.py"], env))
-                steps.append(self.run_step("GoodWe weekly refresh", [refresh_py, "./sems_weekly_generation.py"], env))
+                self.append_refresh_step(self.run_step("GoodWe station refresh", [refresh_py, "./sems_export_json.py"], env))
+                self.append_refresh_step(self.run_step("GoodWe weekly refresh", [refresh_py, "./sems_weekly_generation.py"], env))
             else:
-                steps.append({"label": "GoodWe refresh", "ok": False, "message": "Missing SEMS_USERNAME/SEMS_PASSWORD"})
+                self.append_refresh_step({"label": "GoodWe refresh", "ok": False, "message": "Missing SEMS_USERNAME/SEMS_PASSWORD"})
 
             if env.get("FRONIUS_USERNAME") and env.get("FRONIUS_PASSWORD"):
-                steps.append(self.run_step("Fronius current refresh", [refresh_py, "./fronius_backend_current_generation.py"], env))
-                steps.append(self.run_step("Fronius weekly refresh", [refresh_py, "./fronius_backend_weekly_generation.py"], env))
+                self.append_refresh_step(self.run_step("Fronius current refresh", [refresh_py, "./fronius_backend_current_generation.py"], env))
+                self.append_refresh_step(self.run_step("Fronius weekly refresh", [refresh_py, "./fronius_backend_weekly_generation.py"], env))
             else:
-                steps.append({"label": "Fronius refresh", "ok": False, "message": "Missing FRONIUS_USERNAME/FRONIUS_PASSWORD"})
+                self.append_refresh_step({"label": "Fronius refresh", "ok": False, "message": "Missing FRONIUS_USERNAME/FRONIUS_PASSWORD"})
 
             if env.get("FIMER_USERNAME") and env.get("FIMER_PASSWORD"):
-                steps.append(self.run_step("FIMER refresh", [refresh_py, "./fimer_backend_export_generation.py"], env))
+                self.append_refresh_step(self.run_step("FIMER refresh", [refresh_py, "./fimer_backend_export_generation.py"], env))
             else:
-                steps.append({"label": "FIMER refresh", "ok": False, "message": "Missing FIMER_USERNAME/FIMER_PASSWORD"})
+                self.append_refresh_step({"label": "FIMER refresh", "ok": False, "message": "Missing FIMER_USERNAME/FIMER_PASSWORD"})
 
             if (PROJECT_DIR / "solis_network_capture.json").exists():
-                steps.append(self.run_step("Solis import from latest capture", [refresh_py, "./solis_capture_to_generation.py"], env))
+                self.append_refresh_step(self.run_step("Solis import from latest capture", [refresh_py, "./solis_capture_to_generation.py"], env))
             if (PROJECT_DIR / "solax_network_capture.json").exists():
-                steps.append(self.run_step("SolaX backend refresh", [refresh_py, "./solax_capture_to_generation.py"], env))
+                self.append_refresh_step(self.run_step("SolaX backend refresh", [refresh_py, "./solax_capture_to_generation.py"], env))
 
-            steps.append(self.run_step("Rebuild master PDF", [report_py, "./solar_performance_report_app.py", "--current-project", "--output-dir", str(self.output_dir), "--plant-reports"], env))
-            steps.append(self.run_step("Rebuild dashboard app", [report_py, "./build_solar_dashboard_app.py", "--output-dir", str(self.output_dir)], env))
+            if not self.plant_dataframe().empty:
+                self.append_refresh_step(self.run_step("Rebuild master PDF", [report_py, "./solar_performance_report_app.py", "--current-project", "--output-dir", str(self.output_dir), "--plant-reports"], env))
+                self.append_refresh_step(self.run_step("Rebuild dashboard app", [report_py, "./build_solar_dashboard_app.py", "--output-dir", str(self.output_dir)], env))
+            else:
+                self.append_refresh_step({"label": "Load plant data", "ok": False, "message": "No plant data available after refresh. Check credential variables and Render logs."})
 
-            self.last_refresh = {
-                "started": started.isoformat(timespec="seconds"),
-                "finished": dt.datetime.now().isoformat(timespec="seconds"),
-                "steps": steps,
-            }
+            self.last_refresh["finished"] = dt.datetime.now().isoformat(timespec="seconds")
+            self.last_refresh["running"] = False
             return self.last_refresh
+
+    def refresh_async(self) -> dict[str, Any]:
+        if self.refresh_lock.locked():
+            return {**self.last_refresh, "accepted": False, "message": "Refresh already running"}
+        self.last_refresh = {
+            "started": dt.datetime.now().isoformat(timespec="seconds"),
+            "finished": None,
+            "running": True,
+            "steps": [{"label": "Refresh queued", "ok": True, "message": "Starting background refresh"}],
+        }
+        threading.Thread(target=self.refresh, daemon=True).start()
+        return {**self.last_refresh, "accepted": True}
 
     def generate_selected_report(self, plant_ids: list[str], user: dict[str, Any] | None = None) -> dict[str, Any]:
         df = self.plant_dataframe()
@@ -571,7 +591,7 @@ class Handler(BaseHTTPRequestHandler):
                 if not is_admin(user):
                     self.send_json({"error": "Admin access required"}, 403)
                     return
-                self.send_json(APP.refresh())
+                self.send_json(APP.refresh_async())
             elif parsed.path == "/api/report":
                 payload = self.read_json()
                 self.send_json(APP.generate_selected_report(payload.get("plant_ids") or [], user))
@@ -711,8 +731,10 @@ rowsEl.innerHTML=rows.map(p=>`<tr><td><input type="checkbox" data-id="${p.id}" $
 rowsEl.querySelectorAll('input[type=checkbox][data-id]').forEach(cb=>cb.onchange=()=>{cb.checked?selected.add(cb.dataset.id):selected.delete(cb.dataset.id);render()});
 detailEl.innerHTML=active?`<div class="plant-title">${active.site}</div><p>${active.brand} · <span class="status ${cls(active.status)}">${active.status}</span></p><div class="details"><div class="detail"><span>Data Date</span><b>${active.dataDate||'Unknown'}</b></div><div class="detail"><span>Capacity</span><b>${f(active.capacity)} kW</b></div><div class="detail"><span>Daily</span><b>${f(active.daily)} kWh</b></div><div class="detail"><span>Weekly</span><b>${f(active.weekly)} kWh</b></div><div class="detail"><span>2026/kW</span><b>${f(active.yield2026)}</b></div><div class="detail"><span>Total</span><b>${f(active.total)} MWh</b></div></div>`:'No plant';
 }
-async function load(){const p=await api('/api/plants');plants=p.plants;selected=new Set(plants.map(p=>p.id));renderFilters();render();const s=await api('/api/status');statusData=s;dateLineEl.textContent='Today '+todayText();mobileLineEl.textContent='iPhone: '+s.mobile_url;autoDayEl.value=s.config.auto_report_day;autoTimeEl.value=s.config.auto_report_time;}
-refreshBtn.onclick=async()=>{logEl.textContent='Refreshing live data...';const r=await api('/api/refresh',{method:'POST'});logEl.textContent=r.steps.map(s=>`${s.ok?'OK':'SKIP'} - ${s.label}: ${s.message||''}`).join('\\n');await load();}
+function refreshText(r){const lines=(r.steps||[]).map(s=>`${s.ok?'OK':'SKIP'} - ${s.label}: ${s.message||''}`);if(r.running)lines.push('RUNNING - Refresh still in progress...');if(r.finished)lines.push('DONE - Finished '+r.finished);return lines.join('\\n')||'Ready.'}
+async function load(){const p=await api('/api/plants');plants=p.plants;selected=new Set(plants.map(p=>p.id));renderFilters();render();const s=await api('/api/status');statusData=s;dateLineEl.textContent='Today '+todayText();mobileLineEl.textContent='iPhone: '+s.mobile_url;autoDayEl.value=s.config.auto_report_day;autoTimeEl.value=s.config.auto_report_time;logEl.textContent=refreshText(s.last_refresh||{});}
+async function pollRefresh(){for(let i=0;i<90;i++){const s=await api('/api/status');logEl.textContent=refreshText(s.last_refresh||{});await load();if(!s.last_refresh?.running)return;await new Promise(r=>setTimeout(r,3000));}}
+refreshBtn.onclick=async()=>{logEl.textContent='Starting background refresh...';const r=await api('/api/refresh',{method:'POST'});logEl.textContent=refreshText(r);pollRefresh().catch(error=>{logEl.textContent='Refresh status failed: '+error;});}
 reportBtn.onclick=async()=>{const ids=[...selected];reportResultEl.textContent='Generating report...';const r=await api('/api/report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plant_ids:ids})});reportResultEl.innerHTML=r.ok?`Saved ${r.count} plant report: <a href="${r.download_url}" target="_blank">Download PDF</a>`:'Failed: '+r.message;}
 selectAllBtn.onclick=()=>{const visible=filtered();const all=visible.every(p=>selected.has(p.id));visible.forEach(p=>all?selected.delete(p.id):selected.add(p.id));render()}
 saveScheduleBtn.onclick=async()=>{const r=await api('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({auto_report_day:autoDayEl.value,auto_report_time:autoTimeEl.value})});logEl.textContent='Saved schedule: '+r.config.auto_report_day+' '+r.config.auto_report_time}
