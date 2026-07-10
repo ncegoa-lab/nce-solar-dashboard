@@ -29,6 +29,20 @@ BRANDS = {
 }
 
 
+def load_env_file() -> None:
+    env_path = PROJECT_DIR / ".solar_report_env"
+    if not env_path.exists():
+        return
+    for line in env_path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, value = stripped.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        os.environ.setdefault(key, value)
+
+
 def require_env(name: str) -> str:
     value = os.getenv(name, "").strip()
     if not value:
@@ -64,6 +78,7 @@ def upload_generation(brand: str, json_path: Path, app_url: str, token: str) -> 
 
 
 def main() -> None:
+    load_env_file()
     parser = argparse.ArgumentParser(description="Upload fresh inverter generation JSON to Render.")
     parser.add_argument("--brand", choices=sorted(BRANDS), default="solis")
     parser.add_argument("--skip-capture", action="store_true", help="Upload the existing generation JSON without opening the portal.")

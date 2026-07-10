@@ -50,6 +50,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
+APP_VERSION = "2026-07-10-solis-mac-upload-v2"
 PLANT_COLUMNS = [
     "App ID",
     "Brand",
@@ -620,6 +621,7 @@ class Handler(BaseHTTPRequestHandler):
                     "auth_enabled": bool(load_users()),
                     "user": {"username": (user or {}).get("username", "Local"), "role": (user or {}).get("role", "admin")},
                     "config": APP.config,
+                    "app_version": APP_VERSION,
                     "last_refresh": APP.last_refresh,
                     "local_url": f"http://127.0.0.1:{APP.port}",
                     "mobile_url": f"http://{local_ip()}:{APP.port}",
@@ -771,7 +773,7 @@ table{width:100%;border-collapse:collapse;font-size:12px}th{background:var(--blu
 </style>
 </head>
 <body>
-<header><h1>NCE Live Solar App</h1><div class="meta"><div>Signed in: __USER__</div><div id="dateLine"></div><div id="mobileLine"></div></div><a class="logout" href="/logout">Logout</a></header>
+<header><h1>NCE Live Solar App</h1><div class="meta"><div>Signed in: __USER__</div><div id="dateLine"></div><div id="versionLine"></div><div id="mobileLine"></div></div><a class="logout" href="/logout">Logout</a></header>
 <main>
   <div class="toolbar">
     <div><label>Search</label><input id="search" placeholder="Search any plant"></div>
@@ -815,6 +817,7 @@ const reportBtn=document.querySelector('#report');
 const selectAllBtn=document.querySelector('#selectAll');
 const saveScheduleBtn=document.querySelector('#saveSchedule');
 const dateLineEl=document.querySelector('#dateLine');
+const versionLineEl=document.querySelector('#versionLine');
 const mobileLineEl=document.querySelector('#mobileLine');
 const autoDayEl=document.querySelector('#autoDay');
 const autoTimeEl=document.querySelector('#autoTime');
@@ -836,7 +839,7 @@ rowsEl.querySelectorAll('input[type=checkbox][data-id]').forEach(cb=>cb.onchange
 detailEl.innerHTML=active?`<div class="plant-title">${active.site}</div><p>${active.brand} · <span class="status ${cls(active.status)}">${active.status}</span></p>${staleNote(active)?`<p class="stale">${staleNote(active)}</p>`:''}<div class="details"><div class="detail"><span>Data Date</span><b>${active.dataDate||'Unknown'}</b></div><div class="detail"><span>Capacity</span><b>${f(active.capacity)} kW</b></div><div class="detail"><span>Daily</span><b>${f(active.daily)} kWh</b></div><div class="detail"><span>Weekly</span><b>${f(active.weekly)} kWh</b></div><div class="detail"><span>2026/kW</span><b>${f(active.yield2026)}</b></div><div class="detail"><span>Total</span><b>${f(active.total)} MWh</b></div></div>`:'No plant';
 }
 function refreshText(r){const lines=(r.steps||[]).map(s=>`${s.ok?'OK':'SKIP'} - ${s.label}: ${s.message||''}`);if(r.running)lines.push('RUNNING - Refresh still in progress...');if(r.finished)lines.push('DONE - Finished '+r.finished);return lines.join('\\n')||'Ready.'}
-async function load(){const p=await api('/api/plants');plants=p.plants;selected=new Set(plants.map(p=>p.id));renderFilters();render();const s=await api('/api/status');statusData=s;dateLineEl.textContent='Today '+todayText();mobileLineEl.textContent='iPhone: '+s.mobile_url;autoDayEl.value=s.config.auto_report_day;autoTimeEl.value=s.config.auto_report_time;logEl.textContent=refreshText(s.last_refresh||{});}
+async function load(){const p=await api('/api/plants');plants=p.plants;selected=new Set(plants.map(p=>p.id));renderFilters();render();const s=await api('/api/status');statusData=s;dateLineEl.textContent='Today '+todayText();versionLineEl.textContent='Build: '+(s.app_version||'old');mobileLineEl.textContent='iPhone: '+s.mobile_url;autoDayEl.value=s.config.auto_report_day;autoTimeEl.value=s.config.auto_report_time;logEl.textContent=refreshText(s.last_refresh||{});}
 async function pollRefresh(){for(let i=0;i<90;i++){const s=await api('/api/status');logEl.textContent=refreshText(s.last_refresh||{});await load();if(!s.last_refresh?.running)return;await new Promise(r=>setTimeout(r,3000));}}
 refreshBtn.onclick=async()=>{logEl.textContent='Starting background refresh...';const r=await api('/api/refresh',{method:'POST'});logEl.textContent=refreshText(r);pollRefresh().catch(error=>{logEl.textContent='Refresh status failed: '+error;});}
 reportBtn.onclick=async()=>{const ids=[...selected];reportResultEl.textContent='Generating report...';const r=await api('/api/report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plant_ids:ids})});reportResultEl.innerHTML=r.ok?`Saved ${r.count} plant report: <a href="${r.download_url}" target="_blank">Download PDF</a>`:'Failed: '+r.message;}
