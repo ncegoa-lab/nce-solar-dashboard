@@ -1,17 +1,19 @@
-Upload these files to the root of the GitHub repository:
+Important:
+- APP_LOGIN_DETAILS_PRIVATE.txt is only a note. Editing it does not change the
+  app login.
+- The real app login is controlled by solar_users.json.
 
+To change the app password:
+1. Double-click Reset App Login Password.command on the Mac.
+2. Enter the new password twice.
+3. Upload the newly updated solar_users.json to the GitHub repository root.
+4. Redeploy Render.
+
+Files to upload to GitHub root:
+- solar_users.json
 - solar_live_app.py
 - manage_solar_users.py
-- solar_users.json
 
-Keep this file on the Mac only:
+Keep on Mac only:
 - Reset App Login Password.command
-
-What changed:
-- Login page now has a Reset Password button.
-- The button opens safe reset instructions.
-- It does not allow public internet users to reset the password directly.
-
-After Render redeploys, the dashboard build should show:
-
-Build: 2026-07-10-login-reset-help-v6
+- APP_LOGIN_DETAILS_PRIVATE.txt
