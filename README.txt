@@ -2,19 +2,23 @@ Upload these files to the root of the GitHub repository:
 
 - solar_live_app.py
 - solar_users.json
+- solar_generation_history.json
+- upload_generation_to_render.py
 - manage_solar_users.py
 
-Keep this file on the Mac only:
+Keep these files on the Mac only:
 - Reset App Login Password.command
+- Upload Fresh Solis To Render.command
 
 What changed:
-- The app now prefers solar_users.json over old Render user variables.
-- This prevents stale Render login settings from overriding the uploaded password.
+- Mac/desktop dashboard stays as it is.
+- iPhone layout becomes touch friendly:
+  - compact header
+  - stacked filters and buttons
+  - two-column summary cards
+  - plant table becomes tap-friendly cards
+  - selected plant/history/reports stack cleanly
 
-After Render redeploys, the top blue bar should show:
+After Render redeploys, top blue bar should show:
 
-Build: 2026-07-10-login-file-priority-v7
-
-Login:
-- Username: admin
-- Password: the password saved in APP_LOGIN_DETAILS_PRIVATE.txt
+Build: 2026-07-10-iphone-layout-v8
