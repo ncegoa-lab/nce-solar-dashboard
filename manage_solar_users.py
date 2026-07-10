@@ -25,12 +25,15 @@ def save_payload(payload: dict) -> None:
     USERS_FILE.chmod(0o600)
 
 
-def upsert_user(username: str, role: str, plants: list[str]) -> None:
+def upsert_user(username: str, role: str, plants: list[str], password_arg: str | None = None) -> None:
     payload = load_payload()
-    password = getpass.getpass(f"Password for {username}: ")
-    confirm = getpass.getpass("Confirm password: ")
-    if password != confirm:
-        raise SystemExit("Passwords did not match.")
+    if password_arg is None:
+        password = getpass.getpass(f"Password for {username}: ")
+        confirm = getpass.getpass("Confirm password: ")
+        if password != confirm:
+            raise SystemExit("Passwords did not match.")
+    else:
+        password = password_arg
     users = payload.setdefault("users", [])
     entry = {
         "username": username,
@@ -58,10 +61,11 @@ def main() -> None:
         default=[],
         help='Allowed plant key, for example "Solis::ELVIS GOMES". Repeat for multiple plants.',
     )
+    parser.add_argument("--password", help="Set password non-interactively.")
     args = parser.parse_args()
     if args.role == "customer" and not args.plant:
         raise SystemExit("Customer users need at least one --plant entry.")
-    upsert_user(args.username, args.role, args.plant)
+    upsert_user(args.username, args.role, args.plant, args.password)
 
 
 if __name__ == "__main__":

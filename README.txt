@@ -1,19 +1,17 @@
 Upload these files to the root of the GitHub repository:
 
 - solar_live_app.py
-- solar_generation_history.json
-- upload_generation_to_render.py
+- manage_solar_users.py
 - solar_users.json
 
 Keep this file on the Mac only:
-- Upload Fresh Solis To Render.command
+- Reset App Login Password.command
 
-Do not upload:
-- APP_LOGIN_DETAILS_PRIVATE.txt
+What changed:
+- Login page now has a Reset Password button.
+- The button opens safe reset instructions.
+- It does not allow public internet users to reset the password directly.
 
-Login after Render redeploy:
-- Username is admin
-- Password is saved locally in APP_LOGIN_DETAILS_PRIVATE.txt
+After Render redeploys, the dashboard build should show:
 
-This update makes the app use solar_users.json for login, so you do not need
-to find NCE_APP_USER or NCE_APP_PASSWORD in Render.
+Build: 2026-07-10-login-reset-help-v6

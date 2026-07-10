@@ -51,7 +51,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-10-report-links-v5"
+APP_VERSION = "2026-07-10-login-reset-help-v6"
 PLANT_COLUMNS = [
     "App ID",
     "Brand",
@@ -688,6 +688,14 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def send_reset_help_page(self) -> None:
+        body = RESET_HELP_HTML.encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     def send_json(self, payload: Any, status: int = 200) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
@@ -722,6 +730,8 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_json({"ok": True})
             elif parsed.path == "/login":
                 self.send_login_page()
+            elif parsed.path == "/reset-password":
+                self.send_reset_help_page()
             elif parsed.path == "/logout":
                 self.send_response(302)
                 self.send_header("Set-Cookie", f"{SESSION_COOKIE}=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax")
@@ -869,7 +879,7 @@ LOGIN_HTML = r"""<!doctype html>
 *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:linear-gradient(145deg,#eaf5fb,#f6fbf7);color:#1e2b3f}
 .login{width:min(420px,calc(100vw - 32px));background:white;border:1px solid #d7e0ec;border-radius:12px;box-shadow:0 14px 50px rgba(23,79,156,.16);padding:26px}
 h1{font-size:24px;margin:0 0 6px;color:#174f9c}.sub{margin:0 0 22px;color:#647084}label{display:block;font-size:12px;font-weight:800;color:#647084;margin:14px 0 6px}
-input{width:100%;height:42px;border:1px solid #d7e0ec;border-radius:8px;padding:0 12px;font-size:15px}button{margin-top:18px;width:100%;height:42px;border:0;border-radius:8px;background:#174f9c;color:white;font-weight:900;font-size:15px}
+input{width:100%;height:42px;border:1px solid #d7e0ec;border-radius:8px;padding:0 12px;font-size:15px}button{margin-top:18px;width:100%;height:42px;border:0;border-radius:8px;background:#174f9c;color:white;font-weight:900;font-size:15px}.reset{display:block;text-align:center;margin-top:12px;color:#174f9c;text-decoration:none;font-weight:850;font-size:13px}
 .error{margin:12px 0 0;color:#c73e3e;font-weight:800;font-size:13px}.mark{height:5px;width:90px;background:#18b9d6;border-radius:99px;margin-bottom:18px}
 </style>
 </head>
@@ -883,8 +893,36 @@ input{width:100%;height:42px;border:1px solid #d7e0ec;border-radius:8px;padding:
   <label>Password</label>
   <input name="password" type="password" autocomplete="current-password" required>
   <button type="submit">Sign In</button>
+  <a class="reset" href="/reset-password">Reset Password</a>
   <div class="error">__ERROR__</div>
 </form>
+</body>
+</html>"""
+
+
+RESET_HELP_HTML = r"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reset NCE Solar Password</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:linear-gradient(145deg,#eaf5fb,#f6fbf7);color:#1e2b3f}
+.box{width:min(520px,calc(100vw - 32px));background:white;border:1px solid #d7e0ec;border-radius:12px;box-shadow:0 14px 50px rgba(23,79,156,.16);padding:26px}
+h1{font-size:24px;margin:0 0 8px;color:#174f9c}.sub{margin:0 0 18px;color:#647084;line-height:1.5}.step{border:1px solid #d7e0ec;border-radius:8px;background:#fbfdff;padding:12px;margin:10px 0}.step b{color:#174f9c}a.btn{display:block;text-align:center;margin-top:18px;background:#174f9c;color:white;text-decoration:none;border-radius:8px;padding:11px 12px;font-weight:900}.warn{color:#c73e3e;font-weight:850}
+</style>
+</head>
+<body>
+<main class="box">
+  <h1>Reset Password</h1>
+  <p class="sub">For safety, password reset is done on the Mac. The public web page cannot change the admin password.</p>
+  <div class="step"><b>1.</b> On the Mac, double-click <b>Reset App Login Password.command</b>.</div>
+  <div class="step"><b>2.</b> Enter the new app password twice.</div>
+  <div class="step"><b>3.</b> Upload the updated <b>solar_users.json</b> to GitHub root.</div>
+  <div class="step"><b>4.</b> Redeploy Render, then login as <b>admin</b>.</div>
+  <p class="warn">Do not upload APP_LOGIN_DETAILS_PRIVATE.txt.</p>
+  <a class="btn" href="/login">Back to Login</a>
+</main>
 </body>
 </html>"""
 
