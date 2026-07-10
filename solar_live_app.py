@@ -51,7 +51,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-10-iphone-compact-v9"
+APP_VERSION = "2026-07-10-iphone-history-calendar-v10"
 PLANT_COLUMNS = [
     "App ID",
     "Brand",
@@ -968,6 +968,10 @@ section.panel td::before{content:attr(data-label);color:var(--muted);font-size:1
 section.panel td:first-child{display:block;padding-bottom:2px}
 section.panel td:first-child::before{content:''}
 section.panel td:nth-child(3){font-size:14px}.checkcell{width:auto}
+section.panel tr:not(.open) td:not(:first-child):not(:nth-child(3)){display:none}
+section.panel tr td:nth-child(3)::after{content:'+';float:right;color:var(--blue);font-weight:900}
+section.panel tr.open td:nth-child(3)::after{content:'-'}
+.history-picker{display:grid;grid-template-columns:1fr;gap:8px;margin-top:8px}.picked{border:1px solid var(--line);border-radius:6px;background:#fbfdff;padding:9px;margin-top:8px;font-size:12px}.picked b{font-size:15px}
 .history-scroll{max-height:220px}.history-scroll table{display:table}.history-scroll thead{display:table-header-group}.history-scroll tbody{display:table-row-group}.history-scroll tr{display:table-row;border:0;box-shadow:none;margin:0;padding:0}.history-scroll td,.history-scroll th{display:table-cell;width:auto;padding:7px;font-size:11px}.history-scroll td::before{content:none}
 .report-item{font-size:12px}.log{max-height:140px}.plant-title{font-size:18px}
 .mobile-fold{display:block}.mobile-fold:not([open]){padding-bottom:10px}.mobile-fold summary{font-size:14px}
@@ -1048,16 +1052,20 @@ function filtered(){const q=searchInput.value.toLowerCase(), b=brandFilter.value
 function selectedRows(){return plants.filter(p=>selected.has(p.id))}
 function renderFilters(){brandFilter.innerHTML='<option value="all">All Brands</option>'+uniq(plants.map(p=>p.brand)).map(x=>`<option>${x}</option>`).join('');statusFilter.innerHTML='<option value="all">All Status</option>'+uniq(plants.map(p=>p.status)).map(x=>`<option>${x}</option>`).join('')}
 function historyTable(title, rows, cols, open=false){if(!rows?.length)return `<details class="fold history-block"><summary>${title}</summary><div class="empty-history">No previous data yet. It will build after refreshes/uploads.</div></details>`;return `<details class="fold history-block" ${open?'open':''}><summary>${title}</summary><div class="history-scroll"><table><thead><tr>${cols.map(c=>`<th>${c[0]}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td>${c[2]?f(r[c[1]]):h(r[c[1]])}</td>`).join('')}</tr>`).join('')}</tbody></table></div></details>`}
-function renderHistory(data){const daily=(data.daily||[]).slice(0,1), weekly=(data.weekly||[]).slice(0,1), yearly=(data.yearly||[]).slice(0,1);return [
-historyTable('Today / Latest Daily',daily,[['Date','date'],['Daily kWh','daily',1],['Status','status']],true),
-historyTable('Current / Latest Week',weekly,[['Week','week'],['Daily Sum','dailySum',1],['Weekly kWh','weekly',1]],false),
-historyTable('Current / Latest Year',yearly,[['Year','year'],['Year kWh','yearKwh',1],['Latest Date','lastDate']],false)
+function opt(rows,key){return (rows||[]).map((r,i)=>`<option value="${i}">${h(r[key]||'')}</option>`).join('')}
+function pickedLine(type,row){if(!row)return 'No data for this selection.';if(type==='day')return `${h(row.date)} · ${f(row.daily)} kWh · ${h(row.status)}`;if(type==='week')return `${h(row.week)} · ${f(row.weekly || row.dailySum)} kWh`;return `${h(row.year)} · ${f(row.yearKwh)} kWh · latest ${h(row.lastDate)}`}
+function renderPickedHistory(data){const dayIndex=Math.max(0,(data.daily||[]).findIndex(r=>r.date===document.querySelector('#dailyDatePick')?.value));const weekIndex=Number(document.querySelector('#weekPick')?.value||0);const yearIndex=Number(document.querySelector('#yearPick')?.value||0);document.querySelector('#pickedHistory').innerHTML=`<div class="picked"><b>Daily</b><br>${pickedLine('day',(data.daily||[])[dayIndex])}</div><div class="picked"><b>Week</b><br>${pickedLine('week',(data.weekly||[])[weekIndex])}</div><div class="picked"><b>Year</b><br>${pickedLine('year',(data.yearly||[])[yearIndex])}</div>`}
+function wireHistoryPickers(data){const d=document.querySelector('#dailyDatePick'), w=document.querySelector('#weekPick'), y=document.querySelector('#yearPick');[d,w,y].forEach(el=>{if(el)el.onchange=()=>renderPickedHistory(data)});renderPickedHistory(data)}
+function renderHistory(data){const daily=data.daily||[], weekly=data.weekly||[], yearly=data.yearly||[];const latestDay=daily[0]?.date||'';return `<details class="fold history-block" open><summary>Past History</summary><div class="history-picker"><div><label>Date</label><input id="dailyDatePick" type="date" value="${h(latestDay)}"></div><div><label>Week</label><select id="weekPick">${opt(weekly,'week')}</select></div><div><label>Year</label><select id="yearPick">${opt(yearly,'year')}</select></div></div><div id="pickedHistory"></div></details>`+[
+historyTable('All Daily',daily,[['Date','date'],['Daily kWh','daily',1],['Status','status']],false),
+historyTable('All Weekly',weekly,[['Week','week'],['Daily Sum','dailySum',1],['Weekly kWh','weekly',1]],false),
+historyTable('All Yearly',yearly,[['Year','year'],['Year kWh','yearKwh',1],['Latest Date','lastDate']],false)
 ].join('')}
-async function loadHistory(active){const key=active?.plantKey||'';activeHistoryKey=key;const box=document.querySelector('#historyBox');if(!box||!key)return;box.innerHTML='<div class="empty-history">Loading previous data...</div>';try{const data=await api('/api/history?plant_key='+encodeURIComponent(key));if(activeHistoryKey===key){box.innerHTML=renderHistory(data)}}catch(error){if(activeHistoryKey===key)box.innerHTML='<div class="empty-history">History failed: '+h(error.message)+'</div>';}}
+async function loadHistory(active){const key=active?.plantKey||'';activeHistoryKey=key;const box=document.querySelector('#historyBox');if(!box||!key)return;box.innerHTML='<div class="empty-history">Loading previous data...</div>';try{const data=await api('/api/history?plant_key='+encodeURIComponent(key));if(activeHistoryKey===key){box.innerHTML=renderHistory(data);wireHistoryPickers(data)}}catch(error){if(activeHistoryKey===key)box.innerHTML='<div class="empty-history">History failed: '+h(error.message)+'</div>';}}
 function renderDetail(active){if(!active){detailEl.innerHTML='No plant';return}detailEl.innerHTML=`<div class="plant-title">${h(active.site)}</div><p>${h(active.brand)} · <span class="status ${cls(active.status)}">${h(active.status)}</span></p>${staleNote(active)?`<p class="stale">${h(staleNote(active))}</p>`:''}<div class="details"><div class="detail"><span>Data Date</span><b>${h(active.dataDate||'Unknown')}</b></div><div class="detail"><span>Capacity</span><b>${f(active.capacity)} kW</b></div><div class="detail"><span>Daily</span><b>${f(active.daily)} kWh</b></div><div class="detail"><span>Weekly</span><b>${f(active.weekly)} kWh</b></div><div class="detail"><span>2026/kW</span><b>${f(active.yield2026)}</b></div><div class="detail"><span>Total</span><b>${f(active.total)} MWh</b></div></div><div id="historyBox" class="history-block"></div>`;loadHistory(active)}
 function render(){const rows=filtered(), chosen=selectedRows();const active=plants.find(p=>p.id===activePlantId)||chosen[0]||rows[0]||plants[0];if(active)activePlantId=active.id;cardsEl.innerHTML=[['Visible',rows.length],['Selected',chosen.length],['Daily',f(rows.reduce((a,p)=>a+p.daily,0))+' kWh'],['Weekly',f(rows.reduce((a,p)=>a+p.weekly,0))+' kWh'],['Capacity',f(rows.reduce((a,p)=>a+p.capacity,0))+' kW'],['Fresh',rows.filter(fresh).length+'/'+rows.length]].map(x=>`<div class="card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join('');
 rowsEl.innerHTML=rows.map(p=>`<tr data-id="${p.id}" style="cursor:pointer"><td data-label=""><input type="checkbox" data-id="${p.id}" ${selected.has(p.id)?'checked':''}></td><td data-label="Brand">${h(p.brand)}</td><td data-label="Plant"><b>${h(p.site)}</b></td><td data-label="Status" class="status ${cls(p.status)}">${h(p.status)}</td><td data-label="Date" title="${h(staleNote(p))}">${h(p.dataDate||'')} <span class="pill ${fresh(p)?'fresh':'stale'}">${fresh(p)?'TODAY':'STALE'}</span></td><td data-label="Daily">${f(p.daily)}</td><td data-label="Weekly">${f(p.weekly)}</td><td data-label="2026/kW">${f(p.yield2026)}</td></tr>`).join('');
-rowsEl.querySelectorAll('tr[data-id]').forEach(tr=>tr.onclick=()=>{activePlantId=tr.dataset.id;render()});
+rowsEl.querySelectorAll('tr[data-id]').forEach(tr=>{if(tr.dataset.id===activePlantId)tr.classList.add('open');tr.onclick=()=>{activePlantId=tr.dataset.id;render()}});
 rowsEl.querySelectorAll('input[type=checkbox][data-id]').forEach(cb=>{cb.onclick=e=>e.stopPropagation();cb.onchange=()=>{cb.checked?selected.add(cb.dataset.id):selected.delete(cb.dataset.id);render()}});
 renderDetail(active);
 }
