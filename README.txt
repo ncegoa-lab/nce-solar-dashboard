@@ -8,15 +8,10 @@ Keep this file on the Mac only:
 - Upload Fresh Solis To Render.command
 
 What changed:
-- Selected Plant now has user-selectable history controls:
-  - Daily Date selector
-  - Week selector
-  - Year selector
-- The selected value is shown immediately above the scrolling history table.
+- Generated selected reports now show a clear green Download PDF button.
+- The dashboard now shows a Latest Reports section with recent PDF links.
+- Reports remain accessible after page refresh/reload.
 
 After Render redeploys, the top blue bar should show:
 
-Build: 2026-07-10-history-selectors-v4
-
-History grows from now onward whenever the dashboard refreshes or fresh Solis
-data is uploaded from the Mac.
+Build: 2026-07-10-report-links-v5
