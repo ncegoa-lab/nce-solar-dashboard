@@ -2,7 +2,7 @@
   "users": [
     {
       "username": "admin",
-      "password_hash": "pbkdf2_sha256$260000$1f6222d5e8bd9310723160a8162ebd67$ARo6oB7nA9Rbw7aDmWtyjXMdmVMvyx3hPa+jWTbYk2M=",
+      "password_hash": "pbkdf2_sha256$260000$f09c9842ddfb4011799650654519c5d8$m6TWPhBAK6T7RDy6rQ6DTFuGgK71Mgj/5BsWiAIUBKc=",
       "role": "admin",
       "plants": [
         "*"
