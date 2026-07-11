@@ -26,7 +26,6 @@ import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from zoneinfo import ZoneInfo
 
 import pandas as pd
 
@@ -52,8 +51,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-11-plant-status-colors-v15"
-IST = ZoneInfo("Asia/Kolkata")
+APP_VERSION = "2026-07-10-iphone-history-calendar-v10"
 PLANT_COLUMNS = [
     "App ID",
     "Brand",
@@ -87,14 +85,6 @@ UPLOAD_GENERATION_FILES = {
 
 def plant_key(brand: Any, site: Any) -> str:
     return f"{str(brand).strip()}::{str(site).strip()}"
-
-
-def ist_now() -> dt.datetime:
-    return dt.datetime.now(IST)
-
-
-def ist_today() -> dt.date:
-    return ist_now().date()
 
 
 def parse_iso_date(value: Any) -> dt.date | None:
@@ -272,7 +262,7 @@ class SolarLiveApp:
 
     def plant_payload(self, user: dict[str, Any] | None = None) -> list[dict[str, Any]]:
         df = self.plant_dataframe()
-        today = ist_today().isoformat()
+        today = dt.date.today().isoformat()
         rows = []
         for row in df.to_dict(orient="records"):
             key = plant_key(row["Brand"], row["Site Name"])
@@ -292,7 +282,7 @@ class SolarLiveApp:
                     "weekly": float(row["Weekly Generation (kWh)"] or 0),
                     "year": float(row["Year Generation (kWh)"] or 0),
                     "total": float(row["Total Generation (MWh)"] or 0),
-                    "cuf": float(row.get("CUF (%)") or 0),
+                    "yield2026": float(row["2026 Yield (kWh/kW)"] or 0),
                     "avgDay": float(row["Average Daily Yield (kWh/kW/day)"] or 0),
                     "source": row.get("Year Generation Source", ""),
                     "timestamp": timestamp,
@@ -327,7 +317,7 @@ class SolarLiveApp:
             for row in existing
             if row.get("plantKey") and row.get("date")
         }
-        today = ist_today().isoformat()
+        today = dt.date.today().isoformat()
         count = 0
         for plant in current:
             date_text = plant.get("dataDate") or today
@@ -343,9 +333,9 @@ class SolarLiveApp:
                 "weekly": plant.get("weekly", 0),
                 "year": plant.get("year", 0),
                 "total": plant.get("total", 0),
-                "cuf": plant.get("cuf", 0),
+                "yield2026": plant.get("yield2026", 0),
                 "timestamp": plant.get("timestamp", ""),
-                "recordedAt": ist_now().replace(microsecond=0).isoformat(),
+                "recordedAt": dt.datetime.now().replace(microsecond=0).isoformat(),
             }
             count += 1
 
@@ -399,7 +389,7 @@ class SolarLiveApp:
         }
 
     def run_step(self, label: str, command: list[str], env: dict[str, str]) -> dict[str, Any]:
-        started = ist_now()
+        started = dt.datetime.now()
         try:
             result = subprocess.run(
                 command,
@@ -414,7 +404,7 @@ class SolarLiveApp:
                 "label": label,
                 "ok": result.returncode == 0,
                 "started": started.isoformat(timespec="seconds"),
-                "finished": ist_now().isoformat(timespec="seconds"),
+                "finished": dt.datetime.now().isoformat(timespec="seconds"),
                 "message": (result.stdout or result.stderr or "").strip()[-1200:],
             }
         except Exception as exc:
@@ -422,7 +412,7 @@ class SolarLiveApp:
                 "label": label,
                 "ok": False,
                 "started": started.isoformat(timespec="seconds"),
-                "finished": ist_now().isoformat(timespec="seconds"),
+                "finished": dt.datetime.now().isoformat(timespec="seconds"),
                 "message": str(exc),
             }
 
@@ -460,12 +450,12 @@ class SolarLiveApp:
 
         filename = UPLOAD_GENERATION_FILES[key]
         target = PROJECT_DIR / filename
-        payload.setdefault("uploaded_at", ist_now().replace(microsecond=0).isoformat())
+        payload.setdefault("uploaded_at", dt.datetime.now().replace(microsecond=0).isoformat())
         temp = target.with_suffix(target.suffix + ".tmp")
         temp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
         temp.replace(target)
 
-        started = ist_now().isoformat(timespec="seconds")
+        started = dt.datetime.now().isoformat(timespec="seconds")
         self.last_refresh = {
             "started": started,
             "finished": None,
@@ -475,7 +465,7 @@ class SolarLiveApp:
         self.append_refresh_step(self.record_history_snapshot())
         for step in self.rebuild_outputs():
             self.append_refresh_step(step)
-        self.last_refresh["finished"] = ist_now().isoformat(timespec="seconds")
+        self.last_refresh["finished"] = dt.datetime.now().isoformat(timespec="seconds")
         self.last_refresh["running"] = False
         return {"ok": True, "file": filename, "systems": len(payload["systems"]), "last_refresh": self.last_refresh}
 
@@ -483,7 +473,7 @@ class SolarLiveApp:
         self.last_refresh.setdefault("steps", []).append(step)
 
     def file_status_step(self, label: str, path: Path, ok_message: str, missing_message: str) -> dict[str, Any]:
-        now = ist_now().isoformat(timespec="seconds")
+        now = dt.datetime.now().isoformat(timespec="seconds")
         return {
             "label": label,
             "ok": path.exists(),
@@ -494,7 +484,7 @@ class SolarLiveApp:
 
     def refresh(self) -> dict[str, Any]:
         with self.refresh_lock:
-            started = ist_now()
+            started = dt.datetime.now()
             self.last_refresh = {
                 "started": started.isoformat(timespec="seconds"),
                 "finished": None,
@@ -552,7 +542,7 @@ class SolarLiveApp:
             for step in self.rebuild_outputs(env):
                 self.append_refresh_step(step)
 
-            self.last_refresh["finished"] = ist_now().isoformat(timespec="seconds")
+            self.last_refresh["finished"] = dt.datetime.now().isoformat(timespec="seconds")
             self.last_refresh["running"] = False
             return self.last_refresh
 
@@ -560,7 +550,7 @@ class SolarLiveApp:
         if self.refresh_lock.locked():
             return {**self.last_refresh, "accepted": False, "message": "Refresh already running"}
         self.last_refresh = {
-            "started": ist_now().isoformat(timespec="seconds"),
+            "started": dt.datetime.now().isoformat(timespec="seconds"),
             "finished": None,
             "running": True,
             "steps": [{"label": "Refresh queued", "ok": True, "message": "Starting background refresh"}],
@@ -568,24 +558,22 @@ class SolarLiveApp:
         threading.Thread(target=self.refresh, daemon=True).start()
         return {**self.last_refresh, "accepted": True}
 
-    def generate_selected_report(self, plant_ids: list[str], user: dict[str, Any] | None = None, all_plants: bool = False) -> dict[str, Any]:
+    def generate_selected_report(self, plant_ids: list[str], user: dict[str, Any] | None = None) -> dict[str, Any]:
         df = self.plant_dataframe()
         df["Plant Key"] = df.apply(lambda row: plant_key(row["Brand"], row["Site Name"]), axis=1)
         if user and user.get("role") != "admin":
             df = df[df["Plant Key"].apply(lambda key: user_can_access(user, key))]
-        if all_plants:
-            selected = df.drop(columns=["App ID"])
-        elif plant_ids:
+        if plant_ids:
             selected = df[df["App ID"].isin(plant_ids)].drop(columns=["App ID"])
         else:
-            return {"ok": False, "message": "No plants selected"}
+            selected = df.drop(columns=["App ID"])
         if "Plant Key" in selected:
             selected = selected.drop(columns=["Plant Key"])
         if selected.empty:
             return {"ok": False, "message": "No plants selected"}
         report_dir = self.output_dir / "Selected Plant Reports"
         report_dir.mkdir(parents=True, exist_ok=True)
-        stamp = ist_now().strftime("%Y%m%d_%H%M")
+        stamp = dt.datetime.now().strftime("%Y%m%d_%H%M")
         if len(selected) == len(df):
             name = f"Solar_Report_All_Plants_{stamp}.pdf"
         elif len(selected) == 1:
@@ -600,7 +588,6 @@ class SolarLiveApp:
             "ok": True,
             "path": str(path),
             "download_url": f"/reports/{path.relative_to(self.output_dir).as_posix()}",
-            "viewer_url": f"/view-report?file={urllib.parse.quote(path.relative_to(self.output_dir).as_posix(), safe='')}",
             "count": int(len(selected)),
         }
 
@@ -619,9 +606,8 @@ class SolarLiveApp:
             reports.append(
                 {
                     "name": path.name,
-                    "url": f"/view-report?file={urllib.parse.quote(relative, safe='')}",
-                    "download_url": f"/reports/{urllib.parse.quote(relative)}",
-                    "modified": dt.datetime.fromtimestamp(path.stat().st_mtime, IST).isoformat(timespec="seconds"),
+                    "url": f"/reports/{urllib.parse.quote(relative)}",
+                    "modified": dt.datetime.fromtimestamp(path.stat().st_mtime).isoformat(timespec="seconds"),
                     "size_kb": round(path.stat().st_size / 1024, 1),
                 }
             )
@@ -631,7 +617,7 @@ class SolarLiveApp:
     def maybe_auto_run(self) -> None:
         while True:
             try:
-                now = ist_now()
+                now = dt.datetime.now()
                 day = self.config.get("auto_report_day", "Sunday")
                 time_text = self.config.get("auto_report_time", "20:00")
                 key = f"{now.date()}-{time_text}"
@@ -710,29 +696,6 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def send_report_viewer(self, relative: str) -> None:
-        assert APP is not None
-        path = (APP.output_dir / relative).resolve()
-        try:
-            path.relative_to(APP.output_dir.resolve())
-        except ValueError:
-            self.send_json({"error": "Invalid report path"}, 400)
-            return
-        if not path.exists() or not path.is_file():
-            self.send_json({"error": "Report not found"}, 404)
-            return
-        download_url = f"/reports/{urllib.parse.quote(relative)}"
-        body = (
-            REPORT_VIEWER_HTML
-            .replace("__TITLE__", path.name)
-            .replace("__DOWNLOAD_URL__", download_url)
-        ).encode("utf-8")
-        self.send_response(200)
-        self.send_header("Content-Type", "text/html; charset=utf-8")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
-
     def send_json(self, payload: Any, status: int = 200) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
@@ -784,7 +747,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_header("Content-Length", str(len(body)))
                 self.end_headers()
                 self.wfile.write(body)
-            elif parsed.path.startswith("/api/") or parsed.path.startswith("/reports/") or parsed.path == "/view-report":
+            elif parsed.path.startswith("/api/") or parsed.path.startswith("/reports/"):
                 user = self.require_auth()
                 if load_users() and not user:
                     return
@@ -797,7 +760,7 @@ class Handler(BaseHTTPRequestHandler):
     def handle_authenticated_get(self, parsed: urllib.parse.ParseResult, user: dict[str, Any] | None) -> None:
         assert APP is not None
         if parsed.path == "/api/plants":
-            self.send_json({"plants": APP.plant_payload(user), "today": ist_today().isoformat()})
+            self.send_json({"plants": APP.plant_payload(user), "today": dt.date.today().isoformat()})
         elif parsed.path == "/api/history":
             query = urllib.parse.parse_qs(parsed.query)
             key = (query.get("plant_key") or [""])[0]
@@ -816,10 +779,6 @@ class Handler(BaseHTTPRequestHandler):
                     "mobile_url": f"http://{local_ip()}:{APP.port}",
                 }
             )
-        elif parsed.path == "/view-report":
-            query = urllib.parse.parse_qs(parsed.query)
-            relative = (query.get("file") or [""])[0]
-            self.send_report_viewer(relative)
         elif parsed.path.startswith("/reports/"):
             relative = urllib.parse.unquote(parsed.path[len("/reports/") :])
             path = (APP.output_dir / relative).resolve()
@@ -892,7 +851,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_json(APP.refresh_async())
             elif parsed.path == "/api/report":
                 payload = self.read_json()
-                self.send_json(APP.generate_selected_report(payload.get("plant_ids") or [], user, bool(payload.get("all_plants"))))
+                self.send_json(APP.generate_selected_report(payload.get("plant_ids") or [], user))
             elif parsed.path == "/api/config":
                 if not is_admin(user):
                     self.send_json({"error": "Admin access required"}, 403)
@@ -968,38 +927,6 @@ h1{font-size:24px;margin:0 0 8px;color:#174f9c}.sub{margin:0 0 18px;color:#64708
 </html>"""
 
 
-REPORT_VIEWER_HTML = r"""<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>__TITLE__</title>
-<style>
-*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:#eef3f8;color:#1e2b3f}
-header{position:sticky;top:0;z-index:5;background:#174f9c;color:white;padding:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-h1{font-size:14px;margin:0;flex:1 1 220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-a,button{border:0;border-radius:6px;padding:9px 10px;font-weight:900;font-size:13px;text-decoration:none;cursor:pointer}
-a{background:white;color:#174f9c}button{background:#18b9d6;color:white}.print{background:#16845f}.share{background:#5c6f8b}
-iframe{display:block;width:100%;height:calc(100vh - 58px);border:0;background:white}
-@media(max-width:640px){header{display:grid;grid-template-columns:1fr 1fr;gap:6px}h1{grid-column:1 / -1}.back{grid-column:1 / -1;text-align:center}a,button{width:100%;text-align:center}iframe{height:calc(100vh - 148px)}}
-</style>
-</head>
-<body>
-<header>
-  <a class="back" href="/">Back to App</a>
-  <h1>__TITLE__</h1>
-  <a id="download" href="__DOWNLOAD_URL__" target="_blank">Download</a>
-  <button class="share" id="share">Share</button>
-  <button class="print" onclick="frames.reportFrame.focus();frames.reportFrame.print()">Print</button>
-</header>
-<iframe name="reportFrame" src="__DOWNLOAD_URL__"></iframe>
-<script>
-document.querySelector('#share').onclick=async()=>{const url=new URL('__DOWNLOAD_URL__', location.origin).href;if(navigator.share){try{await navigator.share({title:document.title,url});return}catch(e){}}navigator.clipboard?.writeText(url);alert('Report link copied.');};
-</script>
-</body>
-</html>"""
-
-
 LIVE_HTML = r"""<!doctype html>
 <html lang="en">
 <head>
@@ -1012,7 +939,7 @@ LIVE_HTML = r"""<!doctype html>
 header{background:var(--blue);color:white;padding:14px 22px;display:flex;gap:16px;align-items:center;position:sticky;top:0;z-index:10}
 h1{font-size:20px;margin:0}.meta{margin-left:auto;text-align:right;font-size:12px;line-height:1.4}
 a.logout{color:white;text-decoration:none;border:1px solid rgba(255,255,255,.55);border-radius:6px;padding:7px 10px;font-weight:800;font-size:12px}
-main{padding:16px;max-width:1440px;margin:auto}.toolbar{display:grid;grid-template-columns:1.2fr .8fr .8fr auto auto auto auto auto;gap:10px;align-items:end;margin-bottom:12px}
+main{padding:16px;max-width:1440px;margin:auto}.toolbar{display:grid;grid-template-columns:1.2fr .8fr .8fr auto auto auto;gap:10px;align-items:end;margin-bottom:12px}
 label{font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:5px}select,input{height:36px;border:1px solid var(--line);border-radius:6px;padding:0 10px;width:100%;background:white}
 button{height:36px;border:0;border-radius:6px;padding:0 13px;background:var(--blue);color:white;font-weight:800;cursor:pointer;white-space:nowrap}button.alt{background:var(--cyan)}button.gray{background:#5c6f8b}
 .grid{display:grid;grid-template-columns:repeat(6,minmax(120px,1fr));gap:10px;margin-bottom:12px}.card,.panel{background:white;border:1px solid var(--line);border-radius:8px;box-shadow:0 1px 4px rgba(15,35,60,.05)}
@@ -1022,7 +949,7 @@ table{width:100%;border-collapse:collapse;font-size:12px}th{background:var(--blu
 .status{font-weight:800}.online{color:var(--green)}.offline,.stale{color:var(--red)}.fresh{color:var(--green)}.pill{display:inline-block;border-radius:999px;padding:2px 7px;font-size:10px;font-weight:800;color:white}.pill.fresh{background:var(--green);color:white}.pill.stale{background:var(--red);color:white}
 .plant-title{font-size:21px;font-weight:850}.details{display:grid;grid-template-columns:1fr 1fr;gap:8px}.detail{border:1px solid var(--line);border-radius:6px;background:#fbfdff;padding:10px}.detail span{display:block;color:var(--muted);font-size:11px;font-weight:700;margin-bottom:7px}
 .checkcell{width:34px}.report-link{font-size:12px;color:var(--muted);margin-top:8px;word-break:break-all}.download-btn{display:inline-block;margin-top:8px;background:var(--green);color:white;text-decoration:none;border-radius:6px;padding:9px 12px;font-weight:900}.report-list{margin-top:8px;display:grid;gap:6px}.report-item{display:block;border:1px solid var(--line);border-radius:6px;background:#fbfdff;padding:8px;color:var(--blue);text-decoration:none;font-weight:800}.report-item span{display:block;color:var(--muted);font-size:11px;font-weight:700;margin-top:3px}.log{font-family:ui-monospace,Menlo,monospace;font-size:11px;white-space:pre-wrap;max-height:180px;overflow:auto;background:#f8fafc;border:1px solid var(--line);padding:8px;border-radius:6px}
-.history-block{margin-top:12px}.history-block h3{font-size:13px;margin:10px 0 6px}.history-scroll{max-height:160px;overflow:auto;border:1px solid var(--line);border-radius:6px}.history-scroll table{font-size:11px}.history-scroll th{position:sticky;top:0}.empty-history{color:var(--muted);font-size:12px;padding:8px;border:1px solid var(--line);border-radius:6px;background:#fbfdff}.fold{border-top:1px solid var(--line);padding-top:10px;margin-top:12px}.fold summary{cursor:pointer;font-weight:900;color:var(--blue);list-style:none}.fold summary::-webkit-details-marker{display:none}.fold summary::after{content:'+';float:right}.fold[open] summary::after{content:'-'}.plant-daily{display:none}
+.history-block{margin-top:12px}.history-block h3{font-size:13px;margin:10px 0 6px}.history-scroll{max-height:160px;overflow:auto;border:1px solid var(--line);border-radius:6px}.history-scroll table{font-size:11px}.history-scroll th{position:sticky;top:0}.empty-history{color:var(--muted);font-size:12px;padding:8px;border:1px solid var(--line);border-radius:6px;background:#fbfdff}.fold{border-top:1px solid var(--line);padding-top:10px;margin-top:12px}.fold summary{cursor:pointer;font-weight:900;color:var(--blue);list-style:none}.fold summary::-webkit-details-marker{display:none}.fold summary::after{content:'+';float:right}.fold[open] summary::after{content:'-'}
 @media(max-width:980px){header{position:static}.toolbar,.grid,.split{grid-template-columns:1fr}table{font-size:11px}th:nth-child(5),td:nth-child(5),th:nth-child(7),td:nth-child(7){display:none}}
 @media(max-width:640px){
 body{background:#f3f7fb}
@@ -1034,19 +961,16 @@ main{padding:10px;max-width:none}.toolbar{display:grid;grid-template-columns:1fr
 section.panel table,section.panel thead,section.panel tbody,section.panel tr,section.panel td{display:block;width:100%}
 section.panel table{border-collapse:separate;border-spacing:0}
 section.panel thead{display:none}
-section.panel tr{border:1px solid #dce8f2;border-radius:7px;background:#fbfdff;margin:5px 0;padding:2px 8px;box-shadow:0 1px 2px rgba(15,35,60,.04)}
-section.panel tr:nth-child(even){background:#fbfdff}
-section.panel tr.open{background:white}
-section.panel td{border:0;padding:4px 4px;display:grid;grid-template-columns:92px 1fr;gap:8px;align-items:center;font-size:12px}
+section.panel tr{border:1px solid var(--line);border-radius:8px;background:white;margin:8px 0;padding:8px;box-shadow:0 1px 3px rgba(15,35,60,.05)}
+section.panel tr:nth-child(even){background:white}
+section.panel td{border:0;padding:5px 4px;display:grid;grid-template-columns:92px 1fr;gap:8px;align-items:center;font-size:12px}
 section.panel td::before{content:attr(data-label);color:var(--muted);font-size:11px;font-weight:800}
 section.panel td:first-child{display:block;padding-bottom:2px}
 section.panel td:first-child::before{content:''}
-section.panel td:nth-child(3){font-size:13px;padding:3px 2px}.checkcell{width:auto}
+section.panel td:nth-child(3){font-size:14px}.checkcell{width:auto}
 section.panel tr:not(.open) td:not(:first-child):not(:nth-child(3)){display:none}
-section.panel tr:not(.open) td:first-child{display:none}
 section.panel tr td:nth-child(3)::after{content:'+';float:right;color:var(--blue);font-weight:900}
 section.panel tr.open td:nth-child(3)::after{content:'-'}
-.plant-line{display:flex;align-items:center;justify-content:space-between;gap:8px}.plant-line b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.plant-daily{display:inline;font-size:12px;font-weight:900;white-space:nowrap;margin-right:18px}.plant-line.online b{color:#064E3B}.plant-line.online .plant-daily{color:#16A34A}.plant-line.offline b,.plant-line.offline .plant-daily{color:#111827}
 .history-picker{display:grid;grid-template-columns:1fr;gap:8px;margin-top:8px}.picked{border:1px solid var(--line);border-radius:6px;background:#fbfdff;padding:9px;margin-top:8px;font-size:12px}.picked b{font-size:15px}
 .history-scroll{max-height:220px}.history-scroll table{display:table}.history-scroll thead{display:table-header-group}.history-scroll tbody{display:table-row-group}.history-scroll tr{display:table-row;border:0;box-shadow:none;margin:0;padding:0}.history-scroll td,.history-scroll th{display:table-cell;width:auto;padding:7px;font-size:11px}.history-scroll td::before{content:none}
 .report-item{font-size:12px}.log{max-height:140px}.plant-title{font-size:18px}
@@ -1062,16 +986,14 @@ section.panel tr.open td:nth-child(3)::after{content:'-'}
     <div><label>Brand</label><select id="brand"></select></div>
     <div><label>Status</label><select id="status"></select></div>
     <button id="refresh" class="alt">Refresh Live</button>
-    <button id="reportAll">All Plants Report</button>
-    <button id="reportPlant">Plant Report</button>
-    <button id="report">Selected Report</button>
+    <button id="report">Generate Selected Report</button>
     <button id="selectAll" class="gray">Select All</button>
   </div>
   <div class="grid" id="cards"></div>
   <div class="split">
     <section class="panel">
       <h2>Plants</h2>
-      <table><thead><tr><th class="checkcell"></th><th>Brand</th><th>Plant</th><th>Status</th><th>Date</th><th>Daily</th><th>Weekly</th><th>Yearly</th><th>CUF</th></tr></thead><tbody id="rows"></tbody></table>
+      <table><thead><tr><th class="checkcell"></th><th>Brand</th><th>Plant</th><th>Status</th><th>Date</th><th>Daily</th><th>Weekly</th><th>2026/kW</th></tr></thead><tbody id="rows"></tbody></table>
     </section>
     <aside class="panel">
       <details class="fold mobile-fold" open>
@@ -1108,8 +1030,6 @@ const rowsEl=document.querySelector('#rows');
 const detailEl=document.querySelector('#detail');
 const refreshBtn=document.querySelector('#refresh');
 const reportBtn=document.querySelector('#report');
-const reportAllBtn=document.querySelector('#reportAll');
-const reportPlantBtn=document.querySelector('#reportPlant');
 const selectAllBtn=document.querySelector('#selectAll');
 const saveScheduleBtn=document.querySelector('#saveSchedule');
 const dateLineEl=document.querySelector('#dateLine');
@@ -1120,16 +1040,13 @@ const autoTimeEl=document.querySelector('#autoTime');
 const reportResultEl=document.querySelector('#reportResult');
 const reportListEl=document.querySelector('#reportList');
 const logEl=document.querySelector('#log');
-function istParts(){const values={};new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date()).forEach(p=>{values[p.type]=p.value});return values}
-function todayText(){const p=istParts();return `${p.year}-${p.month}-${p.day}`}
-function istNowText(){const p=istParts();return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute} IST`}
+const todayText=()=>new Date().toISOString().slice(0,10);
 function f(v,d=2){return Number(v||0).toLocaleString('en-IN',{minimumFractionDigits:d,maximumFractionDigits:d})}
 function cls(s){s=String(s||'').toLowerCase();return (s.includes('online')||s.includes('normal'))?'online':'offline'}
 function fresh(p){return p.dataDate===todayText()}
 function staleNote(p){return !fresh(p)&&String(p.brand||'').toLowerCase()==='solis'?'Solis data is from the last saved Mac capture. Refresh Solis on the Mac to make this current.':''}
 function uniq(a){return [...new Set(a)].filter(Boolean).sort()}
 function h(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function weightedCuf(rows){const cap=rows.reduce((a,p)=>a+Number(p.capacity||0),0),year=rows.reduce((a,p)=>a+Number(p.year||0),0);const p=istParts();const days=Math.max(1,Math.floor((Date.UTC(Number(p.year),Number(p.month)-1,Number(p.day))-Date.UTC(2026,0,1))/86400000)+1);return cap&&year?year/(cap*24*days)*100:0}
 async function api(path,opt){const r=await fetch(path,opt);const text=await r.text();let data={};try{data=text?JSON.parse(text):{};}catch(e){throw new Error(`${path} returned ${r.status}: ${text.slice(0,240)||'empty response'}`)}if(!r.ok){throw new Error(data.error||`${path} returned ${r.status}`)}return data}
 function filtered(){const q=searchInput.value.toLowerCase(), b=brandFilter.value, s=statusFilter.value;return plants.filter(p=>(b==='all'||p.brand===b)&&(s==='all'||p.status===s)&&(`${p.site} ${p.brand}`.toLowerCase().includes(q)))}
 function selectedRows(){return plants.filter(p=>selected.has(p.id))}
@@ -1145,22 +1062,19 @@ historyTable('All Weekly',weekly,[['Week','week'],['Daily Sum','dailySum',1],['W
 historyTable('All Yearly',yearly,[['Year','year'],['Year kWh','yearKwh',1],['Latest Date','lastDate']],false)
 ].join('')}
 async function loadHistory(active){const key=active?.plantKey||'';activeHistoryKey=key;const box=document.querySelector('#historyBox');if(!box||!key)return;box.innerHTML='<div class="empty-history">Loading previous data...</div>';try{const data=await api('/api/history?plant_key='+encodeURIComponent(key));if(activeHistoryKey===key){box.innerHTML=renderHistory(data);wireHistoryPickers(data)}}catch(error){if(activeHistoryKey===key)box.innerHTML='<div class="empty-history">History failed: '+h(error.message)+'</div>';}}
-function renderDetail(active){if(!active){detailEl.innerHTML='<div class="empty-history">Tap a plant name to view details.</div>';return}detailEl.innerHTML=`<div class="plant-title">${h(active.site)}</div><p>${h(active.brand)} · <span class="status ${cls(active.status)}">${h(active.status)}</span></p>${staleNote(active)?`<p class="stale">${h(staleNote(active))}</p>`:''}<div class="details"><div class="detail"><span>Data Date</span><b>${h(active.dataDate||'Unknown')}</b></div><div class="detail"><span>Capacity</span><b>${f(active.capacity)} kW</b></div><div class="detail"><span>Daily</span><b>${f(active.daily)} kWh</b></div><div class="detail"><span>Weekly</span><b>${f(active.weekly)} kWh</b></div><div class="detail"><span>Yearly</span><b>${f(active.year)} kWh</b></div><div class="detail"><span>CUF</span><b>${f(active.cuf)}%</b></div><div class="detail"><span>Total</span><b>${f(active.total)} MWh</b></div></div><div id="historyBox" class="history-block"></div>`;loadHistory(active)}
-function render(){const rows=filtered(), chosen=selectedRows();let active=plants.find(p=>p.id===activePlantId);if(active && !rows.some(p=>p.id===active.id)){activePlantId=null;active=null}cardsEl.innerHTML=[['Visible',rows.length],['Selected',chosen.length],['Daily',f(rows.reduce((a,p)=>a+p.daily,0))+' kWh'],['Weekly',f(rows.reduce((a,p)=>a+p.weekly,0))+' kWh'],['Yearly',f(rows.reduce((a,p)=>a+p.year,0))+' kWh'],['CUF',f(weightedCuf(rows))+' %']].map(x=>`<div class="card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join('');
-rowsEl.innerHTML=rows.map(p=>`<tr data-id="${p.id}" style="cursor:pointer"><td data-label=""><input type="checkbox" data-id="${p.id}" ${selected.has(p.id)?'checked':''}></td><td data-label="Brand">${h(p.brand)}</td><td data-label="Plant"><span class="plant-line ${cls(p.status)}"><b>${h(p.site)}</b><span class="plant-daily">${f(p.daily)} kWh</span></span></td><td data-label="Status" class="status ${cls(p.status)}">${h(p.status)}</td><td data-label="Date" title="${h(staleNote(p))}">${h(p.dataDate||'')} <span class="pill ${fresh(p)?'fresh':'stale'}">${fresh(p)?'TODAY':'STALE'}</span></td><td data-label="Daily">${f(p.daily)}</td><td data-label="Weekly">${f(p.weekly)}</td><td data-label="Yearly">${f(p.year)}</td><td data-label="CUF">${f(p.cuf)}%</td></tr>`).join('');
-rowsEl.querySelectorAll('tr[data-id]').forEach(tr=>{if(tr.dataset.id===activePlantId)tr.classList.add('open');tr.onclick=()=>{activePlantId=tr.dataset.id===activePlantId?null:tr.dataset.id;render()}});
+function renderDetail(active){if(!active){detailEl.innerHTML='No plant';return}detailEl.innerHTML=`<div class="plant-title">${h(active.site)}</div><p>${h(active.brand)} · <span class="status ${cls(active.status)}">${h(active.status)}</span></p>${staleNote(active)?`<p class="stale">${h(staleNote(active))}</p>`:''}<div class="details"><div class="detail"><span>Data Date</span><b>${h(active.dataDate||'Unknown')}</b></div><div class="detail"><span>Capacity</span><b>${f(active.capacity)} kW</b></div><div class="detail"><span>Daily</span><b>${f(active.daily)} kWh</b></div><div class="detail"><span>Weekly</span><b>${f(active.weekly)} kWh</b></div><div class="detail"><span>2026/kW</span><b>${f(active.yield2026)}</b></div><div class="detail"><span>Total</span><b>${f(active.total)} MWh</b></div></div><div id="historyBox" class="history-block"></div>`;loadHistory(active)}
+function render(){const rows=filtered(), chosen=selectedRows();const active=plants.find(p=>p.id===activePlantId)||chosen[0]||rows[0]||plants[0];if(active)activePlantId=active.id;cardsEl.innerHTML=[['Visible',rows.length],['Selected',chosen.length],['Daily',f(rows.reduce((a,p)=>a+p.daily,0))+' kWh'],['Weekly',f(rows.reduce((a,p)=>a+p.weekly,0))+' kWh'],['Capacity',f(rows.reduce((a,p)=>a+p.capacity,0))+' kW'],['Fresh',rows.filter(fresh).length+'/'+rows.length]].map(x=>`<div class="card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join('');
+rowsEl.innerHTML=rows.map(p=>`<tr data-id="${p.id}" style="cursor:pointer"><td data-label=""><input type="checkbox" data-id="${p.id}" ${selected.has(p.id)?'checked':''}></td><td data-label="Brand">${h(p.brand)}</td><td data-label="Plant"><b>${h(p.site)}</b></td><td data-label="Status" class="status ${cls(p.status)}">${h(p.status)}</td><td data-label="Date" title="${h(staleNote(p))}">${h(p.dataDate||'')} <span class="pill ${fresh(p)?'fresh':'stale'}">${fresh(p)?'TODAY':'STALE'}</span></td><td data-label="Daily">${f(p.daily)}</td><td data-label="Weekly">${f(p.weekly)}</td><td data-label="2026/kW">${f(p.yield2026)}</td></tr>`).join('');
+rowsEl.querySelectorAll('tr[data-id]').forEach(tr=>{if(tr.dataset.id===activePlantId)tr.classList.add('open');tr.onclick=()=>{activePlantId=tr.dataset.id;render()}});
 rowsEl.querySelectorAll('input[type=checkbox][data-id]').forEach(cb=>{cb.onclick=e=>e.stopPropagation();cb.onchange=()=>{cb.checked?selected.add(cb.dataset.id):selected.delete(cb.dataset.id);render()}});
 renderDetail(active);
 }
 function refreshText(r){const lines=(r.steps||[]).map(s=>`${s.ok?'OK':'SKIP'} - ${s.label}: ${s.message||''}`);if(r.running)lines.push('RUNNING - Refresh still in progress...');if(r.finished)lines.push('DONE - Finished '+r.finished);return lines.join('\\n')||'Ready.'}
-async function loadReports(){try{const r=await api('/api/reports');reportListEl.innerHTML=(r.reports||[]).length?(r.reports||[]).map(x=>`<a class="report-item" href="${x.url}">${h(x.name)}<span>${h(x.modified)} · ${h(x.size_kb)} KB</span></a>`).join(''):'No reports generated yet.';}catch(error){reportListEl.textContent='Could not load reports: '+error.message;}}
-async function load(){const p=await api('/api/plants');plants=p.plants;selected=new Set();renderFilters();render();const s=await api('/api/status');statusData=s;dateLineEl.textContent=istNowText();versionLineEl.textContent='Build: '+(s.app_version||'old');mobileLineEl.textContent='iPhone: '+s.mobile_url;autoDayEl.value=s.config.auto_report_day;autoTimeEl.value=s.config.auto_report_time;logEl.textContent=refreshText(s.last_refresh||{});loadReports();}
+async function loadReports(){try{const r=await api('/api/reports');reportListEl.innerHTML=(r.reports||[]).length?(r.reports||[]).map(x=>`<a class="report-item" href="${x.url}" target="_blank">${h(x.name)}<span>${h(x.modified)} · ${h(x.size_kb)} KB</span></a>`).join(''):'No reports generated yet.';}catch(error){reportListEl.textContent='Could not load reports: '+error.message;}}
+async function load(){const p=await api('/api/plants');plants=p.plants;selected=new Set(plants.map(p=>p.id));renderFilters();render();const s=await api('/api/status');statusData=s;dateLineEl.textContent='Today '+todayText();versionLineEl.textContent='Build: '+(s.app_version||'old');mobileLineEl.textContent='iPhone: '+s.mobile_url;autoDayEl.value=s.config.auto_report_day;autoTimeEl.value=s.config.auto_report_time;logEl.textContent=refreshText(s.last_refresh||{});loadReports();}
 async function pollRefresh(){for(let i=0;i<90;i++){const s=await api('/api/status');logEl.textContent=refreshText(s.last_refresh||{});await load();if(!s.last_refresh?.running)return;await new Promise(r=>setTimeout(r,3000));}}
 refreshBtn.onclick=async()=>{logEl.textContent='Starting background refresh...';const r=await api('/api/refresh',{method:'POST'});logEl.textContent=refreshText(r);pollRefresh().catch(error=>{logEl.textContent='Refresh status failed: '+error;});}
-async function generateReport(ids,label,all=false){reportResultEl.textContent='Generating '+label+'...';const r=await api('/api/report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plant_ids:ids,all_plants:all})});reportResultEl.innerHTML=r.ok?`Saved ${r.count} plant report.<br><a class="download-btn" href="${r.viewer_url}">Open Report</a>`:'Failed: '+h(r.message);if(r.ok)loadReports();}
-reportAllBtn.onclick=()=>generateReport([],'all plants report',true);
-reportPlantBtn.onclick=()=>{if(!activePlantId){reportResultEl.textContent='Tap a plant name first.';return}generateReport([activePlantId],'plant report')}
-reportBtn.onclick=()=>{if(!selected.size){reportResultEl.textContent='Tick one or more plants first.';return}generateReport([...selected],'selected report')};
+reportBtn.onclick=async()=>{const ids=[...selected];reportResultEl.textContent='Generating report...';const r=await api('/api/report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plant_ids:ids})});reportResultEl.innerHTML=r.ok?`Saved ${r.count} plant report.<br><a class="download-btn" href="${r.download_url}" target="_blank">Download PDF</a>`:'Failed: '+h(r.message);if(r.ok)loadReports();}
 selectAllBtn.onclick=()=>{const visible=filtered();const all=visible.every(p=>selected.has(p.id));visible.forEach(p=>all?selected.delete(p.id):selected.add(p.id));render()}
 saveScheduleBtn.onclick=async()=>{const r=await api('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({auto_report_day:autoDayEl.value,auto_report_time:autoTimeEl.value})});logEl.textContent='Saved schedule: '+r.config.auto_report_day+' '+r.config.auto_report_time}
 searchInput.oninput=render;brandFilter.onchange=render;statusFilter.onchange=render;load().catch(error=>{logEl.textContent='App load failed: '+error;});
