@@ -4,19 +4,32 @@
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import json
 import os
 import re
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
+
+from solax_capture_to_generation import (
+    energy_total_from_response,
+    fetch_solax_weekly,
+    fetch_solax_year,
+    solax_decrypt,
+    solax_encrypt,
+    solax_request,
+    watts_to_kw,
+)
 
 
 PROJECT_DIR = Path(__file__).resolve().parent
 OUTPUT_FILE = PROJECT_DIR / "solax_generation.json"
 DEBUG_FILE = PROJECT_DIR / "solax_api_last_response.json"
 DEFAULT_BASE = "https://global.solaxcloud.com"
+WEB_BASE = "https://euapi.solaxcloud.com"
 
 
 def load_env_file() -> None:
@@ -52,6 +65,81 @@ def public_get(base_url: str, path: str, params: dict[str, object]) -> dict:
     request = urllib.request.Request(url, headers={"User-Agent": "NCE-Solar-Dashboard/1.0"})
     with urllib.request.urlopen(request, timeout=45) as response:
         return json.loads(response.read().decode("utf-8"))
+
+
+def encrypted_web_url(path: str, params: dict | None = None) -> str:
+    params = {
+        **(params or {}),
+        "timeStamp": int(time.time() * 1000),
+        "requestId": str(int(time.time() * 1000000))[-8:],
+    }
+    data = solax_encrypt(json.dumps(params, separators=(",", ":")))
+    return WEB_BASE + path + "?" + urllib.parse.urlencode({"data": data})
+
+
+def decrypt_web_payload(payload: dict) -> dict:
+    if payload.get("data"):
+        decoded = solax_decrypt(payload["data"])
+        try:
+            return json.loads(decoded)
+        except json.JSONDecodeError:
+            return {"success": False, "message": decoded}
+    return payload
+
+
+def web_post(path: str, params: dict | None = None, body: dict | None = None, token: str | None = None) -> dict:
+    raw_body = json.dumps({"data": solax_encrypt(json.dumps(body or {}, separators=(",", ":")))})
+    headers = {
+        "Content-Type": "application/json",
+        "Lang": "en_US",
+        "deviceType": "3",
+        "websiteType": "0",
+        "source": "0",
+        "crytoVer": "1",
+        "version": "green",
+        "Permission-Version": "v7.2.0",
+        "platform": "4",
+    }
+    if token:
+        headers["token"] = token
+    request = urllib.request.Request(
+        encrypted_web_url(path, params),
+        data=raw_body.encode("utf-8"),
+        headers=headers,
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=45) as response:
+        return decrypt_web_payload(json.loads(response.read().decode("utf-8")))
+
+
+def fetch_web_token() -> str:
+    username = require_env("SOLAX_USERNAME")
+    password = require_env("SOLAX_PASSWORD")
+    password_md5 = hashlib.md5(password.encode("utf-8")).hexdigest()
+    payload = web_post(
+        "/unionUser/web/v2/public/login",
+        body={"loginName": username, "password": password_md5, "route": 1},
+    )
+    if not payload.get("success"):
+        raise RuntimeError(payload.get("message") or payload.get("msg") or "SolaX web login failed")
+    result = payload.get("result") or {}
+    token = result.get("token") or result.get("TOKEN") or result.get("accessToken")
+    if not token:
+        raise RuntimeError("SolaX web login succeeded but returned no token")
+    return token
+
+
+def fetch_web_station_records(token: str) -> list[dict]:
+    payload = solax_request(
+        "/mesh/web/v1/station/page",
+        token,
+        body={"current": 1, "size": 100},
+        method="POST",
+    )
+    records = (payload.get("result") or {}).get("records") or []
+    if not records:
+        raise RuntimeError("SolaX web station page returned no station records")
+    return [record for record in records if isinstance(record, dict)]
 
 
 def find_dicts(value: object, predicate) -> list[dict]:
@@ -201,6 +289,94 @@ def system_from(device: dict, realtime: dict | None, previous: dict | None = Non
     }
 
 
+def status_from_station(record: dict) -> str:
+    status = str(record.get("stationStatus") or record.get("gridConnectStatus") or "").strip()
+    if status == "1":
+        return "Online"
+    if status == "0":
+        return "Offline"
+    return status_from(record)
+
+
+def system_from_station_record(record: dict, token: str, generated_at: str) -> dict:
+    station_id = str(record.get("stationId") or "")
+    system = {
+        "name": record.get("stationName") or record.get("name") or station_id or "SolaX Plant",
+        "status": status_from_station(record),
+        "capacity_kw": numeric(record.get("pvCapacity") or record.get("capacity")),
+        "current_power_kw": None,
+        "today_generation_kwh": numeric(record.get("pvYield") or record.get("yieldToday") or record.get("todayYield")),
+        "weekly_generation_kwh": None,
+        "month_generation_kwh": None,
+        "year_generation_kwh": None,
+        "total_generation_kwh": None,
+        "system_id": station_id,
+        "source_sno": record.get("deviceSn") or record.get("registerNo") or record.get("stationUniqueId"),
+        "data_timestamp": generated_at,
+    }
+
+    try:
+        overview = solax_request(
+            "/zeus/v1/overview/siteOverview",
+            token,
+            params={"siteId": station_id},
+            method="GET",
+        )
+        result = overview.get("result") or overview
+        energy_card = result.get("energyCard") or {}
+        view_chart = result.get("viewChart") or {}
+        system["current_power_kw"] = (
+            watts_to_kw(energy_card.get("realTimePower"))
+            or watts_to_kw(energy_card.get("pvPower"))
+            or watts_to_kw(view_chart.get("pvPower"))
+            or system.get("current_power_kw")
+        )
+        system["today_generation_kwh"] = (
+            numeric(energy_card.get("yieldToday"))
+            or numeric(energy_card.get("pvYieldToday"))
+            or system.get("today_generation_kwh")
+        )
+        system["total_generation_kwh"] = energy_total_from_response(result) or system.get("total_generation_kwh")
+    except Exception as error:
+        system.setdefault("backend_errors", []).append(f"siteOverview failed: {error}")
+
+    try:
+        weekly = fetch_solax_weekly(token, station_id, dt.datetime.now().astimezone().date())
+        if weekly is not None:
+            system["weekly_generation_kwh"] = weekly
+    except Exception as error:
+        system.setdefault("backend_errors", []).append(f"weekly energyInfo failed: {error}")
+
+    try:
+        year_total = fetch_solax_year(token, station_id, dt.datetime.now().astimezone().year)
+        if year_total is not None:
+            system["year_generation_kwh"] = year_total
+    except Exception as error:
+        system.setdefault("backend_errors", []).append(f"year energyInfo failed: {error}")
+
+    return system
+
+
+def export_from_web_login() -> dict:
+    token = fetch_web_token()
+    generated_at = dt.datetime.now().astimezone().replace(microsecond=0).isoformat()
+    records = fetch_web_station_records(token)
+    systems = [system_from_station_record(record, token, generated_at) for record in records]
+    return {
+        "source": "solax_web_api",
+        "generated_at": generated_at,
+        "captured_at": generated_at,
+        "systems": systems,
+        "notes": ["SolaX data was refreshed through the SolaX web API login."],
+        "api_status": {
+            "record_count": len(records),
+            "live_record_count": len(records),
+            "success": True,
+            "code": 0,
+        },
+    }
+
+
 def load_capture_baseline() -> tuple[dict[str, dict], str | None]:
     try:
         from solax_capture_to_generation import parse_capture
@@ -220,6 +396,12 @@ def load_capture_baseline() -> tuple[dict[str, dict], str | None]:
 
 def main() -> None:
     load_env_file()
+    if os.getenv("SOLAX_USERNAME") and os.getenv("SOLAX_PASSWORD"):
+        payload = export_from_web_login()
+        OUTPUT_FILE.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        print(f"Saved {len(payload['systems'])} SolaX systems to {OUTPUT_FILE.name} using web API login")
+        return
+
     base_url = os.getenv("SOLAX_API_BASE", DEFAULT_BASE).strip().rstrip("/")
     token_id = require_env("SOLAX_TOKEN_ID")
     devices = configured_devices()
