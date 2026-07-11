@@ -52,7 +52,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-11-solis-direct-fetch-v20"
+APP_VERSION = "2026-07-11-refresh-on-open-v22"
 IST = ZoneInfo("Asia/Kolkata")
 PLANT_COLUMNS = [
     "App ID",
@@ -646,6 +646,22 @@ class SolarLiveApp:
         threading.Thread(target=self.refresh, daemon=True).start()
         return {**self.last_refresh, "accepted": True}
 
+    def stale_online_count(self) -> int:
+        today = ist_today().isoformat()
+        plants = self.plant_payload({"role": "admin", "plants": ["*"]})
+        return sum(
+            1
+            for plant in plants
+            if plant.get("dataDate") != today and str(plant.get("status", "")).lower() != "offline"
+        )
+
+    def refresh_on_open(self) -> None:
+        if not self.config.get("auto_refresh_on_open"):
+            return
+        if self.refresh_lock.locked():
+            return
+        self.refresh_async()
+
     def generate_selected_report(self, plant_ids: list[str], user: dict[str, Any] | None = None, all_plants: bool = False) -> dict[str, Any]:
         df = self.plant_dataframe()
         df["Plant Key"] = df.apply(lambda row: plant_key(row["Brand"], row["Site Name"]), axis=1)
@@ -856,6 +872,7 @@ class Handler(BaseHTTPRequestHandler):
                 user = self.require_auth(html=True)
                 if load_users() and not user:
                     return
+                APP.refresh_on_open()
                 body = LIVE_HTML.replace("__USER__", (user or {}).get("username", "Local")).encode("utf-8")
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
