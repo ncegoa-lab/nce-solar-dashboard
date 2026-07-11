@@ -394,8 +394,12 @@ def _load_current_project_rows() -> list[dict[str, Any]]:
 
     for brand, path in (("Solis", "solis_generation.json"), ("SolaX", "solax_generation.json")):
         payload = _read_json(path) or {}
+        live_count = (payload.get("api_status") or {}).get("live_record_count")
         for system in payload.get("systems", []):
-            timestamp = payload.get("uploaded_at") or payload.get("generated_at") or payload.get("captured_at")
+            if brand == "SolaX" and live_count == 0:
+                timestamp = payload.get("captured_at") or payload.get("generated_at") or payload.get("uploaded_at")
+            else:
+                timestamp = payload.get("uploaded_at") or payload.get("generated_at") or payload.get("captured_at")
             rows.append(
                 {
                     "Brand": brand,

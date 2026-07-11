@@ -201,18 +201,21 @@ def system_from(device: dict, realtime: dict | None, previous: dict | None = Non
     }
 
 
-def load_capture_baseline() -> dict[str, dict]:
+def load_capture_baseline() -> tuple[dict[str, dict], str | None]:
     try:
         from solax_capture_to_generation import parse_capture
 
         payload = parse_capture()
-        return {
-            str(system.get("name", "")): system
-            for system in payload.get("systems", [])
-            if system.get("name")
-        }
+        return (
+            {
+                str(system.get("name", "")): system
+                for system in payload.get("systems", [])
+                if system.get("name")
+            },
+            payload.get("captured_at") or payload.get("generated_at"),
+        )
     except Exception:
-        return {}
+        return {}, None
 
 
 def main() -> None:
@@ -234,10 +237,12 @@ def main() -> None:
             }
         except Exception:
             previous_by_name = {}
-    previous_by_name.update(load_capture_baseline())
+    capture_baseline, baseline_captured_at = load_capture_baseline()
+    previous_by_name.update(capture_baseline)
 
     systems = []
     seen = set()
+    live_count = 0
     for device in devices:
         sn = device_identifier(device)
         realtime = fetch_realtime(base_url, token_id, sn) if sn else None
@@ -245,20 +250,28 @@ def main() -> None:
         system = system_from(device, realtime, previous_by_name.get(name))
         if realtime is None:
             system.setdefault("api_warning", "SolaX API did not return authorized live data for this serial; keeping last known values.")
+        else:
+            live_count += 1
         key = system.get("system_id") or system.get("name")
         if key in seen:
             continue
         seen.add(key)
         systems.append(system)
     generated_at = dt.datetime.now().astimezone().replace(microsecond=0).isoformat()
+    captured_at = generated_at if live_count else (baseline_captured_at or generated_at)
     payload = {
         "source": "solax_api",
         "generated_at": generated_at,
-        "captured_at": generated_at,
+        "captured_at": captured_at,
         "systems": systems,
-        "notes": ["SolaX data was refreshed through the SolaX cloud API."],
+        "notes": [
+            "SolaX data was refreshed through the SolaX cloud API."
+            if live_count
+            else "SolaX API did not return authorized live values; showing last captured SolaX data."
+        ],
         "api_status": {
             "record_count": len(devices),
+            "live_record_count": live_count,
             "success": raw_payload.get("success") if isinstance(raw_payload, dict) else None,
             "code": raw_payload.get("code") if isinstance(raw_payload, dict) else None,
         },
