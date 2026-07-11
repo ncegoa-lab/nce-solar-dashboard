@@ -52,7 +52,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-11-history-solax-fix-v18"
+APP_VERSION = "2026-07-11-upload-time-freshness-v19"
 IST = ZoneInfo("Asia/Kolkata")
 PLANT_COLUMNS = [
     "App ID",
@@ -407,6 +407,7 @@ class SolarLiveApp:
                 (plant for plant in self.plant_payload({"role": "admin", "plants": ["*"]}) if plant.get("plantKey") == plant_key_value),
                 {},
             )
+            has_current_today = current.get("dataDate") == today
             rows.insert(
                 0,
                 {
@@ -414,14 +415,14 @@ class SolarLiveApp:
                     "brand": current.get("brand", ""),
                     "site": current.get("site", ""),
                     "plantKey": plant_key_value,
-                    "status": "No data",
+                    "status": current.get("status", "No data") if has_current_today else "No data",
                     "capacity": current.get("capacity", 0),
-                    "daily": 0,
-                    "weekly": 0,
+                    "daily": current.get("daily", 0) if has_current_today else 0,
+                    "weekly": current.get("weekly", 0) if has_current_today else 0,
                     "year": current.get("year", 0),
                     "total": current.get("total", 0),
-                    "cuf": 0,
-                    "timestamp": "",
+                    "cuf": current.get("cuf", 0) if has_current_today else 0,
+                    "timestamp": current.get("timestamp", "") if has_current_today else "",
                     "recordedAt": ist_now().replace(microsecond=0).isoformat(),
                 },
             )
@@ -588,7 +589,7 @@ class SolarLiveApp:
                 self.append_refresh_step({"label": "FIMER refresh", "ok": False, "message": "Missing FIMER_USERNAME/FIMER_PASSWORD"})
 
             solis_capture = solis_capture_status()
-            if solis_capture["fresh"]:
+            if solis_capture["exists"]:
                 self.append_refresh_step(self.run_step("Solis import from latest capture", [refresh_py, "./solis_capture_to_generation.py"], env))
             else:
                 now = ist_now().isoformat(timespec="seconds")
@@ -607,7 +608,7 @@ class SolarLiveApp:
                 )
 
             solax_capture = solax_capture_status()
-            if solax_capture["fresh"]:
+            if solax_capture["exists"]:
                 self.append_refresh_step(self.run_step("SolaX import from latest capture", [refresh_py, "./solax_capture_to_generation.py"], env))
             else:
                 now = ist_now().isoformat(timespec="seconds")

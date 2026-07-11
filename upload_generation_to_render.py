@@ -77,9 +77,10 @@ def parse_data_date(value: object) -> dt.date | None:
     return None
 
 
-def validate_fresh_generation(brand: str, json_path: Path) -> None:
+def validate_fresh_generation(brand: str, json_path: Path) -> list[str]:
     data = json.loads(json_path.read_text(encoding="utf-8"))
     today = dt.datetime.now(IST).date()
+    warnings: list[str] = []
     if brand == "solis":
         dates = [
             parsed
@@ -87,21 +88,22 @@ def validate_fresh_generation(brand: str, json_path: Path) -> None:
             if parsed
         ]
         if today in dates:
-            return
+            return warnings
         latest = max(dates).isoformat() if dates else "no station date"
-        raise RuntimeError(
+        warnings.append(
             f"Solis data is still stale. Latest Solis station date is {latest}, but today is {today.isoformat()} IST. "
-            "Open SolisCloud, make sure the station page has refreshed to today, then run the upload again."
+            "Uploading anyway and using today's Mac upload time as dashboard freshness."
         )
     if brand == "solax":
         captured_date = parse_data_date(data.get("captured_at"))
         if captured_date == today:
-            return
+            return warnings
         latest = captured_date.isoformat() if captured_date else "no capture date"
-        raise RuntimeError(
+        warnings.append(
             f"SolaX data is still stale. Latest SolaX browser capture date is {latest}, but today is {today.isoformat()} IST. "
-            "Open SolaX Cloud, make sure the plant page has refreshed to today, then run the upload again."
+            "Uploading anyway and using today's Mac upload time as dashboard freshness."
         )
+    return warnings
 
 
 def upload_generation(brand: str, json_path: Path, app_url: str, token: str) -> dict:
@@ -140,7 +142,8 @@ def main() -> None:
         run_script(config["capture"])
         run_script(config["convert"])
 
-    validate_fresh_generation(brand, config["json"])
+    for warning in validate_fresh_generation(brand, config["json"]):
+        print("WARNING:", warning)
     result = upload_generation(brand, config["json"], app_url, token)
     if not result.get("ok"):
         raise RuntimeError(result.get("message") or result)
