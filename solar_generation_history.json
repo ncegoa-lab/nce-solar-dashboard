@@ -15,6 +15,21 @@
     "recordedAt": "2026-07-10T20:06:23"
   },
   {
+    "date": "2026-07-11",
+    "brand": "FIMER",
+    "site": "Birla Campus Goa C-mess 50kw",
+    "plantKey": "FIMER::Birla Campus Goa C-mess 50kw",
+    "status": "Online",
+    "capacity": 50.0,
+    "daily": 112.864000000001,
+    "weekly": 931.271999999997,
+    "year": 39202.337999999996,
+    "total": 46.15864,
+    "cuf": 17.014903645833332,
+    "timestamp": "2026-07-11T06:47:47.750Z",
+    "recordedAt": "2026-07-11T12:18:14+05:30"
+  },
+  {
     "date": "2026-07-10",
     "brand": "FIMER",
     "site": "Birla campus goa",
@@ -28,6 +43,21 @@
     "yield2026": 710.9900799999997,
     "timestamp": "2026-07-10T13:42:32.818Z",
     "recordedAt": "2026-07-10T20:06:23"
+  },
+  {
+    "date": "2026-07-11",
+    "brand": "FIMER",
+    "site": "Birla campus goa",
+    "plantKey": "FIMER::Birla campus goa",
+    "status": "Online",
+    "capacity": 100.0,
+    "daily": 161.984000000055,
+    "weekly": 1542.976000000024,
+    "year": 71260.99200000003,
+    "total": 130.49097600000002,
+    "cuf": 15.464625000000007,
+    "timestamp": "2026-07-11T06:47:47.750Z",
+    "recordedAt": "2026-07-11T12:18:14+05:30"
   },
   {
     "date": "2026-07-10",
@@ -45,6 +75,21 @@
     "recordedAt": "2026-07-10T20:06:23"
   },
   {
+    "date": "2026-07-11",
+    "brand": "Fronius",
+    "site": "Afley 6kw",
+    "plantKey": "Fronius::Afley 6kw",
+    "status": "Online",
+    "capacity": 6.0,
+    "daily": 8.06,
+    "weekly": 111.66,
+    "year": 4836.82,
+    "total": 20.36,
+    "cuf": 17.494285300925924,
+    "timestamp": "2026-07-11",
+    "recordedAt": "2026-07-11T12:18:14+05:30"
+  },
+  {
     "date": "2026-07-10",
     "brand": "Fronius",
     "site": "BITS D-Mess 21kw",
@@ -58,6 +103,21 @@
     "yield2026": 840.4761904761905,
     "timestamp": "2026-07-10",
     "recordedAt": "2026-07-10T20:06:23"
+  },
+  {
+    "date": "2026-07-11",
+    "brand": "Fronius",
+    "site": "BITS D-Mess 21kw",
+    "plantKey": "Fronius::BITS D-Mess 21kw",
+    "status": "Online",
+    "capacity": 21.0,
+    "daily": 32.82,
+    "weekly": 416.68,
+    "year": 17680.0,
+    "total": 54.81,
+    "cuf": 18.270502645502646,
+    "timestamp": "2026-07-11",
+    "recordedAt": "2026-07-11T12:18:14+05:30"
   },
   {
     "date": "2026-07-10",
@@ -75,6 +135,21 @@
     "recordedAt": "2026-07-10T20:06:23"
   },
   {
+    "date": "2026-07-11",
+    "brand": "Fronius",
+    "site": "BITS- PCC 1-10Kw",
+    "plantKey": "Fronius::BITS- PCC 1-10Kw",
+    "status": "Online",
+    "capacity": 10.0,
+    "daily": 16.56,
+    "weekly": 203.15,
+    "year": 7590.0,
+    "total": 29.85,
+    "cuf": 16.471354166666664,
+    "timestamp": "2026-07-11",
+    "recordedAt": "2026-07-11T12:18:14+05:30"
+  },
+  {
     "date": "2026-07-10",
     "brand": "Fronius",
     "site": "BITS-Amess 50kw",
@@ -88,6 +163,21 @@
     "yield2026": 822.4,
     "timestamp": "2026-07-10",
     "recordedAt": "2026-07-10T20:06:23"
+  },
+  {
+    "date": "2026-07-11",
+    "brand": "Fronius",
+    "site": "BITS-Amess 50kw",
+    "plantKey": "Fronius::BITS-Amess 50kw",
+    "status": "Online",
+    "capacity": 50.0,
+    "daily": 70.99,
+    "weekly": 1021.4,
+    "year": 41200.0,
+    "total": 182.71,
+    "cuf": 17.881944444444446,
+    "timestamp": "2026-07-11",
+    "recordedAt": "2026-07-11T12:18:14+05:30"
   },
   {
     "date": "2026-07-10",
@@ -105,6 +195,21 @@
     "recordedAt": "2026-07-10T20:06:23"
   },
   {
+    "date": "2026-07-11",
+    "brand": "Fronius",
+    "site": "BITS-PCC1-10kw",
+    "plantKey": "Fronius::BITS-PCC1-10kw",
+    "status": "Offline",
+    "capacity": 10.0,
+    "daily": 0.0,
+    "weekly": 0.0,
+    "year": 0.0,
+    "total": 0.7120299999999999,
+    "cuf": 0.0,
+    "timestamp": "2026-07-11",
+    "recordedAt": "2026-07-11T12:18:14+05:30"
+  },
+  {
     "date": "2026-07-10",
     "brand": "Fronius",
     "site": "Dr Buvaji res6kw",
@@ -118,6 +223,21 @@
     "yield2026": 0.0,
     "timestamp": "2026-07-10",
     "recordedAt": "2026-07-10T20:06:23"
+  },
+  {
+    "date": "2026-07-11",
+    "brand": "Fronius",
+    "site": "Dr Buvaji res6kw",
+    "plantKey": "Fronius::Dr Buvaji res6kw",
+    "status": "Offline",
+    "capacity": 6.0,
+    "daily": 0.0,
+    "weekly": 0.0,
+    "year": 0.0,
+    "total": 7.63,
+    "cuf": 0.0,
+    "timestamp": "2026-07-11",
+    "recordedAt": "2026-07-11T12:18:14+05:30"
   },
   {
     "date": "2026-07-10",
@@ -135,6 +255,21 @@
     "recordedAt": "2026-07-10T20:06:23"
   },
   {
+    "date": "2026-07-11",
+    "brand": "Fronius",
+    "site": "Dr Oween 10.0",
+    "plantKey": "Fronius::Dr Oween 10.0",
+    "status": "Offline",
+    "capacity": 0.0,
+    "daily": 0.0,
+    "weekly": 0.0,
+    "year": 0.0,
+    "total": 26.75,
+    "cuf": 0.0,
+    "timestamp": "2026-07-11",
+    "recordedAt": "2026-07-11T12:18:14+05:30"
+  },
+  {
     "date": "2026-07-10",
     "brand": "Fronius",
     "site": "Xisto 10Kw",
@@ -148,6 +283,21 @@
     "yield2026": 567.0,
     "timestamp": "2026-07-10",
     "recordedAt": "2026-07-10T20:06:23"
+  },
+  {
+    "date": "2026-07-11",
+    "brand": "Fronius",
+    "site": "Xisto 10Kw",
+    "plantKey": "Fronius::Xisto 10Kw",
+    "status": "Online",
+    "capacity": 10.0,
+    "daily": 14.04,
+    "weekly": 155.38,
+    "year": 5680.0,
+    "total": 21.73,
+    "cuf": 12.32638888888889,
+    "timestamp": "2026-07-11",
+    "recordedAt": "2026-07-11T12:18:14+05:30"
   },
   {
     "date": "2026-07-10",
@@ -165,6 +315,21 @@
     "recordedAt": "2026-07-10T20:06:23"
   },
   {
+    "date": "2026-07-11",
+    "brand": "GoodWe",
+    "site": "Balkusht Lotlicar 10kw",
+    "plantKey": "GoodWe::Balkusht Lotlicar 10kw",
+    "status": "Online",
+    "capacity": 10.0,
+    "daily": 14.8,
+    "weekly": 159.5,
+    "year": 304.4,
+    "total": 4.3609,
+    "cuf": 0.6605902777777778,
+    "timestamp": "2026-07-11T12:16:43",
+    "recordedAt": "2026-07-11T12:18:14+05:30"
+  },
+  {
     "date": "2026-07-10",
     "brand": "GoodWe",
     "site": "MIRANDA 6kw",
@@ -178,6 +343,21 @@
     "yield2026": 99.05,
     "timestamp": "2026-07-10T19:11:28",
     "recordedAt": "2026-07-10T20:06:23"
+  },
+  {
+    "date": "2026-07-11",
+    "brand": "GoodWe",
+    "site": "MIRANDA 6kw",
+    "plantKey": "GoodWe::MIRANDA 6kw",
+    "status": "Online",
+    "capacity": 6.0,
+    "daily": 11.0,
+    "weekly": 111.0,
+    "year": 587.3,
+    "total": 5.8176000000000005,
+    "cuf": 2.124204282407407,
+    "timestamp": "2026-07-11T12:16:43",
+    "recordedAt": "2026-07-11T12:18:14+05:30"
   },
   {
     "date": "2026-07-10",
@@ -195,6 +375,21 @@
     "recordedAt": "2026-07-10T20:06:23"
   },
   {
+    "date": "2026-07-11",
+    "brand": "GoodWe",
+    "site": "Mark Revlon 10kw Chandor",
+    "plantKey": "GoodWe::Mark Revlon 10kw Chandor",
+    "status": "Online",
+    "capacity": 10.0,
+    "daily": 10.4,
+    "weekly": 99.9,
+    "year": 732.8,
+    "total": 7.1757,
+    "cuf": 1.5902777777777777,
+    "timestamp": "2026-07-11T12:16:43",
+    "recordedAt": "2026-07-11T12:18:14+05:30"
+  },
+  {
     "date": "2026-07-10",
     "brand": "GoodWe",
     "site": "NIKHIL 10kw",
@@ -208,6 +403,21 @@
     "yield2026": 96.4292497625831,
     "timestamp": "2026-07-10T19:11:28",
     "recordedAt": "2026-07-10T20:06:23"
+  },
+  {
+    "date": "2026-07-11",
+    "brand": "GoodWe",
+    "site": "NIKHIL 10kw",
+    "plantKey": "GoodWe::NIKHIL 10kw",
+    "status": "Online",
+    "capacity": 10.53,
+    "daily": 18.3,
+    "weekly": 155.3,
+    "year": 1000.9,
+    "total": 2.9564,
+    "cuf": 2.0627654452885937,
+    "timestamp": "2026-07-11T12:16:43",
+    "recordedAt": "2026-07-11T12:18:14+05:30"
   },
   {
     "date": "2026-07-10",
@@ -225,6 +435,21 @@
     "recordedAt": "2026-07-10T20:06:23"
   },
   {
+    "date": "2026-07-11",
+    "brand": "GoodWe",
+    "site": "Rajesh Shirodkar 10kw",
+    "plantKey": "GoodWe::Rajesh Shirodkar 10kw",
+    "status": "Offline",
+    "capacity": 10.0,
+    "daily": 0.0,
+    "weekly": 0.0,
+    "year": 0.0,
+    "total": 0.014199999999999999,
+    "cuf": 0.0,
+    "timestamp": "2026-07-11T12:16:43",
+    "recordedAt": "2026-07-11T12:18:14+05:30"
+  },
+  {
     "date": "2026-07-10",
     "brand": "GoodWe",
     "site": "Ravish 10kw",
@@ -238,6 +463,21 @@
     "yield2026": 83.94024276377218,
     "timestamp": "2026-07-10T19:11:28",
     "recordedAt": "2026-07-10T20:06:23"
+  },
+  {
+    "date": "2026-07-11",
+    "brand": "GoodWe",
+    "site": "Ravish 10kw",
+    "plantKey": "GoodWe::Ravish 10kw",
+    "status": "Online",
+    "capacity": 10.71,
+    "daily": 16.8,
+    "weekly": 149.8,
+    "year": 891.1,
+    "total": 1.4984000000000002,
+    "cuf": 1.8056122912127812,
+    "timestamp": "2026-07-11T12:16:43",
+    "recordedAt": "2026-07-11T12:18:14+05:30"
   },
   {
     "date": "2026-07-10",
@@ -255,6 +495,21 @@
     "recordedAt": "2026-07-10T20:06:23"
   },
   {
+    "date": "2026-07-11",
+    "brand": "GoodWe",
+    "site": "Raymond Franco 10kw Pomburpa",
+    "plantKey": "GoodWe::Raymond Franco 10kw Pomburpa",
+    "status": "Online",
+    "capacity": 10.0,
+    "daily": 14.8,
+    "weekly": 135.3,
+    "year": 816.8,
+    "total": 8.5852,
+    "cuf": 1.7725694444444444,
+    "timestamp": "2026-07-11T12:16:43",
+    "recordedAt": "2026-07-11T12:18:14+05:30"
+  },
+  {
     "date": "2026-07-10",
     "brand": "GoodWe",
     "site": "SANJIV LOTLICAR 10kw",
@@ -268,6 +523,21 @@
     "yield2026": 105.87850467289721,
     "timestamp": "2026-07-10T19:11:28",
     "recordedAt": "2026-07-10T20:06:23"
+  },
+  {
+    "date": "2026-07-11",
+    "brand": "GoodWe",
+    "site": "SANJIV LOTLICAR 10kw",
+    "plantKey": "GoodWe::SANJIV LOTLICAR 10kw",
+    "status": "Online",
+    "capacity": 10.7,
+    "daily": 17.8,
+    "weekly": 191.3,
+    "year": 1114.1,
+    "total": 3.6161999999999996,
+    "cuf": 2.2595810617860854,
+    "timestamp": "2026-07-11T12:16:43",
+    "recordedAt": "2026-07-11T12:18:14+05:30"
   },
   {
     "date": "2026-07-10",
@@ -285,6 +555,21 @@
     "recordedAt": "2026-07-10T20:06:23"
   },
   {
+    "date": "2026-07-11",
+    "brand": "GoodWe",
+    "site": "Salkar 10kw Bicholim",
+    "plantKey": "GoodWe::Salkar 10kw Bicholim",
+    "status": "Offline",
+    "capacity": 10.0,
+    "daily": 0.0,
+    "weekly": 0.0,
+    "year": 0.0,
+    "total": 0.0038,
+    "cuf": 0.0,
+    "timestamp": "2026-07-11T12:16:43",
+    "recordedAt": "2026-07-11T12:18:14+05:30"
+  },
+  {
     "date": "2026-07-10",
     "brand": "GoodWe",
     "site": "Vikas 10Kw",
@@ -298,6 +583,21 @@
     "yield2026": 114.42,
     "timestamp": "2026-07-10T19:11:28",
     "recordedAt": "2026-07-10T20:06:23"
+  },
+  {
+    "date": "2026-07-11",
+    "brand": "GoodWe",
+    "site": "Vikas 10Kw",
+    "plantKey": "GoodWe::Vikas 10Kw",
+    "status": "Online",
+    "capacity": 10.0,
+    "daily": 21.2,
+    "weekly": 162.7,
+    "year": 1127.3,
+    "total": 7.8898,
+    "cuf": 2.446397569444444,
+    "timestamp": "2026-07-11T12:16:43",
+    "recordedAt": "2026-07-11T12:18:14+05:30"
   },
   {
     "date": "2026-07-10",
@@ -315,6 +615,21 @@
     "recordedAt": "2026-07-10T20:06:23"
   },
   {
+    "date": "2026-07-11",
+    "brand": "GoodWe",
+    "site": "kunal 10kw",
+    "plantKey": "GoodWe::kunal 10kw",
+    "status": "Online",
+    "capacity": 10.7,
+    "daily": 18.5,
+    "weekly": 186.7,
+    "year": 1084.6,
+    "total": 3.1105,
+    "cuf": 2.1997501298027,
+    "timestamp": "2026-07-11T12:16:43",
+    "recordedAt": "2026-07-11T12:18:14+05:30"
+  },
+  {
     "date": "2026-07-10",
     "brand": "SolaX",
     "site": "Dr Mansi & Samir",
@@ -328,6 +643,21 @@
     "yield2026": 738.0094043887148,
     "timestamp": "2026-07-10T19:12:57",
     "recordedAt": "2026-07-10T20:06:23"
+  },
+  {
+    "date": "2026-07-11",
+    "brand": "SolaX",
+    "site": "Dr Mansi & Samir",
+    "plantKey": "SolaX::Dr Mansi & Samir",
+    "status": "Online",
+    "capacity": 6.38,
+    "daily": 11.8,
+    "weekly": 105.4,
+    "year": 4720.3,
+    "total": 6.9981,
+    "cuf": 16.055966453326366,
+    "timestamp": "2026-07-11T12:18:14",
+    "recordedAt": "2026-07-11T12:18:14+05:30"
   },
   {
     "date": "2026-07-10",
@@ -345,6 +675,21 @@
     "recordedAt": "2026-07-10T20:06:23"
   },
   {
+    "date": "2026-07-11",
+    "brand": "SolaX",
+    "site": "Dr OWIN SPV plant 2",
+    "plantKey": "SolaX::Dr OWIN SPV plant 2",
+    "status": "Online",
+    "capacity": 12.72,
+    "daily": 23.4,
+    "weekly": 181.0,
+    "year": 8210.2,
+    "total": 18.9816,
+    "cuf": 14.007291120719776,
+    "timestamp": "2026-07-11T12:18:14",
+    "recordedAt": "2026-07-11T12:18:14+05:30"
+  },
+  {
     "date": "2026-07-10",
     "brand": "SolaX",
     "site": "EUFREGINO 3kw",
@@ -358,6 +703,21 @@
     "yield2026": 124.66216216216216,
     "timestamp": "2026-07-10T19:12:57",
     "recordedAt": "2026-07-10T20:06:23"
+  },
+  {
+    "date": "2026-07-11",
+    "brand": "SolaX",
+    "site": "EUFREGINO 3kw",
+    "plantKey": "SolaX::EUFREGINO 3kw",
+    "status": "Online",
+    "capacity": 3.7,
+    "daily": 7.1,
+    "weekly": 56.5,
+    "year": 468.35,
+    "total": 0.46835000000000004,
+    "cuf": 2.746985266516516,
+    "timestamp": "2026-07-11T12:18:14",
+    "recordedAt": "2026-07-11T12:18:14+05:30"
   },
   {
     "date": "2026-06-16",
@@ -375,6 +735,21 @@
     "recordedAt": "2026-07-10T20:06:23"
   },
   {
+    "date": "2026-07-11",
+    "brand": "Solis",
+    "site": "BITS CARPORT",
+    "plantKey": "Solis::BITS CARPORT",
+    "status": "Offline",
+    "capacity": 100.44,
+    "daily": 0.0,
+    "weekly": 0.0,
+    "year": 454.4,
+    "total": 3.8294,
+    "cuf": 0.09817912297004291,
+    "timestamp": "2026-07-11T12:17:59",
+    "recordedAt": "2026-07-11T12:18:14+05:30"
+  },
+  {
     "date": "2026-06-16",
     "brand": "Solis",
     "site": "Bits Pilani C-Wing 100Kw",
@@ -388,6 +763,21 @@
     "yield2026": 0.0,
     "timestamp": "2026-06-16T18:04:17",
     "recordedAt": "2026-07-10T20:06:23"
+  },
+  {
+    "date": "2026-07-11",
+    "brand": "Solis",
+    "site": "Bits Pilani C-Wing 100Kw",
+    "plantKey": "Solis::Bits Pilani C-Wing 100Kw",
+    "status": "Offline",
+    "capacity": 100.44,
+    "daily": 0.0,
+    "weekly": 0.0,
+    "year": 0.0,
+    "total": 0.0,
+    "cuf": 0.0,
+    "timestamp": "2026-07-11T12:17:59",
+    "recordedAt": "2026-07-11T12:18:14+05:30"
   },
   {
     "date": "2026-07-10",
@@ -405,6 +795,21 @@
     "recordedAt": "2026-07-10T20:06:23"
   },
   {
+    "date": "2026-07-11",
+    "brand": "Solis",
+    "site": "ELVIS GOMES",
+    "plantKey": "Solis::ELVIS GOMES",
+    "status": "Online",
+    "capacity": 15.37,
+    "daily": 80.2,
+    "weekly": 0.0,
+    "year": 11321.5,
+    "total": 20.058,
+    "cuf": 15.98518375442782,
+    "timestamp": "2026-07-11T12:17:59",
+    "recordedAt": "2026-07-11T12:18:14+05:30"
+  },
+  {
     "date": "2026-07-10",
     "brand": "Solis",
     "site": "Manjula Nanavati",
@@ -418,5 +823,20 @@
     "yield2026": 563.6363636363636,
     "timestamp": "2026-07-10T19:34:18",
     "recordedAt": "2026-07-10T20:06:23"
+  },
+  {
+    "date": "2026-07-11",
+    "brand": "Solis",
+    "site": "Manjula Nanavati",
+    "plantKey": "Solis::Manjula Nanavati",
+    "status": "Online",
+    "capacity": 6.27,
+    "daily": 19.4,
+    "weekly": 0.0,
+    "year": 3534.0,
+    "total": 6.86,
+    "cuf": 12.23169191919192,
+    "timestamp": "2026-07-11T12:17:59",
+    "recordedAt": "2026-07-11T12:18:14+05:30"
   }
 ]

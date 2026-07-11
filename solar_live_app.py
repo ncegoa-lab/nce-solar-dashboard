@@ -52,7 +52,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-11-upload-time-freshness-v19"
+APP_VERSION = "2026-07-11-solis-direct-fetch-v20"
 IST = ZoneInfo("Asia/Kolkata")
 PLANT_COLUMNS = [
     "App ID",

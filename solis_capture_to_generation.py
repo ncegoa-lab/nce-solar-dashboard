@@ -17,6 +17,7 @@ STATUS_MAP = {
 def load_station_records():
     capture = json.loads(CAPTURE_FILE.read_text(encoding="utf-8"))
     latest_records = None
+    latest_direct_records = None
     for response in capture.get("responses", []):
         if not response.get("url", "").endswith("/api/station/list"):
             continue
@@ -26,7 +27,12 @@ def load_station_records():
         payload = json.loads(body) if isinstance(body, str) else body
         records = payload.get("data", {}).get("page", {}).get("records", [])
         if records:
-            latest_records = records
+            if response.get("directFetch"):
+                latest_direct_records = records
+            else:
+                latest_records = records
+    if latest_direct_records:
+        return latest_direct_records, capture.get("captured_at")
     if latest_records:
         return latest_records, capture.get("captured_at")
     raise RuntimeError("No Solis station records found in solis_network_capture.json")
