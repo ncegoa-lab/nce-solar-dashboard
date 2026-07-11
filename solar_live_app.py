@@ -9,7 +9,9 @@ one PDF report for all plants, a single plant, or any selected plants.
 from __future__ import annotations
 
 import argparse
+import csv
 import datetime as dt
+import io
 import json
 import base64
 import hashlib
@@ -44,6 +46,7 @@ CONFIG_FILE = PROJECT_DIR / "solar_live_app_config.json"
 ENV_FILE = PROJECT_DIR / ".solar_report_env"
 USERS_FILE = PROJECT_DIR / "solar_users.json"
 HISTORY_FILE = PROJECT_DIR / "solar_generation_history.json"
+HOURLY_HISTORY_FILE = PROJECT_DIR / "solar_generation_hourly_history.json"
 BUNDLED_PYTHON = Path("/Users/sushil/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3")
 VENV_PYTHON = PROJECT_DIR / ".venv/bin/python"
 DEFAULT_CONFIG = {
@@ -52,7 +55,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-11-no-cache-live-v25"
+APP_VERSION = "2026-07-11-chart-detail-export-v27"
 IST = ZoneInfo("Asia/Kolkata")
 PLANT_COLUMNS = [
     "App ID",
@@ -105,6 +108,17 @@ def parse_iso_date(value: Any) -> dt.date | None:
         except ValueError:
             return None
     return None
+
+
+def html_escape(value: Any) -> str:
+    return (
+        str(value if value is not None else "")
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+        .replace("'", "&#39;")
+    )
 
 
 def read_json_file(path: Path) -> dict[str, Any]:
@@ -355,6 +369,52 @@ class SolarLiveApp:
         temp.write_text(json.dumps(rows, indent=2), encoding="utf-8")
         temp.replace(HISTORY_FILE)
 
+    def load_hourly_history(self) -> list[dict[str, Any]]:
+        if not HOURLY_HISTORY_FILE.exists():
+            return []
+        try:
+            data = json.loads(HOURLY_HISTORY_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            return []
+        return data if isinstance(data, list) else []
+
+    def save_hourly_history(self, rows: list[dict[str, Any]]) -> None:
+        temp = HOURLY_HISTORY_FILE.with_suffix(".json.tmp")
+        temp.write_text(json.dumps(rows, indent=2), encoding="utf-8")
+        temp.replace(HOURLY_HISTORY_FILE)
+
+    def record_hourly_snapshot(self, current: list[dict[str, Any]]) -> None:
+        now = ist_now().replace(minute=0, second=0, microsecond=0)
+        today = now.date()
+        rows = self.load_hourly_history()
+        cutoff = today - dt.timedelta(days=45)
+        rows = [
+            row for row in rows
+            if parse_iso_date(row.get("date")) and parse_iso_date(row.get("date")) >= cutoff
+        ]
+        by_key = {
+            f"{row.get('plantKey')}::{row.get('hour')}": row
+            for row in rows
+            if row.get("plantKey") and row.get("hour")
+        }
+        for plant in current:
+            if plant.get("dataDate") != today.isoformat():
+                continue
+            hour_key = now.isoformat()
+            by_key[f"{plant['plantKey']}::{hour_key}"] = {
+                "date": today.isoformat(),
+                "hour": hour_key,
+                "hourLabel": now.strftime("%H:00"),
+                "brand": plant.get("brand", ""),
+                "site": plant.get("site", ""),
+                "plantKey": plant.get("plantKey", ""),
+                "status": plant.get("status", ""),
+                "daily": plant.get("daily", 0),
+                "timestamp": plant.get("timestamp", ""),
+                "recordedAt": ist_now().replace(microsecond=0).isoformat(),
+            }
+        self.save_hourly_history(sorted(by_key.values(), key=lambda row: (str(row.get("hour", "")), str(row.get("plantKey", "")))))
+
     def record_history_snapshot(self) -> dict[str, Any]:
         current = self.plant_payload({"role": "admin", "plants": ["*"]})
         if not current:
@@ -390,6 +450,7 @@ class SolarLiveApp:
 
         rows = sorted(by_key.values(), key=lambda row: (str(row.get("plantKey", "")), str(row.get("date", ""))))
         self.save_history(rows)
+        self.record_hourly_snapshot(current)
         return {"label": "History snapshot", "ok": True, "message": f"Saved history for {count} plants."}
 
     def history_payload(self, plant_key_value: str, user: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -684,6 +745,123 @@ class SolarLiveApp:
             if str(plant.get("brand", "")).lower() == brand.lower()
         ]
 
+    def monthly_generation_payload(self, plant_keys: list[str], user: dict[str, Any] | None = None) -> dict[str, Any]:
+        today = ist_today()
+        month_start = today.replace(day=1)
+        allowed_keys = set(plant_keys or [])
+        current_rows = self.plant_payload(user or {"role": "admin", "plants": ["*"]})
+        if allowed_keys:
+            current_rows = [plant for plant in current_rows if plant.get("plantKey") in allowed_keys]
+        visible_keys = {plant.get("plantKey") for plant in current_rows}
+
+        totals: dict[str, float] = {}
+        for row in self.load_history():
+            key = row.get("plantKey")
+            if key not in visible_keys or not user_can_access(user, key):
+                continue
+            row_date = parse_iso_date(row.get("date"))
+            if not row_date or not (month_start <= row_date <= today):
+                continue
+            date_key = row_date.isoformat()
+            totals[date_key] = totals.get(date_key, 0.0) + float(row.get("daily") or 0)
+
+        live_today_total = sum(
+            float(plant.get("daily") or 0)
+            for plant in current_rows
+            if plant.get("dataDate") == today.isoformat()
+        )
+        if live_today_total:
+            totals[today.isoformat()] = live_today_total
+
+        days = []
+        cursor = month_start
+        while cursor <= today:
+            key = cursor.isoformat()
+            days.append({"date": key, "day": cursor.day, "generation": round(totals.get(key, 0.0), 3)})
+            cursor += dt.timedelta(days=1)
+        return {"month": today.strftime("%B %Y"), "days": days, "total": round(sum(day["generation"] for day in days), 3)}
+
+    def today_hourly_payload(self, plant_keys: list[str], user: dict[str, Any] | None = None) -> dict[str, Any]:
+        today = ist_today()
+        allowed_keys = set(plant_keys or [])
+        current_rows = self.plant_payload(user or {"role": "admin", "plants": ["*"]})
+        if allowed_keys:
+            current_rows = [plant for plant in current_rows if plant.get("plantKey") in allowed_keys]
+        visible_keys = {plant.get("plantKey") for plant in current_rows}
+        totals: dict[str, float] = {}
+        for row in self.load_hourly_history():
+            key = row.get("plantKey")
+            if key not in visible_keys or not user_can_access(user, key):
+                continue
+            row_date = parse_iso_date(row.get("date"))
+            if row_date != today:
+                continue
+            hour = str(row.get("hourLabel") or str(row.get("hour", ""))[11:16] or "")
+            if hour:
+                totals[hour] = totals.get(hour, 0.0) + float(row.get("daily") or 0)
+
+        now_hour = ist_now().replace(minute=0, second=0, microsecond=0)
+        live_total = sum(
+            float(plant.get("daily") or 0)
+            for plant in current_rows
+            if plant.get("dataDate") == today.isoformat()
+        )
+        if live_total:
+            totals[now_hour.strftime("%H:00")] = live_total
+
+        hours = []
+        cursor = today
+        for hour in range(24):
+            label = f"{hour:02d}:00"
+            if label in totals or hour <= ist_now().hour:
+                hours.append({"hour": label, "generation": round(totals.get(label, 0.0), 3)})
+        return {"date": today.isoformat(), "hours": hours, "total": round(max((row["generation"] for row in hours), default=0.0), 3)}
+
+    def chart_export_rows(self, chart_type: str, plant_keys: list[str], user: dict[str, Any] | None = None) -> tuple[str, list[dict[str, Any]]]:
+        if chart_type == "monthly":
+            payload = self.monthly_generation_payload(plant_keys, user)
+            return f"Monthly Generation - {payload['month']}", [
+                {"Period": item["date"], "Generation (kWh)": item["generation"]}
+                for item in payload.get("days", [])
+            ]
+        payload = self.today_hourly_payload(plant_keys, user)
+        return f"Today's Generation - {payload['date']}", [
+            {"Period": item["hour"], "Generation (kWh)": item["generation"]}
+            for item in payload.get("hours", [])
+        ]
+
+    def chart_csv_bytes(self, chart_type: str, plant_keys: list[str], user: dict[str, Any] | None = None) -> bytes:
+        title, rows = self.chart_export_rows(chart_type, plant_keys, user)
+        output = io.StringIO()
+        output.write(title + "\n")
+        writer = csv.DictWriter(output, fieldnames=["Period", "Generation (kWh)"])
+        writer.writeheader()
+        writer.writerows(rows)
+        return output.getvalue().encode("utf-8")
+
+    def chart_pdf_bytes(self, chart_type: str, plant_keys: list[str], user: dict[str, Any] | None = None) -> bytes:
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+
+        title, rows = self.chart_export_rows(chart_type, plant_keys, user)
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=28, rightMargin=28, topMargin=28, bottomMargin=28)
+        styles = getSampleStyleSheet()
+        table_data = [["Period", "Generation (kWh)"]] + [[row["Period"], f"{float(row['Generation (kWh)']):.2f}"] for row in rows]
+        table = Table(table_data, repeatRows=1)
+        table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#174f9c")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#d7e0ec")),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f3f7fb")]),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("ALIGN", (1, 1), (1, -1), "RIGHT"),
+        ]))
+        doc.build([Paragraph(title, styles["Title"]), Spacer(1, 12), table])
+        return buffer.getvalue()
+
     def refresh_on_open(self) -> None:
         if not self.config.get("auto_refresh_on_open"):
             return
@@ -872,6 +1050,16 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def send_bytes(self, body: bytes, content_type: str, filename: str | None = None) -> None:
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+        if filename:
+            self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     def read_json(self) -> dict[str, Any]:
         length = int(self.headers.get("Content-Length") or 0)
         if not length:
@@ -919,7 +1107,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_header("Content-Length", str(len(body)))
                 self.end_headers()
                 self.wfile.write(body)
-            elif parsed.path.startswith("/api/") or parsed.path.startswith("/reports/") or parsed.path == "/view-report":
+            elif parsed.path.startswith("/api/") or parsed.path.startswith("/reports/") or parsed.path in {"/view-report", "/chart-detail", "/chart-csv", "/chart-pdf"}:
                 user = self.require_auth()
                 if load_users() and not user:
                     return
@@ -939,6 +1127,14 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(APP.history_payload(key, user))
         elif parsed.path == "/api/reports":
             self.send_json({"reports": APP.latest_reports()})
+        elif parsed.path == "/api/monthly-generation":
+            query = urllib.parse.parse_qs(parsed.query)
+            keys = [value for value in (query.get("plant_key") or []) if value]
+            self.send_json(APP.monthly_generation_payload(keys, user))
+        elif parsed.path == "/api/today-hourly-generation":
+            query = urllib.parse.parse_qs(parsed.query)
+            keys = [value for value in (query.get("plant_key") or []) if value]
+            self.send_json(APP.today_hourly_payload(keys, user))
         elif parsed.path == "/api/status":
             self.send_json(
                 {
@@ -956,6 +1152,28 @@ class Handler(BaseHTTPRequestHandler):
             query = urllib.parse.parse_qs(parsed.query)
             relative = (query.get("file") or [""])[0]
             self.send_report_viewer(relative)
+        elif parsed.path == "/chart-detail":
+            query = urllib.parse.parse_qs(parsed.query)
+            chart_type = (query.get("type") or ["today"])[0]
+            keys = [value for value in (query.get("plant_key") or []) if value]
+            title, rows = APP.chart_export_rows(chart_type, keys, user)
+            base_query = urllib.parse.urlencode([("type", chart_type)] + [("plant_key", key) for key in keys])
+            body_rows = "".join(
+                f"<tr><td>{html_escape(str(row['Period']))}</td><td>{float(row['Generation (kWh)']):.2f}</td></tr>"
+                for row in rows
+            )
+            body = CHART_DETAIL_HTML.replace("__TITLE__", html_escape(title)).replace("__ROWS__", body_rows).replace("__QUERY__", base_query).encode("utf-8")
+            self.send_bytes(body, "text/html; charset=utf-8")
+        elif parsed.path == "/chart-csv":
+            query = urllib.parse.parse_qs(parsed.query)
+            chart_type = (query.get("type") or ["today"])[0]
+            keys = [value for value in (query.get("plant_key") or []) if value]
+            self.send_bytes(APP.chart_csv_bytes(chart_type, keys, user), "text/csv; charset=utf-8", f"{chart_type}_generation.csv")
+        elif parsed.path == "/chart-pdf":
+            query = urllib.parse.parse_qs(parsed.query)
+            chart_type = (query.get("type") or ["today"])[0]
+            keys = [value for value in (query.get("plant_key") or []) if value]
+            self.send_bytes(APP.chart_pdf_bytes(chart_type, keys, user), "application/pdf", f"{chart_type}_generation.pdf")
         elif parsed.path.startswith("/reports/"):
             relative = urllib.parse.unquote(parsed.path[len("/reports/") :])
             path = (APP.output_dir / relative).resolve()
@@ -1141,6 +1359,35 @@ document.querySelector('#share').onclick=async()=>{const url=new URL('__DOWNLOAD
 </html>"""
 
 
+CHART_DETAIL_HTML = r"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:#eef3f8;color:#1e2b3f}
+header{position:sticky;top:0;background:#174f9c;color:white;padding:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+h1{font-size:16px;margin:0;flex:1 1 260px}a{background:white;color:#174f9c;text-decoration:none;border-radius:6px;padding:9px 11px;font-weight:900}
+main{max-width:900px;margin:auto;padding:14px}.panel{background:white;border:1px solid #d7e0ec;border-radius:8px;padding:14px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{background:#174f9c;color:white;text-align:left;padding:9px}td{border-bottom:1px solid #d7e0ec;padding:8px}td:last-child{text-align:right;font-weight:800}tr:nth-child(even){background:#f8fafc}
+@media(max-width:640px){header{display:grid;grid-template-columns:1fr 1fr}h1{grid-column:1 / -1}a{text-align:center}}
+</style>
+</head>
+<body>
+<header>
+  <a href="/">Back to App</a>
+  <h1>__TITLE__</h1>
+  <a href="/chart-csv?__QUERY__">CSV</a>
+  <a href="/chart-pdf?__QUERY__" target="_blank">PDF</a>
+</header>
+<main><section class="panel">
+<table><thead><tr><th>Period</th><th>Generation (kWh)</th></tr></thead><tbody>__ROWS__</tbody></table>
+</section></main>
+</body>
+</html>"""
+
+
 LIVE_HTML = r"""<!doctype html>
 <html lang="en">
 <head>
@@ -1159,18 +1406,20 @@ button{height:36px;border:0;border-radius:6px;padding:0 13px;background:var(--bl
 .grid{display:grid;grid-template-columns:repeat(6,minmax(120px,1fr));gap:10px;margin-bottom:12px}.card,.panel{background:white;border:1px solid var(--line);border-radius:8px;box-shadow:0 1px 4px rgba(15,35,60,.05)}
 .card{padding:12px;min-height:78px}.card span{display:block;color:var(--muted);font-size:11px;font-weight:700;margin-bottom:10px}.card strong{font-size:20px}
 .panel{padding:14px}.split{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(340px,.9fr);gap:12px}h2{font-size:15px;margin:0 0 10px}
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}.chart-card{background:white;border:1px solid var(--line);border-radius:8px;padding:14px;box-shadow:0 1px 4px rgba(15,35,60,.05);min-height:230px;cursor:pointer}.chart-card:hover{border-color:var(--cyan);box-shadow:0 2px 8px rgba(15,35,60,.10)}.chart-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}.chart-head h2{margin:0}.chart-total{font-size:12px;font-weight:900;color:var(--green);white-space:nowrap}.bar-chart{height:180px;display:flex;align-items:end;gap:7px;border-left:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 8px 0;overflow-x:auto}.bar-item{min-width:28px;flex:1;max-width:62px;display:flex;flex-direction:column;align-items:center;justify-content:end;height:100%;gap:5px}.bar{width:100%;min-height:2px;border-radius:5px 5px 0 0;background:linear-gradient(180deg,var(--cyan),var(--blue));position:relative}.bar.candle{background:linear-gradient(180deg,#34d399,var(--green))}.bar-label{font-size:10px;color:var(--muted);max-width:58px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}.bar-value{font-size:10px;font-weight:900;color:var(--ink);white-space:nowrap}
 table{width:100%;border-collapse:collapse;font-size:12px}th{background:var(--blue);color:white;text-align:left;padding:8px 7px}td{border-bottom:1px solid var(--line);padding:7px}tr:nth-child(even){background:#f8fafc}
 .status{font-weight:800}.online{color:var(--green)}.offline,.stale{color:var(--red)}.fresh{color:var(--green)}.pill{display:inline-block;border-radius:999px;padding:2px 7px;font-size:10px;font-weight:800;color:white}.pill.fresh{background:var(--green);color:white}.pill.stale{background:var(--red);color:white}.pill.offline{background:#111827;color:white}
 .plant-title{font-size:21px;font-weight:850}.details{display:grid;grid-template-columns:1fr 1fr;gap:8px}.detail{border:1px solid var(--line);border-radius:6px;background:#fbfdff;padding:10px}.detail span{display:block;color:var(--muted);font-size:11px;font-weight:700;margin-bottom:7px}
 .checkcell{width:34px}.report-link{font-size:12px;color:var(--muted);margin-top:8px;word-break:break-all}.download-btn{display:inline-block;margin-top:8px;background:var(--green);color:white;text-decoration:none;border-radius:6px;padding:9px 12px;font-weight:900}.report-list{margin-top:8px;display:grid;gap:6px}.report-item{display:block;border:1px solid var(--line);border-radius:6px;background:#fbfdff;padding:8px;color:var(--blue);text-decoration:none;font-weight:800}.report-item span{display:block;color:var(--muted);font-size:11px;font-weight:700;margin-top:3px}.log{font-family:ui-monospace,Menlo,monospace;font-size:11px;white-space:pre-wrap;max-height:180px;overflow:auto;background:#f8fafc;border:1px solid var(--line);padding:8px;border-radius:6px}
 .history-block{margin-top:12px}.history-block h3{font-size:13px;margin:10px 0 6px}.history-scroll{max-height:160px;overflow:auto;border:1px solid var(--line);border-radius:6px}.history-scroll table{font-size:11px}.history-scroll th{position:sticky;top:0}.empty-history{color:var(--muted);font-size:12px;padding:8px;border:1px solid var(--line);border-radius:6px;background:#fbfdff}.fold{border-top:1px solid var(--line);padding-top:10px;margin-top:12px}.fold summary{cursor:pointer;font-weight:900;color:var(--blue);list-style:none}.fold summary::-webkit-details-marker{display:none}.fold summary::after{content:'+';float:right}.fold[open] summary::after{content:'-'}.plant-daily{display:none}
-@media(max-width:980px){header{position:static}.toolbar,.grid,.split{grid-template-columns:1fr}table{font-size:11px}th:nth-child(5),td:nth-child(5),th:nth-child(7),td:nth-child(7){display:none}}
+@media(max-width:980px){header{position:static}.toolbar,.grid,.split,.charts{grid-template-columns:1fr}table{font-size:11px}th:nth-child(5),td:nth-child(5),th:nth-child(7),td:nth-child(7){display:none}}
 @media(max-width:640px){
 body{background:#f3f7fb}
 header{display:grid;grid-template-columns:1fr auto;gap:8px;padding:12px 14px;align-items:start}
 h1{font-size:18px;line-height:1.15}.meta{grid-column:1 / -1;margin:0;text-align:left;font-size:11px;opacity:.95}a.logout{padding:8px 10px}
 main{padding:10px;max-width:none}.toolbar{display:grid;grid-template-columns:1fr;gap:8px}.toolbar button{width:100%;height:42px}
 .grid{grid-template-columns:1fr 1fr;gap:8px}.card{min-height:68px;padding:10px}.card span{margin-bottom:6px}.card strong{font-size:17px}
+.charts{grid-template-columns:1fr;gap:8px}.chart-card{padding:12px;min-height:190px}.bar-chart{height:140px;gap:5px}.bar-item{min-width:24px}.bar-label{font-size:9px}.bar-value{display:none}
 .panel{padding:12px;border-radius:8px}.split{gap:10px}.details{grid-template-columns:1fr}.detail{padding:9px}
 section.panel table,section.panel thead,section.panel tbody,section.panel tr,section.panel td{display:block;width:100%}
 section.panel table{border-collapse:separate;border-spacing:0}
@@ -1209,6 +1458,16 @@ section.panel tr.open td:nth-child(3)::after{content:'-'}
     <button id="selectAll" class="gray">Select All</button>
   </div>
   <div class="grid" id="cards"></div>
+  <div class="charts">
+    <section class="chart-card" id="dailyChartCard" title="Open hourly details">
+      <div class="chart-head"><h2>Today's Generation</h2><span class="chart-total" id="dailyChartTotal"></span></div>
+      <div class="bar-chart" id="dailyChart"></div>
+    </section>
+    <section class="chart-card" id="monthlyChartCard" title="Open daily monthly details">
+      <div class="chart-head"><h2>Monthly Generation</h2><span class="chart-total" id="monthlyChartTotal"></span></div>
+      <div class="bar-chart" id="monthlyChart"></div>
+    </section>
+  </div>
   <div class="split">
     <section class="panel">
       <h2>Plants</h2>
@@ -1240,11 +1499,17 @@ section.panel tr.open td:nth-child(3)::after{content:'-'}
   </div>
 </main>
 <script>
-let plants=[], selected=new Set(), statusData={}, activePlantId=null, activeHistoryKey='', openRefreshStarted=false;
+let plants=[], selected=new Set(), statusData={}, activePlantId=null, activeHistoryKey='', openRefreshStarted=false, monthlyChartKey='';
 const searchInput=document.querySelector('#search');
 const brandFilter=document.querySelector('#brand');
 const statusFilter=document.querySelector('#status');
 const cardsEl=document.querySelector('#cards');
+const dailyChartEl=document.querySelector('#dailyChart');
+const monthlyChartEl=document.querySelector('#monthlyChart');
+const dailyChartCardEl=document.querySelector('#dailyChartCard');
+const monthlyChartCardEl=document.querySelector('#monthlyChartCard');
+const dailyChartTotalEl=document.querySelector('#dailyChartTotal');
+const monthlyChartTotalEl=document.querySelector('#monthlyChartTotal');
 const rowsEl=document.querySelector('#rows');
 const detailEl=document.querySelector('#detail');
 const refreshBtn=document.querySelector('#refresh');
@@ -1276,8 +1541,13 @@ function h(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;
 function weightedCuf(rows){const cap=rows.reduce((a,p)=>a+Number(p.capacity||0),0),year=rows.reduce((a,p)=>a+Number(p.year||0),0);const p=istParts();const days=Math.max(1,Math.floor((Date.UTC(Number(p.year),Number(p.month)-1,Number(p.day))-Date.UTC(2026,0,1))/86400000)+1);return cap&&year?year/(cap*24*days)*100:0}
 async function api(path,opt={}){const sep=path.includes('?')?'&':'?';const url=path+sep+'_ts='+Date.now();const r=await fetch(url,{cache:'no-store',...opt,headers:{'Cache-Control':'no-cache',...(opt.headers||{})}});const text=await r.text();let data={};try{data=text?JSON.parse(text):{};}catch(e){throw new Error(`${path} returned ${r.status}: ${text.slice(0,240)||'empty response'}`)}if(!r.ok){throw new Error(data.error||`${path} returned ${r.status}`)}return data}
 function filtered(){const q=searchInput.value.toLowerCase(), b=brandFilter.value, s=statusFilter.value;return plants.filter(p=>(b==='all'||p.brand===b)&&(s==='all'||p.status===s)&&(`${p.site} ${p.brand}`.toLowerCase().includes(q)))}
+function chartQuery(type){return 'type='+encodeURIComponent(type)+'&'+filtered().map(p=>'plant_key='+encodeURIComponent(p.plantKey)).join('&')}
 function selectedRows(){return plants.filter(p=>selected.has(p.id))}
 function renderFilters(){brandFilter.innerHTML='<option value="all">All Brands</option>'+uniq(plants.map(p=>p.brand)).map(x=>`<option>${x}</option>`).join('');statusFilter.innerHTML='<option value="all">All Status</option>'+uniq(plants.map(p=>p.status)).map(x=>`<option>${x}</option>`).join('')}
+function shortName(name){return String(name||'').replace(/\b(plant|solar|spv|kw)\b/gi,'').trim().slice(0,16)||'Plant'}
+function renderBarChart(el,totalEl,rows,key){const top=[...rows].sort((a,b)=>Number(b[key]||0)-Number(a[key]||0)).slice(0,14);const total=rows.reduce((a,p)=>a+Number(p[key]||0),0);const max=Math.max(...top.map(p=>Number(p[key]||0)),1);totalEl.textContent=f(total)+' kWh';el.innerHTML=top.length?top.map(p=>{const value=Number(p[key]||0);const height=Math.max(2,value/max*100);return `<div class="bar-item" title="${h(p.site)}: ${f(value)} kWh"><div class="bar-value">${f(value,1)}</div><div class="bar" style="height:${height}%"></div><div class="bar-label">${h(shortName(p.site))}</div></div>`}).join(''):'<div class="empty-history">No plant data</div>'}
+function renderMonthlyCandles(data){const days=data.days||[];const max=Math.max(...days.map(d=>Number(d.generation||0)),1);monthlyChartTotalEl.textContent=`${h(data.month||'This month')} · ${f(data.total)} kWh`;monthlyChartEl.innerHTML=days.length?days.map(d=>{const value=Number(d.generation||0);const height=Math.max(value>0?2:1,value/max*100);return `<div class="bar-item" title="${h(d.date)}: ${f(value)} kWh"><div class="bar-value">${f(value,0)}</div><div class="bar candle" style="height:${height}%"></div><div class="bar-label">${h(d.day)}</div></div>`}).join(''):'<div class="empty-history">No monthly data</div>'}
+async function loadMonthlyChart(rows){const key=rows.map(p=>`${p.plantKey}:${p.dataDate}:${p.daily}`).sort().join('|');if(key===monthlyChartKey)return;monthlyChartKey=key;monthlyChartEl.innerHTML='<div class="empty-history">Loading month...</div>';const query=rows.map(p=>'plant_key='+encodeURIComponent(p.plantKey)).join('&');try{renderMonthlyCandles(await api('/api/monthly-generation'+(query?'?'+query:'')))}catch(error){monthlyChartEl.innerHTML='<div class="empty-history">Monthly graph failed: '+h(error.message)+'</div>'}}
 function historyTable(title, rows, cols, open=false){if(!rows?.length)return `<details class="fold history-block"><summary>${title}</summary><div class="empty-history">No previous data yet. It will build after refreshes/uploads.</div></details>`;return `<details class="fold history-block" ${open?'open':''}><summary>${title}</summary><div class="history-scroll"><table><thead><tr>${cols.map(c=>`<th>${c[0]}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td>${c[2]?f(r[c[1]]):h(r[c[1]])}</td>`).join('')}</tr>`).join('')}</tbody></table></div></details>`}
 function opt(rows,key){return (rows||[]).map((r,i)=>`<option value="${i}">${h(r[key]||'')}</option>`).join('')}
 function pickedLine(type,row,fallback=''){if(type==='day'){const item=row||{date:fallback||todayText(),daily:0,status:'No data'};return `${h(item.date)} · ${f(item.daily)} kWh · ${h(item.status)}`}if(!row)return '0.00 kWh · No data for this selection.';if(type==='week')return `${h(row.week)} · ${f(row.weekly || row.dailySum)} kWh`;return `${h(row.year)} · ${f(row.yearKwh)} kWh · latest ${h(row.lastDate)}`}
@@ -1291,6 +1561,7 @@ historyTable('All Yearly',yearly,[['Year','year'],['Year kWh','yearKwh',1],['Lat
 async function loadHistory(active){const key=active?.plantKey||'';activeHistoryKey=key;const box=document.querySelector('#historyBox');if(!box||!key)return;box.innerHTML='<div class="empty-history">Loading previous data...</div>';try{const data=await api('/api/history?plant_key='+encodeURIComponent(key));if(activeHistoryKey===key){box.innerHTML=renderHistory(data);wireHistoryPickers(data)}}catch(error){if(activeHistoryKey===key)box.innerHTML='<div class="empty-history">History failed: '+h(error.message)+'</div>';}}
 function renderDetail(active){if(!active){detailEl.innerHTML='<div class="empty-history">Tap a plant name to view details.</div>';return}detailEl.innerHTML=`<div class="plant-title">${h(active.site)}</div><p>${h(active.brand)} · <span class="status ${cls(active.status)}">${h(active.status)}</span></p>${staleNote(active)?`<p class="stale">${h(staleNote(active))}</p>`:''}<div class="details"><div class="detail"><span>Data Date</span><b>${h(active.dataDate||'Unknown')}</b></div><div class="detail"><span>Capacity</span><b>${f(active.capacity)} kW</b></div><div class="detail"><span>Daily</span><b>${f(active.daily)} kWh</b></div><div class="detail"><span>Weekly</span><b>${f(active.weekly)} kWh</b></div><div class="detail"><span>Yearly</span><b>${f(active.year)} kWh</b></div><div class="detail"><span>CUF</span><b>${f(active.cuf)}%</b></div><div class="detail"><span>Total</span><b>${f(active.total)} MWh</b></div></div><div id="historyBox" class="history-block"></div>`;loadHistory(active)}
 function render(){const rows=filtered(), chosen=selectedRows();let active=plants.find(p=>p.id===activePlantId);if(active && !rows.some(p=>p.id===active.id)){activePlantId=null;active=null}cardsEl.innerHTML=[['Visible',rows.length],['Selected',chosen.length],['Daily',f(rows.reduce((a,p)=>a+p.daily,0))+' kWh'],['Weekly',f(rows.reduce((a,p)=>a+p.weekly,0))+' kWh'],['Yearly',f(rows.reduce((a,p)=>a+p.year,0))+' kWh'],['CUF',f(weightedCuf(rows))+' %']].map(x=>`<div class="card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join('');
+renderBarChart(dailyChartEl,dailyChartTotalEl,rows,'daily');loadMonthlyChart(rows);
 rowsEl.innerHTML=rows.map(p=>`<tr data-id="${p.id}" style="cursor:pointer"><td data-label=""><input type="checkbox" data-id="${p.id}" ${selected.has(p.id)?'checked':''}></td><td data-label="Brand">${h(p.brand)}</td><td data-label="Plant"><span class="plant-line ${cls(p.status)}"><b>${h(p.site)}</b><span class="plant-daily">${f(p.daily)} kWh</span></span></td><td data-label="Status" class="status ${cls(p.status)}">${h(p.status)}</td><td data-label="Date" title="${h(staleNote(p))}">${h(p.dataDate||'')} <span class="pill ${pillClass(p)}">${pillText(p)}</span></td><td data-label="Daily">${f(p.daily)}</td><td data-label="Weekly">${f(p.weekly)}</td><td data-label="Yearly">${f(p.year)}</td><td data-label="CUF">${f(p.cuf)}%</td></tr>`).join('');
 rowsEl.querySelectorAll('tr[data-id]').forEach(tr=>{if(tr.dataset.id===activePlantId)tr.classList.add('open');tr.onclick=()=>{activePlantId=tr.dataset.id===activePlantId?null:tr.dataset.id;render()}});
 rowsEl.querySelectorAll('input[type=checkbox][data-id]').forEach(cb=>{cb.onclick=e=>e.stopPropagation();cb.onchange=()=>{cb.checked?selected.add(cb.dataset.id):selected.delete(cb.dataset.id);render()}});
@@ -1308,6 +1579,8 @@ reportPlantBtn.onclick=()=>{if(!activePlantId){reportResultEl.textContent='Tap a
 reportBtn.onclick=()=>{if(!selected.size){reportResultEl.textContent='Tick one or more plants first.';return}generateReport([...selected],'selected report')};
 selectAllBtn.onclick=()=>{const visible=filtered();const all=visible.every(p=>selected.has(p.id));visible.forEach(p=>all?selected.delete(p.id):selected.add(p.id));render()}
 saveScheduleBtn.onclick=async()=>{const r=await api('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({auto_report_day:autoDayEl.value,auto_report_time:autoTimeEl.value})});logEl.textContent='Saved schedule: '+r.config.auto_report_day+' '+r.config.auto_report_time}
+dailyChartCardEl.onclick=()=>window.open('/chart-detail?'+chartQuery('today'),'_blank');
+monthlyChartCardEl.onclick=()=>window.open('/chart-detail?'+chartQuery('monthly'),'_blank');
 searchInput.oninput=render;brandFilter.onchange=render;statusFilter.onchange=render;load().catch(error=>{logEl.textContent='App load failed: '+error;});
 </script>
 </body></html>"""
