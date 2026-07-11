@@ -126,7 +126,10 @@ def fetch_realtime(base_url: str, token_id: str, sn: str) -> dict | None:
     ]
     for path in attempts:
         try:
-            return public_get(base_url, path, {"tokenId": token_id, "sn": sn})
+            payload = public_get(base_url, path, {"tokenId": token_id, "sn": sn})
+            if payload.get("success") is False and str(payload.get("result", "")).lower() in {"no auth!", "no auth"}:
+                continue
+            return payload
         except Exception:
             continue
     return None
@@ -150,10 +153,14 @@ def first_value(row: dict, keys: tuple[str, ...]):
 def status_from(row: dict) -> str:
     raw = first_value(row, ("status", "inverterStatus", "state", "statusText", "onlineStatus"))
     text = str(raw or "").strip()
-    if text.lower() in {"1", "online", "normal", "2"}:
+    if text.lower() in {"1", "2", "102", "online", "normal", "working", "active"}:
         return "Online"
-    if text.lower() in {"0", "offline"}:
+    if text.lower() in {"0", "109", "110", "offline"}:
         return "Offline"
+    if text.lower() in {"100", "101", "105", "106", "107", "108", "warning", "standby", "wait", "checking"}:
+        return "Warning"
+    if text.lower() in {"103", "104", "fault", "failure"}:
+        return "Fault"
     return text or "Unknown"
 
 
@@ -165,14 +172,15 @@ def name_from(row: dict, fallback_sn: str | None) -> str:
     )
 
 
-def system_from(device: dict, realtime: dict | None) -> dict:
+def system_from(device: dict, realtime: dict | None, previous: dict | None = None) -> dict:
     live = unwrap_data(realtime or {})
-    row = {**device, **live}
+    previous = previous or {}
+    row = {**previous, **device, **live}
     sn = device_identifier(row)
     power = numeric(first_value(row, ("acpower", "acPower", "power", "pac", "powerdc1", "inverterPower")))
     if power is not None and abs(power) > 100:
         power = round(power / 1000, 3)
-    total = numeric(first_value(row, ("yieldtotal", "yieldTotal", "totalYield", "etotal", "allEnergy")))
+    total = numeric(first_value(row, ("total_generation_kwh", "yieldtotal", "yieldTotal", "totalYield", "etotal", "allEnergy")))
     if total is not None:
         unit_blob = json.dumps(row).lower()
         if re.search(r'"yieldtotalunit"\s*:\s*"mwh"|total.*mwh', unit_blob):
@@ -180,17 +188,31 @@ def system_from(device: dict, realtime: dict | None) -> dict:
     return {
         "name": name_from(row, sn),
         "status": status_from(row),
-        "capacity_kw": numeric(first_value(row, ("capacity", "capacityKw", "installedCapacity", "pvCapacity"))),
-        "current_power_kw": power,
-        "today_generation_kwh": numeric(first_value(row, ("yieldtoday", "yieldToday", "todayYield", "eToday", "dayEnergy"))),
-        "weekly_generation_kwh": numeric(first_value(row, ("yieldWeek", "weekYield", "weeklyYield", "weekEnergy"))),
-        "month_generation_kwh": numeric(first_value(row, ("yieldMonth", "monthYield", "monthlyYield", "monthEnergy"))),
-        "year_generation_kwh": numeric(first_value(row, ("yieldYear", "yearYield", "yearlyYield", "yearEnergy"))),
+        "capacity_kw": numeric(first_value(row, ("capacity_kw", "capacity", "capacityKw", "installedCapacity", "pvCapacity"))),
+        "current_power_kw": power if power is not None else numeric(first_value(row, ("current_power_kw",))),
+        "today_generation_kwh": numeric(first_value(row, ("today_generation_kwh", "yieldtoday", "yieldToday", "todayYield", "eToday", "dayEnergy"))),
+        "weekly_generation_kwh": numeric(first_value(row, ("weekly_generation_kwh", "yieldWeek", "weekYield", "weeklyYield", "weekEnergy"))),
+        "month_generation_kwh": numeric(first_value(row, ("month_generation_kwh", "yieldMonth", "monthYield", "monthlyYield", "monthEnergy"))),
+        "year_generation_kwh": numeric(first_value(row, ("year_generation_kwh", "yieldYear", "yearYield", "yearlyYield", "yearEnergy"))),
         "total_generation_kwh": total,
         "system_id": first_value(row, ("plantId", "stationId", "siteId", "id")) or sn,
         "source_sno": sn,
         "data_timestamp": first_value(row, ("uploadTime", "updateTime", "lastUpdateTime", "time")),
     }
+
+
+def load_capture_baseline() -> dict[str, dict]:
+    try:
+        from solax_capture_to_generation import parse_capture
+
+        payload = parse_capture()
+        return {
+            str(system.get("name", "")): system
+            for system in payload.get("systems", [])
+            if system.get("name")
+        }
+    except Exception:
+        return {}
 
 
 def main() -> None:
@@ -201,12 +223,28 @@ def main() -> None:
     raw_payload = {"source": "SOLAX_DEVICE_SNS", "success": True}
     if not devices:
         devices, raw_payload = fetch_device_list(base_url, token_id)
+    previous_by_name: dict[str, dict] = {}
+    if OUTPUT_FILE.exists():
+        try:
+            previous_payload = json.loads(OUTPUT_FILE.read_text(encoding="utf-8"))
+            previous_by_name = {
+                str(system.get("name", "")): system
+                for system in previous_payload.get("systems", [])
+                if system.get("name")
+            }
+        except Exception:
+            previous_by_name = {}
+    previous_by_name.update(load_capture_baseline())
+
     systems = []
     seen = set()
     for device in devices:
         sn = device_identifier(device)
         realtime = fetch_realtime(base_url, token_id, sn) if sn else None
-        system = system_from(device, realtime)
+        name = name_from(device, sn)
+        system = system_from(device, realtime, previous_by_name.get(name))
+        if realtime is None:
+            system.setdefault("api_warning", "SolaX API did not return authorized live data for this serial; keeping last known values.")
         key = system.get("system_id") or system.get("name")
         if key in seen:
             continue
