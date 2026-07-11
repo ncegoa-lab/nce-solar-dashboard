@@ -52,7 +52,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-11-api-backend-refresh-v23"
+APP_VERSION = "2026-07-11-open-refresh-v24"
 IST = ZoneInfo("Asia/Kolkata")
 PLANT_COLUMNS = [
     "App ID",
@@ -678,6 +678,11 @@ class SolarLiveApp:
             return
         self.refresh_async()
 
+    def refresh_on_open_result(self) -> dict[str, Any]:
+        if not self.config.get("auto_refresh_on_open"):
+            return {**self.last_refresh, "accepted": False, "message": "Auto refresh on open is disabled"}
+        return self.refresh_async()
+
     def generate_selected_report(self, plant_ids: list[str], user: dict[str, Any] | None = None, all_plants: bool = False) -> dict[str, Any]:
         df = self.plant_dataframe()
         df["Plant Key"] = df.apply(lambda row: plant_key(row["Brand"], row["Site Name"]), axis=1)
@@ -1001,6 +1006,11 @@ class Handler(BaseHTTPRequestHandler):
                     self.send_json({"error": "Admin access required"}, 403)
                     return
                 self.send_json(APP.refresh_async())
+            elif parsed.path == "/api/refresh-on-open":
+                if not is_admin(user):
+                    self.send_json({"error": "Admin access required"}, 403)
+                    return
+                self.send_json(APP.refresh_on_open_result())
             elif parsed.path == "/api/report":
                 payload = self.read_json()
                 self.send_json(APP.generate_selected_report(payload.get("plant_ids") or [], user, bool(payload.get("all_plants"))))
@@ -1210,7 +1220,7 @@ section.panel tr.open td:nth-child(3)::after{content:'-'}
   </div>
 </main>
 <script>
-let plants=[], selected=new Set(), statusData={}, activePlantId=null, activeHistoryKey='';
+let plants=[], selected=new Set(), statusData={}, activePlantId=null, activeHistoryKey='', openRefreshStarted=false;
 const searchInput=document.querySelector('#search');
 const brandFilter=document.querySelector('#brand');
 const statusFilter=document.querySelector('#status');
@@ -1268,7 +1278,8 @@ renderDetail(active);
 }
 function refreshText(r){const lines=(r.steps||[]).map(s=>`${s.ok?'OK':'SKIP'} - ${s.label}: ${s.message||''}`);if(r.running)lines.push('RUNNING - Refresh still in progress...');if(r.finished)lines.push('DONE - Finished '+r.finished);return lines.join('\\n')||'Ready.'}
 async function loadReports(){try{const r=await api('/api/reports');reportListEl.innerHTML=(r.reports||[]).length?(r.reports||[]).map(x=>`<a class="report-item" href="${x.url}">${h(x.name)}<span>${h(x.modified)} · ${h(x.size_kb)} KB</span></a>`).join(''):'No reports generated yet.';}catch(error){reportListEl.textContent='Could not load reports: '+error.message;}}
-async function load(){const p=await api('/api/plants');plants=p.plants;selected=new Set();renderFilters();render();const s=await api('/api/status');statusData=s;dateLineEl.textContent=istNowText();versionLineEl.textContent='Build: '+(s.app_version||'old');mobileLineEl.textContent='iPhone: '+s.mobile_url;autoDayEl.value=s.config.auto_report_day;autoTimeEl.value=s.config.auto_report_time;logEl.textContent=refreshText(s.last_refresh||{});loadReports();}
+async function triggerOpenRefresh(){if(openRefreshStarted)return;openRefreshStarted=true;try{const r=await api('/api/refresh-on-open',{method:'POST'});logEl.textContent=refreshText(r);if(r.accepted||r.running)pollRefresh().catch(error=>{logEl.textContent='Open refresh status failed: '+error;});}catch(error){logEl.textContent='Open refresh failed: '+error.message;}}
+async function load(){const p=await api('/api/plants');plants=p.plants;selected=new Set();renderFilters();render();const s=await api('/api/status');statusData=s;dateLineEl.textContent=istNowText();versionLineEl.textContent='Build: '+(s.app_version||'old');mobileLineEl.textContent='iPhone: '+s.mobile_url;autoDayEl.value=s.config.auto_report_day;autoTimeEl.value=s.config.auto_report_time;logEl.textContent=refreshText(s.last_refresh||{});loadReports();if(s.config?.auto_refresh_on_open){setTimeout(triggerOpenRefresh,500);}}
 async function pollRefresh(){for(let i=0;i<90;i++){const s=await api('/api/status');logEl.textContent=refreshText(s.last_refresh||{});await load();if(!s.last_refresh?.running)return;await new Promise(r=>setTimeout(r,3000));}}
 refreshBtn.onclick=async()=>{logEl.textContent='Starting background refresh...';const r=await api('/api/refresh',{method:'POST'});logEl.textContent=refreshText(r);pollRefresh().catch(error=>{logEl.textContent='Refresh status failed: '+error;});}
 async function generateReport(ids,label,all=false){reportResultEl.textContent='Generating '+label+'...';const r=await api('/api/report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plant_ids:ids,all_plants:all})});reportResultEl.innerHTML=r.ok?`Saved ${r.count} plant report.<br><a class="download-btn" href="${r.viewer_url}">Open Report</a>`:'Failed: '+h(r.message);if(r.ok)loadReports();}
