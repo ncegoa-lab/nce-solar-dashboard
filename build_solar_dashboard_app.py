@@ -278,6 +278,16 @@ HTML_TEMPLATE = r"""<!doctype html>
       background: var(--green);
       margin-left: 6px;
     }
+    .offline-badge {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 2px 7px;
+      font-size: 10px;
+      font-weight: 800;
+      color: #fff;
+      background: #111827;
+      margin-left: 6px;
+    }
     @media (max-width: 980px) {
       .toolbar, .layout, .kpis { grid-template-columns: 1fr; }
       header { position: static; }
@@ -383,6 +393,7 @@ HTML_TEMPLATE = r"""<!doctype html>
     function isFresh(p) { return p.dataDate === "__REPORT_DATE__"; }
     function freshnessBadge(p) {
       if (!p.dataDate) return `<span class="stale">NO DATE</span>`;
+      if (statusClass(p.status) === "offline") return `<span class="offline-badge">OFFLINE</span>`;
       return isFresh(p) ? `<span class="fresh">TODAY</span>` : `<span class="stale">STALE</span>`;
     }
     function unique(values) {
