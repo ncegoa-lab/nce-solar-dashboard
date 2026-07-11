@@ -52,7 +52,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-11-open-refresh-v24"
+APP_VERSION = "2026-07-11-no-cache-live-v25"
 IST = ZoneInfo("Asia/Kolkata")
 PLANT_COLUMNS = [
     "App ID",
@@ -671,6 +671,19 @@ class SolarLiveApp:
             if plant.get("dataDate") != today and str(plant.get("status", "")).lower() != "offline"
         )
 
+    def brand_debug(self, brand: str) -> list[dict[str, Any]]:
+        return [
+            {
+                "site": plant.get("site"),
+                "daily": plant.get("daily"),
+                "weekly": plant.get("weekly"),
+                "dataDate": plant.get("dataDate"),
+                "timestamp": plant.get("timestamp"),
+            }
+            for plant in self.plant_payload({"role": "admin", "plants": ["*"]})
+            if str(plant.get("brand", "")).lower() == brand.lower()
+        ]
+
     def refresh_on_open(self) -> None:
         if not self.config.get("auto_refresh_on_open"):
             return
@@ -852,6 +865,9 @@ class Handler(BaseHTTPRequestHandler):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -897,6 +913,9 @@ class Handler(BaseHTTPRequestHandler):
                 body = LIVE_HTML.replace("__USER__", (user or {}).get("username", "Local")).encode("utf-8")
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+                self.send_header("Pragma", "no-cache")
+                self.send_header("Expires", "0")
                 self.send_header("Content-Length", str(len(body)))
                 self.end_headers()
                 self.wfile.write(body)
@@ -928,6 +947,7 @@ class Handler(BaseHTTPRequestHandler):
                     "config": APP.config,
                     "app_version": APP_VERSION,
                     "last_refresh": APP.last_refresh,
+                    "solax_debug": APP.brand_debug("SolaX"),
                     "local_url": f"http://127.0.0.1:{APP.port}",
                     "mobile_url": f"http://{local_ip()}:{APP.port}",
                 }
@@ -1254,7 +1274,7 @@ function staleNote(p){return !fresh(p)&&!offline(p)&&String(p.brand||'').toLower
 function uniq(a){return [...new Set(a)].filter(Boolean).sort()}
 function h(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function weightedCuf(rows){const cap=rows.reduce((a,p)=>a+Number(p.capacity||0),0),year=rows.reduce((a,p)=>a+Number(p.year||0),0);const p=istParts();const days=Math.max(1,Math.floor((Date.UTC(Number(p.year),Number(p.month)-1,Number(p.day))-Date.UTC(2026,0,1))/86400000)+1);return cap&&year?year/(cap*24*days)*100:0}
-async function api(path,opt){const r=await fetch(path,opt);const text=await r.text();let data={};try{data=text?JSON.parse(text):{};}catch(e){throw new Error(`${path} returned ${r.status}: ${text.slice(0,240)||'empty response'}`)}if(!r.ok){throw new Error(data.error||`${path} returned ${r.status}`)}return data}
+async function api(path,opt={}){const sep=path.includes('?')?'&':'?';const url=path+sep+'_ts='+Date.now();const r=await fetch(url,{cache:'no-store',...opt,headers:{'Cache-Control':'no-cache',...(opt.headers||{})}});const text=await r.text();let data={};try{data=text?JSON.parse(text):{};}catch(e){throw new Error(`${path} returned ${r.status}: ${text.slice(0,240)||'empty response'}`)}if(!r.ok){throw new Error(data.error||`${path} returned ${r.status}`)}return data}
 function filtered(){const q=searchInput.value.toLowerCase(), b=brandFilter.value, s=statusFilter.value;return plants.filter(p=>(b==='all'||p.brand===b)&&(s==='all'||p.status===s)&&(`${p.site} ${p.brand}`.toLowerCase().includes(q)))}
 function selectedRows(){return plants.filter(p=>selected.has(p.id))}
 function renderFilters(){brandFilter.innerHTML='<option value="all">All Brands</option>'+uniq(plants.map(p=>p.brand)).map(x=>`<option>${x}</option>`).join('');statusFilter.innerHTML='<option value="all">All Status</option>'+uniq(plants.map(p=>p.status)).map(x=>`<option>${x}</option>`).join('')}
