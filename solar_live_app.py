@@ -52,7 +52,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-11-offline-stale-label-v17"
+APP_VERSION = "2026-07-11-history-solax-fix-v18"
 IST = ZoneInfo("Asia/Kolkata")
 PLANT_COLUMNS = [
     "App ID",
@@ -127,6 +127,22 @@ def solis_capture_status() -> dict[str, Any]:
         "exists": True,
         "fresh": False,
         "message": f"Solis browser capture is stale ({captured_text}). Refresh Solis on the Mac and upload again.",
+    }
+
+
+def solax_capture_status() -> dict[str, Any]:
+    path = PROJECT_DIR / "solax_network_capture.json"
+    if not path.exists():
+        return {"exists": False, "fresh": False, "message": "No SolaX browser capture found."}
+    payload = read_json_file(path)
+    captured_date = parse_iso_date(payload.get("captured_at"))
+    if captured_date == ist_today():
+        return {"exists": True, "fresh": True, "message": f"Using SolaX browser capture from {captured_date.isoformat()}."}
+    captured_text = captured_date.isoformat() if captured_date else str(payload.get("captured_at") or "unknown date")
+    return {
+        "exists": True,
+        "fresh": False,
+        "message": f"SolaX browser capture is stale ({captured_text}). Refresh SolaX on the Mac and upload again.",
     }
 
 
@@ -340,7 +356,7 @@ class SolarLiveApp:
         temp.replace(HISTORY_FILE)
 
     def record_history_snapshot(self) -> dict[str, Any]:
-        current = self.plant_payload(None)
+        current = self.plant_payload({"role": "admin", "plants": ["*"]})
         if not current:
             return {"label": "History snapshot", "ok": False, "message": "No plant data available to record."}
 
@@ -385,6 +401,30 @@ class SolarLiveApp:
             if row.get("plantKey") == plant_key_value and parse_iso_date(row.get("date"))
         ]
         rows.sort(key=lambda row: str(row.get("date", "")), reverse=True)
+        today = ist_today().isoformat()
+        if not any(row.get("date") == today for row in rows):
+            current = next(
+                (plant for plant in self.plant_payload({"role": "admin", "plants": ["*"]}) if plant.get("plantKey") == plant_key_value),
+                {},
+            )
+            rows.insert(
+                0,
+                {
+                    "date": today,
+                    "brand": current.get("brand", ""),
+                    "site": current.get("site", ""),
+                    "plantKey": plant_key_value,
+                    "status": "No data",
+                    "capacity": current.get("capacity", 0),
+                    "daily": 0,
+                    "weekly": 0,
+                    "year": current.get("year", 0),
+                    "total": current.get("total", 0),
+                    "cuf": 0,
+                    "timestamp": "",
+                    "recordedAt": ist_now().replace(microsecond=0).isoformat(),
+                },
+            )
 
         weekly: dict[str, dict[str, Any]] = {}
         yearly: dict[str, dict[str, Any]] = {}
@@ -566,16 +606,23 @@ class SolarLiveApp:
                     }
                 )
 
-            if (PROJECT_DIR / "solax_network_capture.json").exists():
+            solax_capture = solax_capture_status()
+            if solax_capture["fresh"]:
                 self.append_refresh_step(self.run_step("SolaX import from latest capture", [refresh_py, "./solax_capture_to_generation.py"], env))
             else:
+                now = ist_now().isoformat(timespec="seconds")
+                has_saved_solax = (PROJECT_DIR / "solax_generation.json").exists()
                 self.append_refresh_step(
-                    self.file_status_step(
-                        "SolaX saved data",
-                        PROJECT_DIR / "solax_generation.json",
-                        "Using uploaded solax_generation.json. Cloud live refresh needs official SolaX API/backend access or a fresh browser capture from the Mac.",
-                        "No SolaX data found. Upload solax_generation.json, or configure official SolaX API/backend access.",
-                    )
+                    {
+                        "label": "SolaX refresh skipped",
+                        "ok": False,
+                        "started": now,
+                        "finished": now,
+                        "message": (
+                            f"{solax_capture['message']} "
+                            + ("Existing saved SolaX file is still being shown." if has_saved_solax else "No SolaX data file is available.")
+                        ),
+                    }
                 )
 
             self.append_refresh_step(self.record_history_snapshot())

@@ -61,7 +61,7 @@ def run_script(path: Path) -> None:
     subprocess.run([python, str(path)], cwd=str(PROJECT_DIR), env=env, check=True)
 
 
-def parse_solis_data_date(value: object) -> dt.date | None:
+def parse_data_date(value: object) -> dt.date | None:
     text = str(value or "").strip()
     cleaned = re.sub(r"\s*\(.*?\)\s*$", "", text).strip()
     for fmt in ("%d/%m/%Y %H:%M:%S", "%d/%m/%Y %H:%M", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S"):
@@ -78,22 +78,30 @@ def parse_solis_data_date(value: object) -> dt.date | None:
 
 
 def validate_fresh_generation(brand: str, json_path: Path) -> None:
-    if brand != "solis":
-        return
     data = json.loads(json_path.read_text(encoding="utf-8"))
-    dates = [
-        parsed
-        for parsed in (parse_solis_data_date(system.get("data_timestamp")) for system in data.get("systems", []))
-        if parsed
-    ]
     today = dt.datetime.now(IST).date()
-    if today in dates:
-        return
-    latest = max(dates).isoformat() if dates else "no station date"
-    raise RuntimeError(
-        f"Solis data is still stale. Latest Solis station date is {latest}, but today is {today.isoformat()} IST. "
-        "Open SolisCloud, make sure the station page has refreshed to today, then run the upload again."
-    )
+    if brand == "solis":
+        dates = [
+            parsed
+            for parsed in (parse_data_date(system.get("data_timestamp")) for system in data.get("systems", []))
+            if parsed
+        ]
+        if today in dates:
+            return
+        latest = max(dates).isoformat() if dates else "no station date"
+        raise RuntimeError(
+            f"Solis data is still stale. Latest Solis station date is {latest}, but today is {today.isoformat()} IST. "
+            "Open SolisCloud, make sure the station page has refreshed to today, then run the upload again."
+        )
+    if brand == "solax":
+        captured_date = parse_data_date(data.get("captured_at"))
+        if captured_date == today:
+            return
+        latest = captured_date.isoformat() if captured_date else "no capture date"
+        raise RuntimeError(
+            f"SolaX data is still stale. Latest SolaX browser capture date is {latest}, but today is {today.isoformat()} IST. "
+            "Open SolaX Cloud, make sure the plant page has refreshed to today, then run the upload again."
+        )
 
 
 def upload_generation(brand: str, json_path: Path, app_url: str, token: str) -> dict:

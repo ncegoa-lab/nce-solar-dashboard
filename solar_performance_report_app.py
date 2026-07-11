@@ -396,7 +396,7 @@ def _load_current_project_rows() -> list[dict[str, Any]]:
         payload = _read_json(path) or {}
         for system in payload.get("systems", []):
             timestamp = (
-                payload.get("generated_at")
+                payload.get("captured_at") or payload.get("generated_at")
                 if brand == "SolaX"
                 else parse_vendor_timestamp(
                     system.get("data_timestamp"),
