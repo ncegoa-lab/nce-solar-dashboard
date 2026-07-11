@@ -37,14 +37,23 @@ def load_env_file() -> None:
     env_path = PROJECT_DIR / ".solar_report_env"
     if not env_path.exists():
         return
+    unnamed_values: list[str] = []
     for line in env_path.read_text(encoding="utf-8").splitlines():
         stripped = line.strip()
-        if not stripped or stripped.startswith("#") or "=" not in stripped:
+        if not stripped or stripped.startswith("#"):
+            continue
+        if "=" not in stripped:
+            unnamed_values.append(stripped.strip('"').strip("'"))
             continue
         key, value = stripped.split("=", 1)
         key = key.strip()
         value = value.strip().strip('"').strip("'")
         os.environ.setdefault(key, value)
+    for value in unnamed_values:
+        if value.startswith("http://") or value.startswith("https://"):
+            os.environ.setdefault("RENDER_APP_URL", value)
+        elif "upload" in value.lower() or len(value) >= 20:
+            os.environ.setdefault("SOLAR_UPLOAD_TOKEN", value)
 
 
 def require_env(name: str) -> str:
