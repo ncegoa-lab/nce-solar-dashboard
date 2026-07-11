@@ -1,25 +1,17 @@
-Upload these files to the root of the GitHub repository:
+NCE Solar Dashboard update: Solis stale refresh + history zero fix
 
-- solar_live_app.py
-- solar_users.json
-- solar_generation_history.json
-- upload_generation_to_render.py
-- manage_solar_users.py
+Upload these files to the GitHub repo root, replacing the existing files.
 
-Keep these files on the Mac only:
-- Reset App Login Password.command
-- Upload Fresh Solis To Render.command
+After Render redeploys, check the header build text:
+Build: 2026-07-11-solis-history-fix-v16
 
-What changed:
-- iPhone plant list is collapsible by plant name.
-- Tap a plant name to expand its values.
-- Past History is compact but user-selectable:
-  - calendar-style date picker for daily history
-  - week selector for weekly history
-  - year selector for yearly history
-- Latest Reports remains limited to last 3.
-- Mac/desktop layout stays table friendly.
+Changes:
+- Solis refresh will no longer convert an old browser capture and pretend it refreshed.
+- Refresh log now says Solis refresh skipped when the Solis capture is stale.
+- Mac Solis upload tool checks the Solis station data date before upload.
+- If Solis data is still old, upload stops and says the latest Solis date found.
+- Past History date picker opens on today IST.
+- If a selected daily date has no data, Daily shows 0.00 kWh instead of showing yesterday.
 
-After Render redeploys, top blue bar should show:
-
-Build: 2026-07-10-iphone-history-calendar-v10
+Important:
+For Solis, the web app cannot refresh SolisCloud by itself without official API access. Use Upload Fresh Solis To Render.command on the Mac after SolisCloud station page shows today data.

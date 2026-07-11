@@ -4,17 +4,21 @@
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 import os
+import re
 import subprocess
 import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 
 PROJECT_DIR = Path(__file__).resolve().parent
 VENV_PYTHON = PROJECT_DIR / ".venv/bin/python"
+IST = ZoneInfo("Asia/Kolkata")
 BRANDS = {
     "solis": {
         "capture": PROJECT_DIR / "solis_manual_login_capture.py",
@@ -57,6 +61,41 @@ def run_script(path: Path) -> None:
     subprocess.run([python, str(path)], cwd=str(PROJECT_DIR), env=env, check=True)
 
 
+def parse_solis_data_date(value: object) -> dt.date | None:
+    text = str(value or "").strip()
+    cleaned = re.sub(r"\s*\(.*?\)\s*$", "", text).strip()
+    for fmt in ("%d/%m/%Y %H:%M:%S", "%d/%m/%Y %H:%M", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S"):
+        try:
+            return dt.datetime.strptime(cleaned, fmt).date()
+        except ValueError:
+            continue
+    if len(cleaned) >= 10:
+        try:
+            return dt.date.fromisoformat(cleaned[:10])
+        except ValueError:
+            return None
+    return None
+
+
+def validate_fresh_generation(brand: str, json_path: Path) -> None:
+    if brand != "solis":
+        return
+    data = json.loads(json_path.read_text(encoding="utf-8"))
+    dates = [
+        parsed
+        for parsed in (parse_solis_data_date(system.get("data_timestamp")) for system in data.get("systems", []))
+        if parsed
+    ]
+    today = dt.datetime.now(IST).date()
+    if today in dates:
+        return
+    latest = max(dates).isoformat() if dates else "no station date"
+    raise RuntimeError(
+        f"Solis data is still stale. Latest Solis station date is {latest}, but today is {today.isoformat()} IST. "
+        "Open SolisCloud, make sure the station page has refreshed to today, then run the upload again."
+    )
+
+
 def upload_generation(brand: str, json_path: Path, app_url: str, token: str) -> dict:
     data = json.loads(json_path.read_text(encoding="utf-8"))
     body = json.dumps({"brand": brand, "data": data}).encode("utf-8")
@@ -93,6 +132,7 @@ def main() -> None:
         run_script(config["capture"])
         run_script(config["convert"])
 
+    validate_fresh_generation(brand, config["json"])
     result = upload_generation(brand, config["json"], app_url, token)
     if not result.get("ok"):
         raise RuntimeError(result.get("message") or result)
