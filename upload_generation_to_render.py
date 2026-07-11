@@ -23,11 +23,13 @@ BRANDS = {
     "solis": {
         "capture": PROJECT_DIR / "solis_manual_login_capture.py",
         "convert": PROJECT_DIR / "solis_capture_to_generation.py",
+        "api": PROJECT_DIR / "solis_api_export_generation.py",
         "json": PROJECT_DIR / "solis_generation.json",
     },
     "solax": {
         "capture": PROJECT_DIR / "solax_manual_login_capture.py",
         "convert": PROJECT_DIR / "solax_capture_to_generation.py",
+        "api": PROJECT_DIR / "solax_api_export_generation.py",
         "json": PROJECT_DIR / "solax_generation.json",
     },
 }
@@ -68,6 +70,14 @@ def run_script(path: Path) -> None:
     env = os.environ.copy()
     env["PYTHONPYCACHEPREFIX"] = str(PROJECT_DIR / ".pycache")
     subprocess.run([python, str(path)], cwd=str(PROJECT_DIR), env=env, check=True)
+
+
+def api_configured(brand: str) -> bool:
+    if brand == "solis":
+        return bool(os.getenv("SOLIS_KEY_ID") and os.getenv("SOLIS_KEY_SECRET"))
+    if brand == "solax":
+        return bool(os.getenv("SOLAX_TOKEN_ID"))
+    return False
 
 
 def parse_data_date(value: object) -> dt.date | None:
@@ -148,8 +158,11 @@ def main() -> None:
     config = BRANDS[brand]
 
     if not args.skip_capture:
-        run_script(config["capture"])
-        run_script(config["convert"])
+        if api_configured(brand):
+            run_script(config["api"])
+        else:
+            run_script(config["capture"])
+            run_script(config["convert"])
 
     for warning in validate_fresh_generation(brand, config["json"]):
         print("WARNING:", warning)

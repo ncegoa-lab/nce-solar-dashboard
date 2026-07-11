@@ -11,6 +11,18 @@ OUTPUT_FILE = Path("fimer_generation.json")
 PORTFOLIO_ID = os.getenv("FIMER_PORTFOLIO_ID", "31841756")
 
 
+def load_env_file():
+    env_path = Path(__file__).resolve().parent / ".solar_report_env"
+    if not env_path.exists():
+        return
+    for line in env_path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, value = stripped.split("=", 1)
+        os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+
 def require_env(name):
     value = os.getenv(name)
     if not value:
@@ -48,7 +60,20 @@ def get_json(session, path, **params):
     return {"status": response.status_code, "body": body}
 
 
+def configured_plant_ids():
+    raw = os.getenv("FIMER_API_PLANT_IDS", "")
+    return [item.strip() for item in raw.split(",") if item.strip()]
+
+
+def plant_matches_filter(plant, filters):
+    if not filters:
+        return True
+    searchable = json.dumps(plant, sort_keys=True, ensure_ascii=False).lower()
+    return any(item.lower() in searchable for item in filters)
+
+
 def main():
+    load_env_file()
     username = require_env("FIMER_USERNAME")
     password = require_env("FIMER_PASSWORD")
 
@@ -86,7 +111,11 @@ def main():
         energy.append({"key": key, "value": value})
 
     plant_energy = []
+    plant_filters = configured_plant_ids()
     plant_rows = plants.get("body", []) if plants["status"] == 200 else []
+    filtered_rows = [plant for plant in plant_rows if plant_matches_filter(plant, plant_filters)]
+    if plant_filters and filtered_rows:
+        plant_rows = filtered_rows
     for plant in plant_rows:
         install_date = plant.get("configuration", {}).get("installDate")
         if install_date:

@@ -52,7 +52,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-11-refresh-on-open-v22"
+APP_VERSION = "2026-07-11-api-backend-refresh-v23"
 IST = ZoneInfo("Asia/Kolkata")
 PLANT_COLUMNS = [
     "App ID",
@@ -588,43 +588,59 @@ class SolarLiveApp:
             else:
                 self.append_refresh_step({"label": "FIMER refresh", "ok": False, "message": "Missing FIMER_USERNAME/FIMER_PASSWORD"})
 
-            solis_capture = solis_capture_status()
-            if solis_capture["exists"]:
-                self.append_refresh_step(self.run_step("Solis import from latest capture", [refresh_py, "./solis_capture_to_generation.py"], env))
+            if env.get("SOLIS_KEY_ID") and env.get("SOLIS_KEY_SECRET"):
+                step = self.run_step("Solis API refresh", [refresh_py, "./solis_api_export_generation.py"], env)
+                self.append_refresh_step(step)
+                if not step.get("ok"):
+                    solis_capture = solis_capture_status()
+                    if solis_capture["exists"]:
+                        self.append_refresh_step(self.run_step("Solis fallback import from latest capture", [refresh_py, "./solis_capture_to_generation.py"], env))
             else:
-                now = ist_now().isoformat(timespec="seconds")
-                has_saved_solis = (PROJECT_DIR / "solis_generation.json").exists()
-                self.append_refresh_step(
-                    {
-                        "label": "Solis refresh skipped",
-                        "ok": False,
-                        "started": now,
-                        "finished": now,
-                        "message": (
-                            f"{solis_capture['message']} "
-                            + ("Existing saved Solis file is still being shown." if has_saved_solis else "No Solis data file is available.")
-                        ),
-                    }
-                )
+                solis_capture = solis_capture_status()
+                if solis_capture["exists"]:
+                    self.append_refresh_step(self.run_step("Solis import from latest capture", [refresh_py, "./solis_capture_to_generation.py"], env))
+                else:
+                    now = ist_now().isoformat(timespec="seconds")
+                    has_saved_solis = (PROJECT_DIR / "solis_generation.json").exists()
+                    self.append_refresh_step(
+                        {
+                            "label": "Solis refresh skipped",
+                            "ok": False,
+                            "started": now,
+                            "finished": now,
+                            "message": (
+                                f"{solis_capture['message']} "
+                                + ("Existing saved Solis file is still being shown." if has_saved_solis else "No Solis data file is available.")
+                            ),
+                        }
+                    )
 
-            solax_capture = solax_capture_status()
-            if solax_capture["exists"]:
-                self.append_refresh_step(self.run_step("SolaX import from latest capture", [refresh_py, "./solax_capture_to_generation.py"], env))
+            if env.get("SOLAX_TOKEN_ID"):
+                step = self.run_step("SolaX API refresh", [refresh_py, "./solax_api_export_generation.py"], env)
+                self.append_refresh_step(step)
+                if not step.get("ok"):
+                    solax_capture = solax_capture_status()
+                    if solax_capture["exists"]:
+                        self.append_refresh_step(self.run_step("SolaX fallback import from latest capture", [refresh_py, "./solax_capture_to_generation.py"], env))
             else:
-                now = ist_now().isoformat(timespec="seconds")
-                has_saved_solax = (PROJECT_DIR / "solax_generation.json").exists()
-                self.append_refresh_step(
-                    {
-                        "label": "SolaX refresh skipped",
-                        "ok": False,
-                        "started": now,
-                        "finished": now,
-                        "message": (
-                            f"{solax_capture['message']} "
-                            + ("Existing saved SolaX file is still being shown." if has_saved_solax else "No SolaX data file is available.")
-                        ),
-                    }
-                )
+                solax_capture = solax_capture_status()
+                if solax_capture["exists"]:
+                    self.append_refresh_step(self.run_step("SolaX import from latest capture", [refresh_py, "./solax_capture_to_generation.py"], env))
+                else:
+                    now = ist_now().isoformat(timespec="seconds")
+                    has_saved_solax = (PROJECT_DIR / "solax_generation.json").exists()
+                    self.append_refresh_step(
+                        {
+                            "label": "SolaX refresh skipped",
+                            "ok": False,
+                            "started": now,
+                            "finished": now,
+                            "message": (
+                                f"{solax_capture['message']} "
+                                + ("Existing saved SolaX file is still being shown." if has_saved_solax else "No SolaX data file is available.")
+                            ),
+                        }
+                    )
 
             self.append_refresh_step(self.record_history_snapshot())
             for step in self.rebuild_outputs(env):

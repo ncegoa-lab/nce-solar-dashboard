@@ -1,14 +1,27 @@
-NCE Solar Dashboard update: refresh whenever app opens
+Upload these files to GitHub, replacing the files with the same names:
 
-Upload these files to GitHub repo root, replacing existing files.
+solar_live_app.py
+upload_generation_to_render.py
+fimer_backend_export_generation.py
+solis_api_export_generation.py
+solax_api_export_generation.py
+.solar_report_env.example
 
-After Render redeploys, check the header build text:
-Build: 2026-07-11-refresh-on-open-v22
+Do not upload .solar_report_env. It contains private credentials.
 
-Change:
-- Every time the dashboard page is opened, it queues Refresh Live automatically.
-- If a refresh is already running, it will not start a duplicate refresh.
-- Startup auto-refresh is still kept.
+Render environment variables to add:
 
-Note:
-Solis/SolaX still require Mac upload commands for true portal data capture because Render cannot log into those portals without API access.
+SOLIS_API_BASE
+SOLIS_KEY_ID
+SOLIS_KEY_SECRET
+SOLAX_API_BASE
+SOLAX_TOKEN_ID
+FIMER_API_PLANT_IDS
+
+Optional for SolaX public API:
+
+SOLAX_DEVICE_SNS
+
+Use SOLAX_DEVICE_SNS only if SolaX API still says "no auth". Format:
+
+Plant Name=INVERTER_SERIAL,Another Plant=INVERTER_SERIAL
