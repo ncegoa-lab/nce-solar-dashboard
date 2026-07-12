@@ -231,6 +231,9 @@ def normalize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         year_kwh = safe_float(
             first_available(raw, ("Year Generation (kWh)", "year_generation_kwh", "YTD Generation (kWh)"))
         )
+        current_power_kw = safe_float(
+            first_available(raw, ("Current Power (kW)", "current_power_kw", "currentPower", "Current Power"))
+        )
         year_source = "Portal YTD" if year_kwh > 0 else "Unavailable"
         if year_kwh <= 0 and weekly_kwh > 0:
             year_kwh = weekly_kwh / completed_week_days() * report_elapsed_days()
@@ -249,6 +252,7 @@ def normalize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                 "Daily Generation (kWh)": daily_kwh,
                 "Weekly Generation (kWh)": weekly_kwh,
                 "Year Generation (kWh)": year_kwh,
+                "Current Power (kW)": current_power_kw,
                 "Year Generation Source": year_source,
                 "Total Generation (MWh)": total_mwh_value,
                 "Timestamp": str(first_available(raw, ("Timestamp", "timestamp", "captured_at"), ist_now().isoformat())),
@@ -345,6 +349,7 @@ def _load_current_project_rows() -> list[dict[str, Any]]:
                 "Daily Generation (kWh)": station.get("eday"),
                 "Weekly Generation (kWh)": weekly.get("weekly_generation_kwh"),
                 "Year Generation (kWh)": weekly.get("year_generation_kwh"),
+                "Current Power (kW)": station.get("power") or station.get("pac") or station.get("current_power_kw"),
                 "Total Generation (kWh)": station.get("etotal"),
                 "Timestamp": station.get("date") or goodwe.get("generated_at"),
             }
@@ -364,6 +369,7 @@ def _load_current_project_rows() -> list[dict[str, Any]]:
                 "Daily Generation (kWh)": current.get("today_generation_kwh"),
                 "Weekly Generation (kWh)": system.get("weekly_generation_kwh"),
                 "Year Generation (kWh)": system.get("year_generation_kwh"),
+                "Current Power (kW)": current.get("current_power_kw") or current.get("current_power"),
                 "Total Generation (kWh)": current.get("total_generation_kwh"),
                 "Timestamp": current.get("date") or fronius_current.get("date") or fronius_current.get("generated_at"),
             }
@@ -387,6 +393,7 @@ def _load_current_project_rows() -> list[dict[str, Any]]:
                 "Daily Generation (kWh)": energy_value("today"),
                 "Weekly Generation (kWh)": energy_value("week"),
                 "Year Generation (kWh)": energy_value("year"),
+                "Current Power (kW)": plant.get("power") or plant.get("currentPower") or plant.get("current_power_kw"),
                 "Total Generation (kWh)": energy_value("total"),
                 "Timestamp": fimer.get("generatedAt") or fimer.get("now"),
             }
@@ -409,6 +416,7 @@ def _load_current_project_rows() -> list[dict[str, Any]]:
                     "Daily Generation (kWh)": system.get("today_generation_kwh"),
                     "Weekly Generation (kWh)": system.get("weekly_generation_kwh"),
                     "Year Generation (kWh)": system.get("year_generation_kwh"),
+                    "Current Power (kW)": system.get("current_power_kw") or system.get("current_power"),
                     "Total Generation (kWh)": system.get("total_generation_kwh"),
                     "Timestamp": timestamp,
                 }

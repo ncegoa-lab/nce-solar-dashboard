@@ -55,7 +55,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-11-chart-detail-export-v27"
+APP_VERSION = "2026-07-12-auto-refresh-analytics-v28"
 IST = ZoneInfo("Asia/Kolkata")
 PLANT_COLUMNS = [
     "App ID",
@@ -66,6 +66,7 @@ PLANT_COLUMNS = [
     "Daily Generation (kWh)",
     "Weekly Generation (kWh)",
     "Year Generation (kWh)",
+    "Current Power (kW)",
     "Total Generation (MWh)",
     "2026 Yield (kWh/kW)",
     "Average Daily Yield (kWh/kW/day)",
@@ -344,6 +345,7 @@ class SolarLiveApp:
                     "daily": float(row["Daily Generation (kWh)"] or 0),
                     "weekly": float(row["Weekly Generation (kWh)"] or 0),
                     "year": float(row["Year Generation (kWh)"] or 0),
+                    "currentPower": float(row.get("Current Power (kW)") or 0),
                     "total": float(row["Total Generation (MWh)"] or 0),
                     "cuf": float(row.get("CUF (%)") or 0),
                     "avgDay": float(row["Average Daily Yield (kWh/kW/day)"] or 0),
@@ -441,6 +443,7 @@ class SolarLiveApp:
                 "daily": plant.get("daily", 0),
                 "weekly": plant.get("weekly", 0),
                 "year": plant.get("year", 0),
+                "currentPower": plant.get("currentPower", 0),
                 "total": plant.get("total", 0),
                 "cuf": plant.get("cuf", 0),
                 "timestamp": plant.get("timestamp", ""),
@@ -481,6 +484,7 @@ class SolarLiveApp:
                     "daily": current.get("daily", 0) if has_current_today else 0,
                     "weekly": current.get("weekly", 0) if has_current_today else 0,
                     "year": current.get("year", 0),
+                    "currentPower": current.get("currentPower", 0) if has_current_today else 0,
                     "total": current.get("total", 0),
                     "cuf": current.get("cuf", 0) if has_current_today else 0,
                     "timestamp": current.get("timestamp", "") if has_current_today else "",
@@ -745,41 +749,77 @@ class SolarLiveApp:
             if str(plant.get("brand", "")).lower() == brand.lower()
         ]
 
-    def monthly_generation_payload(self, plant_keys: list[str], user: dict[str, Any] | None = None) -> dict[str, Any]:
+    def monthly_generation_payload(
+        self,
+        plant_keys: list[str],
+        user: dict[str, Any] | None = None,
+        month: int | None = None,
+        year: int | None = None,
+    ) -> dict[str, Any]:
         today = ist_today()
-        month_start = today.replace(day=1)
+        target_year = year if year and 2000 <= year <= 2100 else today.year
+        target_month = month if month and 1 <= month <= 12 else today.month
+        month_start = dt.date(target_year, target_month, 1)
+        if target_month == 12:
+            month_end = dt.date(target_year + 1, 1, 1) - dt.timedelta(days=1)
+        else:
+            month_end = dt.date(target_year, target_month + 1, 1) - dt.timedelta(days=1)
+        if target_year == today.year and target_month == today.month:
+            month_end = min(month_end, today)
         allowed_keys = set(plant_keys or [])
         current_rows = self.plant_payload(user or {"role": "admin", "plants": ["*"]})
         if allowed_keys:
             current_rows = [plant for plant in current_rows if plant.get("plantKey") in allowed_keys]
-        visible_keys = {plant.get("plantKey") for plant in current_rows}
+        visible_keys = {str(plant.get("plantKey") or "") for plant in current_rows}
+        plant_meta = {
+            str(plant.get("plantKey") or ""): {
+                "plantKey": str(plant.get("plantKey") or ""),
+                "site": plant.get("site", ""),
+                "brand": plant.get("brand", ""),
+                "capacity": plant.get("capacity", 0),
+            }
+            for plant in current_rows
+        }
 
-        totals: dict[str, float] = {}
+        by_day_plant: dict[tuple[str, str], float] = {}
         for row in self.load_history():
             key = row.get("plantKey")
             if key not in visible_keys or not user_can_access(user, key):
                 continue
             row_date = parse_iso_date(row.get("date"))
-            if not row_date or not (month_start <= row_date <= today):
+            if not row_date or not (month_start <= row_date <= month_end):
                 continue
             date_key = row_date.isoformat()
-            totals[date_key] = totals.get(date_key, 0.0) + float(row.get("daily") or 0)
+            by_day_plant[(date_key, key)] = float(row.get("daily") or 0)
 
-        live_today_total = sum(
-            float(plant.get("daily") or 0)
-            for plant in current_rows
-            if plant.get("dataDate") == today.isoformat()
-        )
-        if live_today_total:
-            totals[today.isoformat()] = live_today_total
+        if month_start <= today <= month_end:
+            for plant in current_rows:
+                key = str(plant.get("plantKey") or "")
+                if plant.get("dataDate") == today.isoformat():
+                    by_day_plant[(today.isoformat(), key)] = float(plant.get("daily") or 0)
 
         days = []
         cursor = month_start
-        while cursor <= today:
-            key = cursor.isoformat()
-            days.append({"date": key, "day": cursor.day, "generation": round(totals.get(key, 0.0), 3)})
+        total = 0.0
+        while cursor <= month_end:
+            date_key = cursor.isoformat()
+            values = []
+            day_total = 0.0
+            for key, meta in plant_meta.items():
+                generation = round(by_day_plant.get((date_key, key), 0.0), 3)
+                day_total += generation
+                values.append({**meta, "generation": generation})
+            total += day_total
+            days.append({"date": date_key, "day": cursor.day, "generation": round(day_total, 3), "values": values})
             cursor += dt.timedelta(days=1)
-        return {"month": today.strftime("%B %Y"), "days": days, "total": round(sum(day["generation"] for day in days), 3)}
+        return {
+            "month": month_start.strftime("%B %Y"),
+            "monthNumber": target_month,
+            "year": target_year,
+            "plants": list(plant_meta.values()),
+            "days": days,
+            "total": round(total, 3),
+        }
 
     def today_hourly_payload(self, plant_keys: list[str], user: dict[str, Any] | None = None) -> dict[str, Any]:
         today = ist_today()
@@ -817,21 +857,45 @@ class SolarLiveApp:
                 hours.append({"hour": label, "generation": round(totals.get(label, 0.0), 3)})
         return {"date": today.isoformat(), "hours": hours, "total": round(max((row["generation"] for row in hours), default=0.0), 3)}
 
-    def chart_export_rows(self, chart_type: str, plant_keys: list[str], user: dict[str, Any] | None = None) -> tuple[str, list[dict[str, Any]]]:
+    def chart_export_rows(
+        self,
+        chart_type: str,
+        plant_keys: list[str],
+        user: dict[str, Any] | None = None,
+        month: int | None = None,
+        year: int | None = None,
+    ) -> tuple[str, list[dict[str, Any]]]:
         if chart_type == "monthly":
-            payload = self.monthly_generation_payload(plant_keys, user)
-            return f"Monthly Generation - {payload['month']}", [
-                {"Period": item["date"], "Generation (kWh)": item["generation"]}
-                for item in payload.get("days", [])
-            ]
+            payload = self.monthly_generation_payload(plant_keys, user, month=month, year=year)
+            rows = []
+            for item in payload.get("days", []):
+                values = item.get("values") or []
+                if values:
+                    for value in values:
+                        rows.append(
+                            {
+                                "Period": f"{item['date']} - {value.get('site', '')}",
+                                "Generation (kWh)": value.get("generation", 0),
+                            }
+                        )
+                else:
+                    rows.append({"Period": item["date"], "Generation (kWh)": item["generation"]})
+            return f"Monthly Generation - {payload['month']}", rows
         payload = self.today_hourly_payload(plant_keys, user)
         return f"Today's Generation - {payload['date']}", [
             {"Period": item["hour"], "Generation (kWh)": item["generation"]}
             for item in payload.get("hours", [])
         ]
 
-    def chart_csv_bytes(self, chart_type: str, plant_keys: list[str], user: dict[str, Any] | None = None) -> bytes:
-        title, rows = self.chart_export_rows(chart_type, plant_keys, user)
+    def chart_csv_bytes(
+        self,
+        chart_type: str,
+        plant_keys: list[str],
+        user: dict[str, Any] | None = None,
+        month: int | None = None,
+        year: int | None = None,
+    ) -> bytes:
+        title, rows = self.chart_export_rows(chart_type, plant_keys, user, month=month, year=year)
         output = io.StringIO()
         output.write(title + "\n")
         writer = csv.DictWriter(output, fieldnames=["Period", "Generation (kWh)"])
@@ -839,13 +903,20 @@ class SolarLiveApp:
         writer.writerows(rows)
         return output.getvalue().encode("utf-8")
 
-    def chart_pdf_bytes(self, chart_type: str, plant_keys: list[str], user: dict[str, Any] | None = None) -> bytes:
+    def chart_pdf_bytes(
+        self,
+        chart_type: str,
+        plant_keys: list[str],
+        user: dict[str, Any] | None = None,
+        month: int | None = None,
+        year: int | None = None,
+    ) -> bytes:
         from reportlab.lib import colors
         from reportlab.lib.pagesizes import A4
         from reportlab.lib.styles import getSampleStyleSheet
         from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 
-        title, rows = self.chart_export_rows(chart_type, plant_keys, user)
+        title, rows = self.chart_export_rows(chart_type, plant_keys, user, month=month, year=year)
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=28, rightMargin=28, topMargin=28, bottomMargin=28)
         styles = getSampleStyleSheet()
@@ -1130,7 +1201,9 @@ class Handler(BaseHTTPRequestHandler):
         elif parsed.path == "/api/monthly-generation":
             query = urllib.parse.parse_qs(parsed.query)
             keys = [value for value in (query.get("plant_key") or []) if value]
-            self.send_json(APP.monthly_generation_payload(keys, user))
+            month = int((query.get("month") or [0])[0] or 0)
+            year = int((query.get("year") or [0])[0] or 0)
+            self.send_json(APP.monthly_generation_payload(keys, user, month=month, year=year))
         elif parsed.path == "/api/today-hourly-generation":
             query = urllib.parse.parse_qs(parsed.query)
             keys = [value for value in (query.get("plant_key") or []) if value]
@@ -1156,8 +1229,15 @@ class Handler(BaseHTTPRequestHandler):
             query = urllib.parse.parse_qs(parsed.query)
             chart_type = (query.get("type") or ["today"])[0]
             keys = [value for value in (query.get("plant_key") or []) if value]
-            title, rows = APP.chart_export_rows(chart_type, keys, user)
-            base_query = urllib.parse.urlencode([("type", chart_type)] + [("plant_key", key) for key in keys])
+            month = int((query.get("month") or [0])[0] or 0)
+            year = int((query.get("year") or [0])[0] or 0)
+            title, rows = APP.chart_export_rows(chart_type, keys, user, month=month, year=year)
+            base_items = [("type", chart_type)] + [("plant_key", key) for key in keys]
+            if month:
+                base_items.append(("month", str(month)))
+            if year:
+                base_items.append(("year", str(year)))
+            base_query = urllib.parse.urlencode(base_items)
             body_rows = "".join(
                 f"<tr><td>{html_escape(str(row['Period']))}</td><td>{float(row['Generation (kWh)']):.2f}</td></tr>"
                 for row in rows
@@ -1168,12 +1248,16 @@ class Handler(BaseHTTPRequestHandler):
             query = urllib.parse.parse_qs(parsed.query)
             chart_type = (query.get("type") or ["today"])[0]
             keys = [value for value in (query.get("plant_key") or []) if value]
-            self.send_bytes(APP.chart_csv_bytes(chart_type, keys, user), "text/csv; charset=utf-8", f"{chart_type}_generation.csv")
+            month = int((query.get("month") or [0])[0] or 0)
+            year = int((query.get("year") or [0])[0] or 0)
+            self.send_bytes(APP.chart_csv_bytes(chart_type, keys, user, month=month, year=year), "text/csv; charset=utf-8", f"{chart_type}_generation.csv")
         elif parsed.path == "/chart-pdf":
             query = urllib.parse.parse_qs(parsed.query)
             chart_type = (query.get("type") or ["today"])[0]
             keys = [value for value in (query.get("plant_key") or []) if value]
-            self.send_bytes(APP.chart_pdf_bytes(chart_type, keys, user), "application/pdf", f"{chart_type}_generation.pdf")
+            month = int((query.get("month") or [0])[0] or 0)
+            year = int((query.get("year") or [0])[0] or 0)
+            self.send_bytes(APP.chart_pdf_bytes(chart_type, keys, user, month=month, year=year), "application/pdf", f"{chart_type}_generation.pdf")
         elif parsed.path.startswith("/reports/"):
             relative = urllib.parse.unquote(parsed.path[len("/reports/") :])
             path = (APP.output_dir / relative).resolve()
@@ -1400,26 +1484,28 @@ LIVE_HTML = r"""<!doctype html>
 header{background:var(--blue);color:white;padding:14px 22px;display:flex;gap:16px;align-items:center;position:sticky;top:0;z-index:10}
 h1{font-size:20px;margin:0}.meta{margin-left:auto;text-align:right;font-size:12px;line-height:1.4}
 a.logout{color:white;text-decoration:none;border:1px solid rgba(255,255,255,.55);border-radius:6px;padding:7px 10px;font-weight:800;font-size:12px}
-main{padding:16px;max-width:1440px;margin:auto}.toolbar{display:grid;grid-template-columns:1.2fr .8fr .8fr auto auto auto auto auto;gap:10px;align-items:end;margin-bottom:12px}
+main{padding:16px;max-width:1440px;margin:auto}.toolbar{display:grid;grid-template-columns:1.2fr .8fr .8fr auto auto auto auto auto;gap:10px;align-items:end;margin-bottom:10px}
 label{font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:5px}select,input{height:36px;border:1px solid var(--line);border-radius:6px;padding:0 10px;width:100%;background:white}
 button{height:36px;border:0;border-radius:6px;padding:0 13px;background:var(--blue);color:white;font-weight:800;cursor:pointer;white-space:nowrap}button.alt{background:var(--cyan)}button.gray{background:#5c6f8b}
+.update-strip{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:0 0 12px;color:var(--muted);font-size:12px}.update-strip b{color:var(--ink)}.loading{background:#e8f7fb;color:#0e7490;border:1px solid #a5e4ee;border-radius:999px;padding:4px 10px;font-weight:900}.warning{background:#fff7ed;color:#b45309;border:1px solid #fed7aa;border-radius:999px;padding:4px 10px;font-weight:900}.hidden{display:none!important}
 .grid{display:grid;grid-template-columns:repeat(6,minmax(120px,1fr));gap:10px;margin-bottom:12px}.card,.panel{background:white;border:1px solid var(--line);border-radius:8px;box-shadow:0 1px 4px rgba(15,35,60,.05)}
 .card{padding:12px;min-height:78px}.card span{display:block;color:var(--muted);font-size:11px;font-weight:700;margin-bottom:10px}.card strong{font-size:20px}
-.panel{padding:14px}.split{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(340px,.9fr);gap:12px}h2{font-size:15px;margin:0 0 10px}
-.charts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}.chart-card{background:white;border:1px solid var(--line);border-radius:8px;padding:14px;box-shadow:0 1px 4px rgba(15,35,60,.05);min-height:230px;cursor:pointer}.chart-card:hover{border-color:var(--cyan);box-shadow:0 2px 8px rgba(15,35,60,.10)}.chart-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}.chart-head h2{margin:0}.chart-total{font-size:12px;font-weight:900;color:var(--green);white-space:nowrap}.bar-chart{height:180px;display:flex;align-items:end;gap:7px;border-left:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 8px 0;overflow-x:auto}.bar-item{min-width:28px;flex:1;max-width:62px;display:flex;flex-direction:column;align-items:center;justify-content:end;height:100%;gap:5px}.bar{width:100%;min-height:2px;border-radius:5px 5px 0 0;background:linear-gradient(180deg,var(--cyan),var(--blue));position:relative}.bar.candle{background:linear-gradient(180deg,#34d399,var(--green))}.bar-label{font-size:10px;color:var(--muted);max-width:58px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}.bar-value{font-size:10px;font-weight:900;color:var(--ink);white-space:nowrap}
+.panel{padding:14px}.split{display:grid;grid-template-columns:minmax(340px,.85fr) minmax(0,1.55fr);gap:12px;align-items:start}h2{font-size:15px;margin:0 0 10px}
+.main-chart{margin-bottom:12px}.chart-card{background:white;border:1px solid var(--line);border-radius:8px;padding:14px;box-shadow:0 1px 4px rgba(15,35,60,.05);min-height:220px;cursor:pointer}.side-chart{margin-top:12px;min-height:230px}.chart-card:hover{border-color:var(--cyan);box-shadow:0 2px 8px rgba(15,35,60,.10)}.chart-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}.chart-head h2{margin:0}.chart-total{font-size:12px;font-weight:900;color:var(--green);white-space:nowrap}.bar-chart{height:180px;display:flex;align-items:end;gap:7px;border-left:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 8px 0;overflow-x:auto}.bar-item{min-width:28px;flex:1;max-width:72px;display:flex;flex-direction:column;align-items:center;justify-content:end;height:100%;gap:5px}.bar{width:100%;min-height:2px;border-radius:5px 5px 0 0;background:linear-gradient(180deg,var(--cyan),var(--blue));position:relative}.bar.candle{background:linear-gradient(180deg,#34d399,var(--green))}.bar.perkw{background:linear-gradient(180deg,#22c55e,var(--green))}.bar-label{font-size:10px;color:var(--muted);max-width:64px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}.bar-value{font-size:10px;font-weight:900;color:var(--ink);white-space:nowrap}.grouped-chart{align-items:stretch}.day-group{min-width:56px;height:100%;display:flex;flex-direction:column;justify-content:end;gap:4px}.day-bars{height:calc(100% - 22px);display:flex;align-items:end;gap:2px}.mini-bar{flex:1;min-width:6px;border-radius:4px 4px 0 0;background:var(--blue)}.month-controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}.selected-plant-list{display:grid;gap:8px;max-height:260px;overflow:auto}.selected-card{border:1px solid var(--line);border-radius:7px;background:#fbfdff;padding:9px}.selected-card.online{background:#f0fdf4;border-color:#bbf7d0}.selected-card.offline{background:#f8fafc;border-color:#d7e0ec}.selected-card b{display:block;margin-bottom:5px}.selected-card span{display:block;color:var(--muted);font-size:11px;line-height:1.55}
 table{width:100%;border-collapse:collapse;font-size:12px}th{background:var(--blue);color:white;text-align:left;padding:8px 7px}td{border-bottom:1px solid var(--line);padding:7px}tr:nth-child(even){background:#f8fafc}
 .status{font-weight:800}.online{color:var(--green)}.offline,.stale{color:var(--red)}.fresh{color:var(--green)}.pill{display:inline-block;border-radius:999px;padding:2px 7px;font-size:10px;font-weight:800;color:white}.pill.fresh{background:var(--green);color:white}.pill.stale{background:var(--red);color:white}.pill.offline{background:#111827;color:white}
 .plant-title{font-size:21px;font-weight:850}.details{display:grid;grid-template-columns:1fr 1fr;gap:8px}.detail{border:1px solid var(--line);border-radius:6px;background:#fbfdff;padding:10px}.detail span{display:block;color:var(--muted);font-size:11px;font-weight:700;margin-bottom:7px}
 .checkcell{width:34px}.report-link{font-size:12px;color:var(--muted);margin-top:8px;word-break:break-all}.download-btn{display:inline-block;margin-top:8px;background:var(--green);color:white;text-decoration:none;border-radius:6px;padding:9px 12px;font-weight:900}.report-list{margin-top:8px;display:grid;gap:6px}.report-item{display:block;border:1px solid var(--line);border-radius:6px;background:#fbfdff;padding:8px;color:var(--blue);text-decoration:none;font-weight:800}.report-item span{display:block;color:var(--muted);font-size:11px;font-weight:700;margin-top:3px}.log{font-family:ui-monospace,Menlo,monospace;font-size:11px;white-space:pre-wrap;max-height:180px;overflow:auto;background:#f8fafc;border:1px solid var(--line);padding:8px;border-radius:6px}
 .history-block{margin-top:12px}.history-block h3{font-size:13px;margin:10px 0 6px}.history-scroll{max-height:160px;overflow:auto;border:1px solid var(--line);border-radius:6px}.history-scroll table{font-size:11px}.history-scroll th{position:sticky;top:0}.empty-history{color:var(--muted);font-size:12px;padding:8px;border:1px solid var(--line);border-radius:6px;background:#fbfdff}.fold{border-top:1px solid var(--line);padding-top:10px;margin-top:12px}.fold summary{cursor:pointer;font-weight:900;color:var(--blue);list-style:none}.fold summary::-webkit-details-marker{display:none}.fold summary::after{content:'+';float:right}.fold[open] summary::after{content:'-'}.plant-daily{display:none}
-@media(max-width:980px){header{position:static}.toolbar,.grid,.split,.charts{grid-template-columns:1fr}table{font-size:11px}th:nth-child(5),td:nth-child(5),th:nth-child(7),td:nth-child(7){display:none}}
+@media(max-width:980px){header{position:static}.toolbar,.grid,.split{grid-template-columns:1fr}table{font-size:11px}th:nth-child(5),td:nth-child(5),th:nth-child(7),td:nth-child(7){display:none}}
 @media(max-width:640px){
 body{background:#f3f7fb}
 header{display:grid;grid-template-columns:1fr auto;gap:8px;padding:12px 14px;align-items:start}
 h1{font-size:18px;line-height:1.15}.meta{grid-column:1 / -1;margin:0;text-align:left;font-size:11px;opacity:.95}a.logout{padding:8px 10px}
-main{padding:10px;max-width:none}.toolbar{display:grid;grid-template-columns:1fr;gap:8px}.toolbar button{width:100%;height:42px}
+main{padding:10px;max-width:none;overflow-x:hidden}.toolbar{display:grid;grid-template-columns:1fr;gap:8px}.toolbar button{width:100%;height:42px}
+.update-strip{font-size:11px;gap:6px;margin-bottom:8px}.update-strip span{max-width:100%}
 .grid{grid-template-columns:1fr 1fr;gap:8px}.card{min-height:68px;padding:10px}.card span{margin-bottom:6px}.card strong{font-size:17px}
-.charts{grid-template-columns:1fr;gap:8px}.chart-card{padding:12px;min-height:190px}.bar-chart{height:140px;gap:5px}.bar-item{min-width:24px}.bar-label{font-size:9px}.bar-value{display:none}
+.chart-card{padding:10px;min-height:0}.side-chart{margin-top:8px}.chart-head{align-items:flex-start}.chart-head h2{font-size:14px}.bar-chart{height:190px;gap:5px}.grouped-chart{height:205px}.bar-item{min-width:26px}.bar-label{font-size:9px;max-width:50px}.bar-value{display:none}.selected-plant-list{max-height:none}.selected-card{padding:8px}.month-controls select{height:38px}
 .panel{padding:12px;border-radius:8px}.split{gap:10px}.details{grid-template-columns:1fr}.detail{padding:9px}
 section.panel table,section.panel thead,section.panel tbody,section.panel tr,section.panel td{display:block;width:100%}
 section.panel table{border-collapse:separate;border-spacing:0}
@@ -1451,29 +1537,43 @@ section.panel tr.open td:nth-child(3)::after{content:'-'}
     <div><label>Search</label><input id="search" placeholder="Search any plant"></div>
     <div><label>Brand</label><select id="brand"></select></div>
     <div><label>Status</label><select id="status"></select></div>
-    <button id="refresh" class="alt">Refresh Live</button>
+    <button id="refresh" class="alt">Refresh now</button>
     <button id="reportAll">All Plants Report</button>
     <button id="reportPlant">Plant Report</button>
     <button id="report">Selected Report</button>
     <button id="selectAll" class="gray">Select All</button>
   </div>
-  <div class="grid" id="cards"></div>
-  <div class="charts">
-    <section class="chart-card" id="dailyChartCard" title="Open hourly details">
-      <div class="chart-head"><h2>Today's Generation</h2><span class="chart-total" id="dailyChartTotal"></span></div>
-      <div class="bar-chart" id="dailyChart"></div>
-    </section>
-    <section class="chart-card" id="monthlyChartCard" title="Open daily monthly details">
-      <div class="chart-head"><h2>Monthly Generation</h2><span class="chart-total" id="monthlyChartTotal"></span></div>
-      <div class="bar-chart" id="monthlyChart"></div>
-    </section>
+  <div class="update-strip">
+    <span>Last updated: <b id="lastUpdated">Not loaded</b></span>
+    <span id="loadingIndicator" class="loading hidden">Updating live data...</span>
+    <span id="warningLine" class="warning hidden"></span>
   </div>
-  <div class="split">
-    <section class="panel">
-      <h2>Plants</h2>
-      <table><thead><tr><th class="checkcell"></th><th>Brand</th><th>Plant</th><th>Status</th><th>Date</th><th>Daily</th><th>Weekly</th><th>Yearly</th><th>CUF</th></tr></thead><tbody id="rows"></tbody></table>
-    </section>
-    <aside class="panel">
+  <div class="grid" id="cards"></div>
+  <section class="chart-card main-chart" id="perKwChartCard" title="Open today's hourly details">
+    <div class="chart-head"><h2>Today's Per-kW Generation</h2><span class="chart-total" id="perKwChartTotal"></span></div>
+    <div class="bar-chart" id="perKwChart"></div>
+  </section>
+  <div class="split dashboard-split">
+    <aside class="panel side-panel">
+      <details class="fold mobile-fold" open>
+        <summary>Selected Plant Details</summary>
+        <div id="selectedPlantDetails" class="selected-plant-list"></div>
+      </details>
+      <section class="chart-card side-chart" id="selectedTodayChartCard" title="Open hourly details">
+        <div class="chart-head"><h2>Today's Generation - Selected Plants</h2><span class="chart-total" id="selectedTodayTotal"></span></div>
+        <div class="bar-chart" id="selectedTodayChart"></div>
+      </section>
+      <section class="chart-card side-chart" id="monthlyChartCard" title="Open daily monthly details">
+        <div class="chart-head">
+          <h2>Monthly Day-wise Generation - Selected Plants</h2>
+          <span class="chart-total" id="monthlyChartTotal"></span>
+        </div>
+        <div class="month-controls">
+          <select id="monthSelect"></select>
+          <select id="yearSelect"></select>
+        </div>
+        <div class="bar-chart grouped-chart" id="monthlyChart"></div>
+      </section>
       <details class="fold mobile-fold" open>
         <summary>Selected Plant</summary>
         <div id="detail"></div>
@@ -1496,22 +1596,32 @@ section.panel tr.open td:nth-child(3)::after{content:'-'}
         <div class="log" id="log">Ready.</div>
       </details>
     </aside>
+    <section class="panel">
+      <h2>Plants</h2>
+      <table><thead><tr><th class="checkcell"></th><th>Brand</th><th>Plant</th><th>Status</th><th>Date</th><th>Daily</th><th>Weekly</th><th>Yearly</th><th>CUF</th></tr></thead><tbody id="rows"></tbody></table>
+    </section>
   </div>
 </main>
 <script>
-let plants=[], selected=new Set(), statusData={}, activePlantId=null, activeHistoryKey='', openRefreshStarted=false, monthlyChartKey='';
+let plants=[], selected=new Set(), statusData={}, activePlantId=null, activeHistoryKey='', openRefreshStarted=false, monthlyChartKey='', refreshInFlight=false, autoRefreshTimer=null;
 const searchInput=document.querySelector('#search');
 const brandFilter=document.querySelector('#brand');
 const statusFilter=document.querySelector('#status');
 const cardsEl=document.querySelector('#cards');
-const dailyChartEl=document.querySelector('#dailyChart');
+const perKwChartEl=document.querySelector('#perKwChart');
+const perKwChartCardEl=document.querySelector('#perKwChartCard');
+const perKwChartTotalEl=document.querySelector('#perKwChartTotal');
+const selectedTodayChartEl=document.querySelector('#selectedTodayChart');
+const selectedTodayChartCardEl=document.querySelector('#selectedTodayChartCard');
+const selectedTodayTotalEl=document.querySelector('#selectedTodayTotal');
 const monthlyChartEl=document.querySelector('#monthlyChart');
-const dailyChartCardEl=document.querySelector('#dailyChartCard');
 const monthlyChartCardEl=document.querySelector('#monthlyChartCard');
-const dailyChartTotalEl=document.querySelector('#dailyChartTotal');
 const monthlyChartTotalEl=document.querySelector('#monthlyChartTotal');
+const monthSelectEl=document.querySelector('#monthSelect');
+const yearSelectEl=document.querySelector('#yearSelect');
 const rowsEl=document.querySelector('#rows');
 const detailEl=document.querySelector('#detail');
+const selectedPlantDetailsEl=document.querySelector('#selectedPlantDetails');
 const refreshBtn=document.querySelector('#refresh');
 const reportBtn=document.querySelector('#report');
 const reportAllBtn=document.querySelector('#reportAll');
@@ -1526,6 +1636,9 @@ const autoTimeEl=document.querySelector('#autoTime');
 const reportResultEl=document.querySelector('#reportResult');
 const reportListEl=document.querySelector('#reportList');
 const logEl=document.querySelector('#log');
+const lastUpdatedEl=document.querySelector('#lastUpdated');
+const loadingIndicatorEl=document.querySelector('#loadingIndicator');
+const warningLineEl=document.querySelector('#warningLine');
 function istParts(){const values={};new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date()).forEach(p=>{values[p.type]=p.value});return values}
 function todayText(){const p=istParts();return `${p.year}-${p.month}-${p.day}`}
 function istNowText(){const p=istParts();return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute} IST`}
@@ -1541,13 +1654,20 @@ function h(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;
 function weightedCuf(rows){const cap=rows.reduce((a,p)=>a+Number(p.capacity||0),0),year=rows.reduce((a,p)=>a+Number(p.year||0),0);const p=istParts();const days=Math.max(1,Math.floor((Date.UTC(Number(p.year),Number(p.month)-1,Number(p.day))-Date.UTC(2026,0,1))/86400000)+1);return cap&&year?year/(cap*24*days)*100:0}
 async function api(path,opt={}){const sep=path.includes('?')?'&':'?';const url=path+sep+'_ts='+Date.now();const r=await fetch(url,{cache:'no-store',...opt,headers:{'Cache-Control':'no-cache',...(opt.headers||{})}});const text=await r.text();let data={};try{data=text?JSON.parse(text):{};}catch(e){throw new Error(`${path} returned ${r.status}: ${text.slice(0,240)||'empty response'}`)}if(!r.ok){throw new Error(data.error||`${path} returned ${r.status}`)}return data}
 function filtered(){const q=searchInput.value.toLowerCase(), b=brandFilter.value, s=statusFilter.value;return plants.filter(p=>(b==='all'||p.brand===b)&&(s==='all'||p.status===s)&&(`${p.site} ${p.brand}`.toLowerCase().includes(q)))}
-function chartQuery(type){return 'type='+encodeURIComponent(type)+'&'+filtered().map(p=>'plant_key='+encodeURIComponent(p.plantKey)).join('&')}
 function selectedRows(){return plants.filter(p=>selected.has(p.id))}
-function renderFilters(){brandFilter.innerHTML='<option value="all">All Brands</option>'+uniq(plants.map(p=>p.brand)).map(x=>`<option>${x}</option>`).join('');statusFilter.innerHTML='<option value="all">All Status</option>'+uniq(plants.map(p=>p.status)).map(x=>`<option>${x}</option>`).join('')}
+function chartRows(){return selectedRows()}
+function chartQuery(type){const rows=chartRows();let query='type='+encodeURIComponent(type);if(!rows.length){query+='&plant_key=__none__'}else{rows.forEach(p=>query+='&plant_key='+encodeURIComponent(p.plantKey))}if(type==='monthly'){query+='&month='+encodeURIComponent(monthSelectEl.value||'')+'&year='+encodeURIComponent(yearSelectEl.value||'')}return query}
+function setLoading(on){loadingIndicatorEl.classList.toggle('hidden',!on);refreshBtn.disabled=on;refreshBtn.textContent=on?'Refreshing...':'Refresh now'}
+function setWarning(message){warningLineEl.textContent=message||'';warningLineEl.classList.toggle('hidden',!message)}
+function refreshWarning(r){const bad=(r.steps||[]).filter(s=>!s.ok && !String(s.label||'').toLowerCase().includes('skipped'));return bad.length?'Some inverter/API refreshes failed. Showing last successful data: '+bad.slice(0,2).map(s=>s.label).join(', '):''}
+function setupDateSelectors(){const monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];const p=istParts();const currentMonth=Number(p.month), currentYear=Number(p.year);monthSelectEl.innerHTML=monthNames.map((m,i)=>`<option value="${i+1}" ${i+1===currentMonth?'selected':''}>${m}</option>`).join('');let years=[];for(let y=currentYear;y>=2026;y--)years.push(y);yearSelectEl.innerHTML=years.map(y=>`<option value="${y}" ${y===currentYear?'selected':''}>${y}</option>`).join('')}
+function renderFilters(){const oldBrand=brandFilter.value||'all', oldStatus=statusFilter.value||'all';const brands=uniq(plants.map(p=>p.brand)), statuses=uniq(plants.map(p=>p.status));brandFilter.innerHTML='<option value="all">All Brands</option>'+brands.map(x=>`<option>${x}</option>`).join('');statusFilter.innerHTML='<option value="all">All Status</option>'+statuses.map(x=>`<option>${x}</option>`).join('');brandFilter.value=brands.includes(oldBrand)?oldBrand:'all';statusFilter.value=statuses.includes(oldStatus)?oldStatus:'all'}
 function shortName(name){return String(name||'').replace(/\b(plant|solar|spv|kw)\b/gi,'').trim().slice(0,16)||'Plant'}
-function renderBarChart(el,totalEl,rows,key){const top=[...rows].sort((a,b)=>Number(b[key]||0)-Number(a[key]||0)).slice(0,14);const total=rows.reduce((a,p)=>a+Number(p[key]||0),0);const max=Math.max(...top.map(p=>Number(p[key]||0)),1);totalEl.textContent=f(total)+' kWh';el.innerHTML=top.length?top.map(p=>{const value=Number(p[key]||0);const height=Math.max(2,value/max*100);return `<div class="bar-item" title="${h(p.site)}: ${f(value)} kWh"><div class="bar-value">${f(value,1)}</div><div class="bar" style="height:${height}%"></div><div class="bar-label">${h(shortName(p.site))}</div></div>`}).join(''):'<div class="empty-history">No plant data</div>'}
-function renderMonthlyCandles(data){const days=data.days||[];const max=Math.max(...days.map(d=>Number(d.generation||0)),1);monthlyChartTotalEl.textContent=`${h(data.month||'This month')} · ${f(data.total)} kWh`;monthlyChartEl.innerHTML=days.length?days.map(d=>{const value=Number(d.generation||0);const height=Math.max(value>0?2:1,value/max*100);return `<div class="bar-item" title="${h(d.date)}: ${f(value)} kWh"><div class="bar-value">${f(value,0)}</div><div class="bar candle" style="height:${height}%"></div><div class="bar-label">${h(d.day)}</div></div>`}).join(''):'<div class="empty-history">No monthly data</div>'}
-async function loadMonthlyChart(rows){const key=rows.map(p=>`${p.plantKey}:${p.dataDate}:${p.daily}`).sort().join('|');if(key===monthlyChartKey)return;monthlyChartKey=key;monthlyChartEl.innerHTML='<div class="empty-history">Loading month...</div>';const query=rows.map(p=>'plant_key='+encodeURIComponent(p.plantKey)).join('&');try{renderMonthlyCandles(await api('/api/monthly-generation'+(query?'?'+query:'')))}catch(error){monthlyChartEl.innerHTML='<div class="empty-history">Monthly graph failed: '+h(error.message)+'</div>'}}
+function renderBars(el,totalEl,rows,key,unit='kWh',barClass=''){const top=[...rows].sort((a,b)=>Number(b[key]||0)-Number(a[key]||0));const total=rows.reduce((a,p)=>a+Number(p[key]||0),0);const max=Math.max(...top.map(p=>Number(p[key]||0)),1);totalEl.textContent=`${f(total)} ${unit}`;el.innerHTML=top.length?top.map(p=>{const value=Number(p[key]||0);const height=Math.max(value>0?2:1,value/max*100);return `<div class="bar-item" title="${h(p.site)} | Capacity: ${f(p.capacity)} kW | ${f(value)} ${unit}"><div class="bar-value">${f(value,1)}</div><div class="bar ${barClass}" style="height:${height}%"></div><div class="bar-label">${h(shortName(p.site))}</div></div>`}).join(''):'<div class="empty-history">Select one or more plants.</div>'}
+function renderPerKw(rows){const data=rows.map(p=>({...p,perKw:Number(p.capacity||0)>0?Number(p.daily||0)/Number(p.capacity||0):0}));const max=Math.max(...data.map(p=>p.perKw),1);perKwChartTotalEl.textContent=data.length?'kWh/kW':'No plants selected';perKwChartEl.innerHTML=data.length?data.map(p=>{const height=Math.max(p.perKw>0?2:1,p.perKw/max*100);const cap=Number(p.capacity||0);const title=cap>0?`${h(p.site)}: ${f(p.perKw)} kWh/kW (${f(p.daily)} kWh / ${f(cap)} kW)`:`${h(p.site)}: Capacity missing, shown as 0.00 kWh/kW`;return `<div class="bar-item" title="${title}"><div class="bar-value">${f(p.perKw)}</div><div class="bar perkw" style="height:${height}%"></div><div class="bar-label">${h(shortName(p.site))}</div></div>`}).join(''):'<div class="empty-history">Select plants to compare per-kW generation.</div>'}
+function colorFor(i){return ['#174f9c','#18b9d6','#16845f','#f59e0b','#7c3aed','#ef4444','#0891b2','#4f46e5'][i%8]}
+function renderMonthlyGrouped(data){const days=data.days||[], plantsList=data.plants||[];const allValues=days.flatMap(d=>(d.values||[]).map(v=>Number(v.generation||0)));const max=Math.max(...allValues,1);monthlyChartTotalEl.textContent=`${h(data.month||'Month')} · ${f(data.total)} kWh`;if(!plantsList.length){monthlyChartEl.innerHTML='<div class="empty-history">Select one or more plants.</div>';return}monthlyChartEl.innerHTML=days.length?days.map(d=>`<div class="day-group" title="${h(d.date)} total: ${f(d.generation)} kWh"><div class="day-bars">${plantsList.map((p,i)=>{const v=(d.values||[]).find(x=>x.plantKey===p.plantKey)||{};const gen=Number(v.generation||0);const height=Math.max(gen>0?2:1,gen/max*100);return `<div class="mini-bar" style="height:${height}%;background:${colorFor(i)}" title="${h(p.site)} · ${h(d.date)} · ${f(gen)} kWh"></div>`}).join('')}</div><div class="bar-label">${h(d.day)}</div></div>`).join(''):'<div class="empty-history">No monthly data</div>'}
+async function loadMonthlyChart(rows){const key=rows.map(p=>`${p.plantKey}:${p.dataDate}:${p.daily}`).sort().join('|')+`|${monthSelectEl.value}|${yearSelectEl.value}`;if(key===monthlyChartKey)return;monthlyChartKey=key;monthlyChartEl.innerHTML='<div class="empty-history">Loading month...</div>';const query=rows.map(p=>'plant_key='+encodeURIComponent(p.plantKey)).join('&')+'&month='+encodeURIComponent(monthSelectEl.value||'')+'&year='+encodeURIComponent(yearSelectEl.value||'');try{renderMonthlyGrouped(await api('/api/monthly-generation?'+query))}catch(error){monthlyChartEl.innerHTML='<div class="empty-history">Monthly graph failed: '+h(error.message)+'</div>'}}
 function historyTable(title, rows, cols, open=false){if(!rows?.length)return `<details class="fold history-block"><summary>${title}</summary><div class="empty-history">No previous data yet. It will build after refreshes/uploads.</div></details>`;return `<details class="fold history-block" ${open?'open':''}><summary>${title}</summary><div class="history-scroll"><table><thead><tr>${cols.map(c=>`<th>${c[0]}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td>${c[2]?f(r[c[1]]):h(r[c[1]])}</td>`).join('')}</tr>`).join('')}</tbody></table></div></details>`}
 function opt(rows,key){return (rows||[]).map((r,i)=>`<option value="${i}">${h(r[key]||'')}</option>`).join('')}
 function pickedLine(type,row,fallback=''){if(type==='day'){const item=row||{date:fallback||todayText(),daily:0,status:'No data'};return `${h(item.date)} · ${f(item.daily)} kWh · ${h(item.status)}`}if(!row)return '0.00 kWh · No data for this selection.';if(type==='week')return `${h(row.week)} · ${f(row.weekly || row.dailySum)} kWh`;return `${h(row.year)} · ${f(row.yearKwh)} kWh · latest ${h(row.lastDate)}`}
@@ -1560,8 +1680,9 @@ historyTable('All Yearly',yearly,[['Year','year'],['Year kWh','yearKwh',1],['Lat
 ].join('')}
 async function loadHistory(active){const key=active?.plantKey||'';activeHistoryKey=key;const box=document.querySelector('#historyBox');if(!box||!key)return;box.innerHTML='<div class="empty-history">Loading previous data...</div>';try{const data=await api('/api/history?plant_key='+encodeURIComponent(key));if(activeHistoryKey===key){box.innerHTML=renderHistory(data);wireHistoryPickers(data)}}catch(error){if(activeHistoryKey===key)box.innerHTML='<div class="empty-history">History failed: '+h(error.message)+'</div>';}}
 function renderDetail(active){if(!active){detailEl.innerHTML='<div class="empty-history">Tap a plant name to view details.</div>';return}detailEl.innerHTML=`<div class="plant-title">${h(active.site)}</div><p>${h(active.brand)} · <span class="status ${cls(active.status)}">${h(active.status)}</span></p>${staleNote(active)?`<p class="stale">${h(staleNote(active))}</p>`:''}<div class="details"><div class="detail"><span>Data Date</span><b>${h(active.dataDate||'Unknown')}</b></div><div class="detail"><span>Capacity</span><b>${f(active.capacity)} kW</b></div><div class="detail"><span>Daily</span><b>${f(active.daily)} kWh</b></div><div class="detail"><span>Weekly</span><b>${f(active.weekly)} kWh</b></div><div class="detail"><span>Yearly</span><b>${f(active.year)} kWh</b></div><div class="detail"><span>CUF</span><b>${f(active.cuf)}%</b></div><div class="detail"><span>Total</span><b>${f(active.total)} MWh</b></div></div><div id="historyBox" class="history-block"></div>`;loadHistory(active)}
+function renderSelectedPlantDetails(rows){selectedPlantDetailsEl.innerHTML=rows.length?rows.map(p=>`<div class="selected-card ${cls(p.status)}"><b>${h(p.site)}</b><span>Capacity: ${f(p.capacity)} kW</span><span>Current Power: ${f(p.currentPower)} kW</span><span>Today's Generation: ${f(p.daily)} kWh</span><span>Status: ${h(p.status)}</span><span>Last Updated: ${h(p.timestamp||p.dataDate||'Unavailable')}</span></div>`).join(''):'<div class="empty-history">Select plants to see live details.</div>'}
 function render(){const rows=filtered(), chosen=selectedRows();let active=plants.find(p=>p.id===activePlantId);if(active && !rows.some(p=>p.id===active.id)){activePlantId=null;active=null}cardsEl.innerHTML=[['Visible',rows.length],['Selected',chosen.length],['Daily',f(rows.reduce((a,p)=>a+p.daily,0))+' kWh'],['Weekly',f(rows.reduce((a,p)=>a+p.weekly,0))+' kWh'],['Yearly',f(rows.reduce((a,p)=>a+p.year,0))+' kWh'],['CUF',f(weightedCuf(rows))+' %']].map(x=>`<div class="card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join('');
-renderBarChart(dailyChartEl,dailyChartTotalEl,rows,'daily');loadMonthlyChart(rows);
+renderPerKw(chosen);renderSelectedPlantDetails(chosen);renderBars(selectedTodayChartEl,selectedTodayTotalEl,chosen,'daily','kWh','');loadMonthlyChart(chosen);
 rowsEl.innerHTML=rows.map(p=>`<tr data-id="${p.id}" style="cursor:pointer"><td data-label=""><input type="checkbox" data-id="${p.id}" ${selected.has(p.id)?'checked':''}></td><td data-label="Brand">${h(p.brand)}</td><td data-label="Plant"><span class="plant-line ${cls(p.status)}"><b>${h(p.site)}</b><span class="plant-daily">${f(p.daily)} kWh</span></span></td><td data-label="Status" class="status ${cls(p.status)}">${h(p.status)}</td><td data-label="Date" title="${h(staleNote(p))}">${h(p.dataDate||'')} <span class="pill ${pillClass(p)}">${pillText(p)}</span></td><td data-label="Daily">${f(p.daily)}</td><td data-label="Weekly">${f(p.weekly)}</td><td data-label="Yearly">${f(p.year)}</td><td data-label="CUF">${f(p.cuf)}%</td></tr>`).join('');
 rowsEl.querySelectorAll('tr[data-id]').forEach(tr=>{if(tr.dataset.id===activePlantId)tr.classList.add('open');tr.onclick=()=>{activePlantId=tr.dataset.id===activePlantId?null:tr.dataset.id;render()}});
 rowsEl.querySelectorAll('input[type=checkbox][data-id]').forEach(cb=>{cb.onclick=e=>e.stopPropagation();cb.onchange=()=>{cb.checked?selected.add(cb.dataset.id):selected.delete(cb.dataset.id);render()}});
@@ -1569,19 +1690,24 @@ renderDetail(active);
 }
 function refreshText(r){const lines=(r.steps||[]).map(s=>`${s.ok?'OK':'SKIP'} - ${s.label}: ${s.message||''}`);if(r.running)lines.push('RUNNING - Refresh still in progress...');if(r.finished)lines.push('DONE - Finished '+r.finished);return lines.join('\\n')||'Ready.'}
 async function loadReports(){try{const r=await api('/api/reports');reportListEl.innerHTML=(r.reports||[]).length?(r.reports||[]).map(x=>`<a class="report-item" href="${x.url}">${h(x.name)}<span>${h(x.modified)} · ${h(x.size_kb)} KB</span></a>`).join(''):'No reports generated yet.';}catch(error){reportListEl.textContent='Could not load reports: '+error.message;}}
-async function triggerOpenRefresh(){if(openRefreshStarted)return;openRefreshStarted=true;try{const r=await api('/api/refresh-on-open',{method:'POST'});logEl.textContent=refreshText(r);if(r.accepted||r.running)pollRefresh().catch(error=>{logEl.textContent='Open refresh status failed: '+error;});}catch(error){logEl.textContent='Open refresh failed: '+error.message;}}
-async function load(){const p=await api('/api/plants');plants=p.plants;selected=new Set();renderFilters();render();const s=await api('/api/status');statusData=s;dateLineEl.textContent=istNowText();versionLineEl.textContent='Build: '+(s.app_version||'old');mobileLineEl.textContent='iPhone: '+s.mobile_url;autoDayEl.value=s.config.auto_report_day;autoTimeEl.value=s.config.auto_report_time;logEl.textContent=refreshText(s.last_refresh||{});loadReports();if(s.config?.auto_refresh_on_open){setTimeout(triggerOpenRefresh,500);}}
-async function pollRefresh(){for(let i=0;i<90;i++){const s=await api('/api/status');logEl.textContent=refreshText(s.last_refresh||{});await load();if(!s.last_refresh?.running)return;await new Promise(r=>setTimeout(r,3000));}}
-refreshBtn.onclick=async()=>{logEl.textContent='Starting background refresh...';const r=await api('/api/refresh',{method:'POST'});logEl.textContent=refreshText(r);pollRefresh().catch(error=>{logEl.textContent='Refresh status failed: '+error;});}
+async function triggerOpenRefresh(){if(openRefreshStarted)return;openRefreshStarted=true;startRefresh('open')}
+async function load(opts={}){const keep=new Set(selected);const p=await api('/api/plants');plants=p.plants||[];if(opts.preserveSelection!==false){const ids=new Set(plants.map(p=>p.id));selected=new Set([...keep].filter(id=>ids.has(id)))}else{selected=new Set()}renderFilters();render();const s=await api('/api/status');statusData=s;dateLineEl.textContent=istNowText();versionLineEl.textContent='Build: '+(s.app_version||'old');mobileLineEl.textContent='iPhone: '+s.mobile_url;lastUpdatedEl.textContent=istNowText();autoDayEl.value=s.config.auto_report_day;autoTimeEl.value=s.config.auto_report_time;logEl.textContent=refreshText(s.last_refresh||{});if(opts.reports!==false)loadReports();if(s.config?.auto_refresh_on_open){setTimeout(triggerOpenRefresh,500);}}
+async function pollRefresh(){let finalStatus={};for(let i=0;i<90;i++){const s=await api('/api/status');finalStatus=s.last_refresh||{};logEl.textContent=refreshText(finalStatus);await load({preserveSelection:true,reports:false});if(!finalStatus.running)return finalStatus;await new Promise(r=>setTimeout(r,3000));}return finalStatus}
+async function startRefresh(reason='manual'){if(refreshInFlight)return;if(reason==='auto' && document.hidden)return;refreshInFlight=true;setLoading(true);setWarning('');try{logEl.textContent='Starting background refresh...';const r=await api('/api/refresh',{method:'POST'});logEl.textContent=refreshText(r);const finalStatus=(r.accepted||r.running)?await pollRefresh():r;const warn=refreshWarning(finalStatus);if(warn)setWarning(warn);await load({preserveSelection:true,reports:reason!=='auto'});}catch(error){setWarning('Live refresh failed. Last successful data is still shown. '+error.message);logEl.textContent='Refresh failed: '+error.message;}finally{setLoading(false);refreshInFlight=false;}}
+function startAutoRefresh(){if(autoRefreshTimer)clearInterval(autoRefreshTimer);autoRefreshTimer=setInterval(()=>startRefresh('auto'),60000)}
+refreshBtn.onclick=()=>startRefresh('manual');
 async function generateReport(ids,label,all=false){reportResultEl.textContent='Generating '+label+'...';const r=await api('/api/report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plant_ids:ids,all_plants:all})});reportResultEl.innerHTML=r.ok?`Saved ${r.count} plant report.<br><a class="download-btn" href="${r.viewer_url}">Open Report</a>`:'Failed: '+h(r.message);if(r.ok)loadReports();}
 reportAllBtn.onclick=()=>generateReport([],'all plants report',true);
 reportPlantBtn.onclick=()=>{if(!activePlantId){reportResultEl.textContent='Tap a plant name first.';return}generateReport([activePlantId],'plant report')}
 reportBtn.onclick=()=>{if(!selected.size){reportResultEl.textContent='Tick one or more plants first.';return}generateReport([...selected],'selected report')};
 selectAllBtn.onclick=()=>{const visible=filtered();const all=visible.every(p=>selected.has(p.id));visible.forEach(p=>all?selected.delete(p.id):selected.add(p.id));render()}
 saveScheduleBtn.onclick=async()=>{const r=await api('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({auto_report_day:autoDayEl.value,auto_report_time:autoTimeEl.value})});logEl.textContent='Saved schedule: '+r.config.auto_report_day+' '+r.config.auto_report_time}
-dailyChartCardEl.onclick=()=>window.open('/chart-detail?'+chartQuery('today'),'_blank');
+perKwChartCardEl.onclick=()=>window.open('/chart-detail?'+chartQuery('today'),'_blank');
+selectedTodayChartCardEl.onclick=()=>window.open('/chart-detail?'+chartQuery('today'),'_blank');
 monthlyChartCardEl.onclick=()=>window.open('/chart-detail?'+chartQuery('monthly'),'_blank');
-searchInput.oninput=render;brandFilter.onchange=render;statusFilter.onchange=render;load().catch(error=>{logEl.textContent='App load failed: '+error;});
+monthSelectEl.onchange=()=>{monthlyChartKey='';render()};yearSelectEl.onchange=()=>{monthlyChartKey='';render()};
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){load({preserveSelection:true,reports:false}).catch(error=>setWarning('Could not reload dashboard after returning: '+error.message));startRefresh('resume');}});
+searchInput.oninput=render;brandFilter.onchange=render;statusFilter.onchange=render;setupDateSelectors();startAutoRefresh();load({preserveSelection:false}).catch(error=>{setWarning('App load failed. Please try Refresh now. '+error.message);logEl.textContent='App load failed: '+error;});
 </script>
 </body></html>"""
 
