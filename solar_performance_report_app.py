@@ -712,13 +712,58 @@ def _history_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     return history
 
 
-def _save_trend_matplotlib(kind: str, history: pd.DataFrame, output: Path) -> None:
+def _today_hourly_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    """Load today's cumulative hourly generation for report area chart."""
+
+    hourly_path = Path("solar_generation_hourly_history.json")
+    keys = {f"{row['Brand']}::{row['Site Name']}" for _, row in df.iterrows()}
+    today = ist_today()
+    rows: list[dict[str, Any]] = []
+    if hourly_path.exists():
+        try:
+            payload = json.loads(hourly_path.read_text(encoding="utf-8"))
+        except Exception:
+            payload = []
+        for item in payload if isinstance(payload, list) else []:
+            if item.get("plantKey") not in keys:
+                continue
+            try:
+                row_date = pd.to_datetime(item.get("date")).date()
+            except Exception:
+                row_date = None
+            if row_date != today:
+                continue
+            hour_label = str(item.get("hourLabel") or str(item.get("hour", ""))[11:16] or "")
+            if not hour_label:
+                continue
+            rows.append({"hour": hour_label, "generation": safe_float(item.get("daily"))})
+
+    if not rows:
+        rows.append({"hour": ist_now().strftime("%H:00"), "generation": safe_float(df["Daily Generation (kWh)"].sum())})
+
+    hourly = pd.DataFrame(rows)
+    grouped = hourly.groupby("hour", as_index=False)["generation"].sum().sort_values("hour")
+    first = grouped[grouped["generation"] > 0].index.min()
+    if pd.notna(first):
+        grouped = grouped.loc[first:].reset_index(drop=True)
+    return grouped
+
+
+def _save_trend_matplotlib(kind: str, history: pd.DataFrame, output: Path, df: pd.DataFrame | None = None) -> None:
     """Create the three requested report trend charts with Matplotlib."""
 
     plt.style.use("seaborn-v0_8-whitegrid")
     fig, ax = plt.subplots(figsize=(10.8, 4.0), dpi=190)
     today = pd.Timestamp(ist_today())
-    if kind == "monthly_daywise":
+    if kind == "today_area":
+        hourly = _today_hourly_dataframe(df if df is not None else pd.DataFrame())
+        ax.fill_between(hourly["hour"], hourly["generation"], color=GREEN, alpha=0.22)
+        ax.plot(hourly["hour"], hourly["generation"], color=BLUE, linewidth=2.3)
+        ax.set_title("Today's Generation - Since Start")
+        ax.set_xlabel("Hour")
+        ax.set_ylabel("kWh")
+        ax.tick_params(axis="x", rotation=35, labelsize=7)
+    elif kind == "monthly_daywise":
         current = history[(history["date"].dt.year == today.year) & (history["date"].dt.month == today.month)]
         series = current.groupby(history.loc[current.index, "date"].dt.day)["daily"].sum()
         days = list(range(1, today.day + 1))
@@ -757,7 +802,7 @@ def _save_trend_matplotlib(kind: str, history: pd.DataFrame, output: Path) -> No
     plt.close(fig)
 
 
-def _save_trend_fallback(kind: str, history: pd.DataFrame, output: Path) -> None:
+def _save_trend_fallback(kind: str, history: pd.DataFrame, output: Path, df: pd.DataFrame | None = None) -> None:
     """Fallback trend chart renderer when Matplotlib is not available."""
 
     width, height = 1500, 560
@@ -776,7 +821,13 @@ def _save_trend_fallback(kind: str, history: pd.DataFrame, output: Path) -> None
         draw.line((left, bottom, right, bottom), fill=GRID, width=2)
         return left, top, right, bottom
 
-    if kind == "monthly_daywise":
+    if kind == "today_area":
+        title("Today's Generation - Since Start")
+        hourly = _today_hourly_dataframe(df if df is not None else pd.DataFrame())
+        labels = list(range(len(hourly)))
+        values = [float(value) for value in hourly["generation"].tolist()]
+        fill = GREEN
+    elif kind == "monthly_daywise":
         title("Monthly Generation - Day Wise")
         current = history[(history["date"].dt.year == today.year) & (history["date"].dt.month == today.month)]
         series = current.groupby(history.loc[current.index, "date"].dt.day)["daily"].sum()
@@ -803,7 +854,7 @@ def _save_trend_fallback(kind: str, history: pd.DataFrame, output: Path) -> None
 
     left, top, right, bottom = axes()
     max_value = max(values or [1], default=1) or 1
-    if kind == "perkw_year_daily" and len(values) > 1:
+    if kind in {"perkw_year_daily", "today_area"} and len(values) > 1:
         points = [
             (
                 left + int(idx * (right - left) / max(len(values) - 1, 1)),
@@ -829,15 +880,16 @@ def create_report_trend_charts(df: pd.DataFrame, chart_dir: Path) -> dict[str, P
     chart_dir.mkdir(parents=True, exist_ok=True)
     history = _history_dataframe(df)
     charts = {
+        "today_area": chart_dir / "report_today_generation_area.png",
         "monthly_daywise": chart_dir / "report_monthly_generation_daywise.png",
         "yearly_monthwise": chart_dir / "report_yearly_generation_monthwise.png",
         "perkw_year_daily": chart_dir / "report_perkw_generation_year_daily.png",
     }
     for kind, path in charts.items():
         if HAS_MATPLOTLIB:
-            _save_trend_matplotlib(kind, history, path)
+            _save_trend_matplotlib(kind, history, path, df=df)
         else:
-            _save_trend_fallback(kind, history, path)
+            _save_trend_fallback(kind, history, path, df=df)
     return charts
 
 
@@ -1587,9 +1639,12 @@ def generate_compact_pdf(
     story.append(Paragraph("Insights, Trends, Status and Recommendations", styles["h1"]))
     chart_cells = [
         [
-            RLImage(str(trend_charts["monthly_daywise"]), width=78 * mm, height=38 * mm),
-            RLImage(str(trend_charts["yearly_monthwise"]), width=78 * mm, height=38 * mm),
-            RLImage(str(trend_charts["perkw_year_daily"]), width=78 * mm, height=38 * mm),
+            RLImage(str(trend_charts["today_area"]), width=118 * mm, height=34 * mm),
+            RLImage(str(trend_charts["monthly_daywise"]), width=118 * mm, height=34 * mm),
+        ],
+        [
+            RLImage(str(trend_charts["yearly_monthwise"]), width=118 * mm, height=34 * mm),
+            RLImage(str(trend_charts["perkw_year_daily"]), width=118 * mm, height=34 * mm),
         ],
         [
             RLImage(str(status_chart), width=54 * mm, height=30 * mm),
@@ -1598,14 +1653,9 @@ def generate_compact_pdf(
                 % (summary["online_plants"], summary["offline_plants"], summary["warning_plants"], summary["fault_plants"]),
                 styles["small"],
             ),
-            Paragraph(
-                "<b>Report Notes</b><br/>Monthly chart is day-wise. Yearly chart is month-wise. Per-kW chart is daily specific generation for the year."
-                + (f"<br/>{portal_url}" if portal_url else ""),
-                styles["small"],
-            ),
         ],
     ]
-    chart_table = Table(chart_cells, colWidths=[82 * mm] * 3, rowHeights=[40 * mm, 32 * mm])
+    chart_table = Table(chart_cells, colWidths=[123 * mm, 123 * mm], rowHeights=[36 * mm, 36 * mm, 30 * mm])
     chart_table.setStyle(
         TableStyle(
             [
