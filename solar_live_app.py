@@ -55,7 +55,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-12-auto-refresh-analytics-v28"
+APP_VERSION = "2026-07-12-right-side-details-v30"
 IST = ZoneInfo("Asia/Kolkata")
 PLANT_COLUMNS = [
     "App ID",
@@ -1490,14 +1490,14 @@ button{height:36px;border:0;border-radius:6px;padding:0 13px;background:var(--bl
 .update-strip{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:0 0 12px;color:var(--muted);font-size:12px}.update-strip b{color:var(--ink)}.loading{background:#e8f7fb;color:#0e7490;border:1px solid #a5e4ee;border-radius:999px;padding:4px 10px;font-weight:900}.warning{background:#fff7ed;color:#b45309;border:1px solid #fed7aa;border-radius:999px;padding:4px 10px;font-weight:900}.hidden{display:none!important}
 .grid{display:grid;grid-template-columns:repeat(6,minmax(120px,1fr));gap:10px;margin-bottom:12px}.card,.panel{background:white;border:1px solid var(--line);border-radius:8px;box-shadow:0 1px 4px rgba(15,35,60,.05)}
 .card{padding:12px;min-height:78px}.card span{display:block;color:var(--muted);font-size:11px;font-weight:700;margin-bottom:10px}.card strong{font-size:20px}
-.panel{padding:14px}.split{display:grid;grid-template-columns:minmax(340px,.85fr) minmax(0,1.55fr);gap:12px;align-items:start}h2{font-size:15px;margin:0 0 10px}
-.main-chart{margin-bottom:12px}.chart-card{background:white;border:1px solid var(--line);border-radius:8px;padding:14px;box-shadow:0 1px 4px rgba(15,35,60,.05);min-height:220px;cursor:pointer}.side-chart{margin-top:12px;min-height:230px}.chart-card:hover{border-color:var(--cyan);box-shadow:0 2px 8px rgba(15,35,60,.10)}.chart-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}.chart-head h2{margin:0}.chart-total{font-size:12px;font-weight:900;color:var(--green);white-space:nowrap}.bar-chart{height:180px;display:flex;align-items:end;gap:7px;border-left:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 8px 0;overflow-x:auto}.bar-item{min-width:28px;flex:1;max-width:72px;display:flex;flex-direction:column;align-items:center;justify-content:end;height:100%;gap:5px}.bar{width:100%;min-height:2px;border-radius:5px 5px 0 0;background:linear-gradient(180deg,var(--cyan),var(--blue));position:relative}.bar.candle{background:linear-gradient(180deg,#34d399,var(--green))}.bar.perkw{background:linear-gradient(180deg,#22c55e,var(--green))}.bar-label{font-size:10px;color:var(--muted);max-width:64px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}.bar-value{font-size:10px;font-weight:900;color:var(--ink);white-space:nowrap}.grouped-chart{align-items:stretch}.day-group{min-width:56px;height:100%;display:flex;flex-direction:column;justify-content:end;gap:4px}.day-bars{height:calc(100% - 22px);display:flex;align-items:end;gap:2px}.mini-bar{flex:1;min-width:6px;border-radius:4px 4px 0 0;background:var(--blue)}.month-controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}.selected-plant-list{display:grid;gap:8px;max-height:260px;overflow:auto}.selected-card{border:1px solid var(--line);border-radius:7px;background:#fbfdff;padding:9px}.selected-card.online{background:#f0fdf4;border-color:#bbf7d0}.selected-card.offline{background:#f8fafc;border-color:#d7e0ec}.selected-card b{display:block;margin-bottom:5px}.selected-card span{display:block;color:var(--muted);font-size:11px;line-height:1.55}
+.panel{padding:14px}.split{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(340px,.85fr);gap:12px;align-items:start}h2{font-size:15px;margin:0 0 10px}
+.main-charts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}.main-chart{margin-bottom:0}.chart-card{background:white;border:1px solid var(--line);border-radius:8px;padding:14px;box-shadow:0 1px 4px rgba(15,35,60,.05);min-height:220px;cursor:pointer}.side-chart{margin-top:12px;min-height:230px}.chart-card:hover{border-color:var(--cyan);box-shadow:0 2px 8px rgba(15,35,60,.10)}.chart-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}.chart-head h2{margin:0}.chart-total{font-size:12px;font-weight:900;color:var(--green);white-space:nowrap}.bar-chart{height:180px;display:flex;align-items:end;gap:7px;border-left:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 8px 0;overflow-x:auto}.bar-item{min-width:28px;flex:1;max-width:72px;display:flex;flex-direction:column;align-items:center;justify-content:end;height:100%;gap:5px}.bar{width:100%;min-height:2px;border-radius:5px 5px 0 0;background:linear-gradient(180deg,var(--cyan),var(--blue));position:relative}.bar.candle{background:linear-gradient(180deg,#34d399,var(--green))}.bar.perkw{background:linear-gradient(180deg,#22c55e,var(--green))}.bar-label{font-size:10px;color:var(--muted);max-width:64px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}.bar-value{font-size:10px;font-weight:900;color:var(--ink);white-space:nowrap}.grouped-chart{align-items:stretch}.day-group{min-width:56px;height:100%;display:flex;flex-direction:column;justify-content:end;gap:4px}.day-bars{height:calc(100% - 22px);display:flex;align-items:end;gap:2px}.mini-bar{flex:1;min-width:6px;border-radius:4px 4px 0 0;background:var(--blue)}.month-controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}.selected-plant-list{display:grid;gap:8px;max-height:260px;overflow:auto}.selected-card{border:1px solid var(--line);border-radius:7px;background:#fbfdff;padding:9px}.selected-card.online{background:#f0fdf4;border-color:#bbf7d0}.selected-card.offline{background:#f8fafc;border-color:#d7e0ec}.selected-card b{display:block;margin-bottom:5px}.selected-card span{display:block;color:var(--muted);font-size:11px;line-height:1.55}
 table{width:100%;border-collapse:collapse;font-size:12px}th{background:var(--blue);color:white;text-align:left;padding:8px 7px}td{border-bottom:1px solid var(--line);padding:7px}tr:nth-child(even){background:#f8fafc}
 .status{font-weight:800}.online{color:var(--green)}.offline,.stale{color:var(--red)}.fresh{color:var(--green)}.pill{display:inline-block;border-radius:999px;padding:2px 7px;font-size:10px;font-weight:800;color:white}.pill.fresh{background:var(--green);color:white}.pill.stale{background:var(--red);color:white}.pill.offline{background:#111827;color:white}
 .plant-title{font-size:21px;font-weight:850}.details{display:grid;grid-template-columns:1fr 1fr;gap:8px}.detail{border:1px solid var(--line);border-radius:6px;background:#fbfdff;padding:10px}.detail span{display:block;color:var(--muted);font-size:11px;font-weight:700;margin-bottom:7px}
 .checkcell{width:34px}.report-link{font-size:12px;color:var(--muted);margin-top:8px;word-break:break-all}.download-btn{display:inline-block;margin-top:8px;background:var(--green);color:white;text-decoration:none;border-radius:6px;padding:9px 12px;font-weight:900}.report-list{margin-top:8px;display:grid;gap:6px}.report-item{display:block;border:1px solid var(--line);border-radius:6px;background:#fbfdff;padding:8px;color:var(--blue);text-decoration:none;font-weight:800}.report-item span{display:block;color:var(--muted);font-size:11px;font-weight:700;margin-top:3px}.log{font-family:ui-monospace,Menlo,monospace;font-size:11px;white-space:pre-wrap;max-height:180px;overflow:auto;background:#f8fafc;border:1px solid var(--line);padding:8px;border-radius:6px}
 .history-block{margin-top:12px}.history-block h3{font-size:13px;margin:10px 0 6px}.history-scroll{max-height:160px;overflow:auto;border:1px solid var(--line);border-radius:6px}.history-scroll table{font-size:11px}.history-scroll th{position:sticky;top:0}.empty-history{color:var(--muted);font-size:12px;padding:8px;border:1px solid var(--line);border-radius:6px;background:#fbfdff}.fold{border-top:1px solid var(--line);padding-top:10px;margin-top:12px}.fold summary{cursor:pointer;font-weight:900;color:var(--blue);list-style:none}.fold summary::-webkit-details-marker{display:none}.fold summary::after{content:'+';float:right}.fold[open] summary::after{content:'-'}.plant-daily{display:none}
-@media(max-width:980px){header{position:static}.toolbar,.grid,.split{grid-template-columns:1fr}table{font-size:11px}th:nth-child(5),td:nth-child(5),th:nth-child(7),td:nth-child(7){display:none}}
+@media(max-width:980px){header{position:static}.toolbar,.grid,.split,.main-charts{grid-template-columns:1fr}table{font-size:11px}th:nth-child(5),td:nth-child(5),th:nth-child(7),td:nth-child(7){display:none}}
 @media(max-width:640px){
 body{background:#f3f7fb}
 header{display:grid;grid-template-columns:1fr auto;gap:8px;padding:12px 14px;align-items:start}
@@ -1549,11 +1549,28 @@ section.panel tr.open td:nth-child(3)::after{content:'-'}
     <span id="warningLine" class="warning hidden"></span>
   </div>
   <div class="grid" id="cards"></div>
-  <section class="chart-card main-chart" id="perKwChartCard" title="Open today's hourly details">
-    <div class="chart-head"><h2>Today's Per-kW Generation</h2><span class="chart-total" id="perKwChartTotal"></span></div>
-    <div class="bar-chart" id="perKwChart"></div>
-  </section>
+  <div class="main-charts">
+    <section class="chart-card main-chart" id="perKwChartCard" title="Open today's hourly details">
+      <div class="chart-head"><h2>Today's Per-kW Generation</h2><span class="chart-total" id="perKwChartTotal"></span></div>
+      <div class="bar-chart" id="perKwChart"></div>
+    </section>
+    <section class="chart-card main-chart" id="monthlyChartCard" title="Open daily monthly details">
+      <div class="chart-head">
+        <h2>Monthly Generation</h2>
+        <span class="chart-total" id="monthlyChartTotal"></span>
+      </div>
+      <div class="month-controls">
+        <select id="monthSelect"></select>
+        <select id="yearSelect"></select>
+      </div>
+      <div class="bar-chart grouped-chart" id="monthlyChart"></div>
+    </section>
+  </div>
   <div class="split dashboard-split">
+    <section class="panel">
+      <h2>Plants</h2>
+      <table><thead><tr><th class="checkcell"></th><th>Brand</th><th>Plant</th><th>Status</th><th>Date</th><th>Daily</th><th>Weekly</th><th>Yearly</th><th>CUF</th></tr></thead><tbody id="rows"></tbody></table>
+    </section>
     <aside class="panel side-panel">
       <details class="fold mobile-fold" open>
         <summary>Selected Plant Details</summary>
@@ -1562,17 +1579,6 @@ section.panel tr.open td:nth-child(3)::after{content:'-'}
       <section class="chart-card side-chart" id="selectedTodayChartCard" title="Open hourly details">
         <div class="chart-head"><h2>Today's Generation - Selected Plants</h2><span class="chart-total" id="selectedTodayTotal"></span></div>
         <div class="bar-chart" id="selectedTodayChart"></div>
-      </section>
-      <section class="chart-card side-chart" id="monthlyChartCard" title="Open daily monthly details">
-        <div class="chart-head">
-          <h2>Monthly Day-wise Generation - Selected Plants</h2>
-          <span class="chart-total" id="monthlyChartTotal"></span>
-        </div>
-        <div class="month-controls">
-          <select id="monthSelect"></select>
-          <select id="yearSelect"></select>
-        </div>
-        <div class="bar-chart grouped-chart" id="monthlyChart"></div>
       </section>
       <details class="fold mobile-fold" open>
         <summary>Selected Plant</summary>
@@ -1596,10 +1602,6 @@ section.panel tr.open td:nth-child(3)::after{content:'-'}
         <div class="log" id="log">Ready.</div>
       </details>
     </aside>
-    <section class="panel">
-      <h2>Plants</h2>
-      <table><thead><tr><th class="checkcell"></th><th>Brand</th><th>Plant</th><th>Status</th><th>Date</th><th>Daily</th><th>Weekly</th><th>Yearly</th><th>CUF</th></tr></thead><tbody id="rows"></tbody></table>
-    </section>
   </div>
 </main>
 <script>
@@ -1655,8 +1657,7 @@ function weightedCuf(rows){const cap=rows.reduce((a,p)=>a+Number(p.capacity||0),
 async function api(path,opt={}){const sep=path.includes('?')?'&':'?';const url=path+sep+'_ts='+Date.now();const r=await fetch(url,{cache:'no-store',...opt,headers:{'Cache-Control':'no-cache',...(opt.headers||{})}});const text=await r.text();let data={};try{data=text?JSON.parse(text):{};}catch(e){throw new Error(`${path} returned ${r.status}: ${text.slice(0,240)||'empty response'}`)}if(!r.ok){throw new Error(data.error||`${path} returned ${r.status}`)}return data}
 function filtered(){const q=searchInput.value.toLowerCase(), b=brandFilter.value, s=statusFilter.value;return plants.filter(p=>(b==='all'||p.brand===b)&&(s==='all'||p.status===s)&&(`${p.site} ${p.brand}`.toLowerCase().includes(q)))}
 function selectedRows(){return plants.filter(p=>selected.has(p.id))}
-function chartRows(){return selectedRows()}
-function chartQuery(type){const rows=chartRows();let query='type='+encodeURIComponent(type);if(!rows.length){query+='&plant_key=__none__'}else{rows.forEach(p=>query+='&plant_key='+encodeURIComponent(p.plantKey))}if(type==='monthly'){query+='&month='+encodeURIComponent(monthSelectEl.value||'')+'&year='+encodeURIComponent(yearSelectEl.value||'')}return query}
+function chartQuery(type,rows){rows=rows||filtered();let query='type='+encodeURIComponent(type);if(!rows.length){query+='&plant_key=__none__'}else{rows.forEach(p=>query+='&plant_key='+encodeURIComponent(p.plantKey))}if(type==='monthly'){query+='&month='+encodeURIComponent(monthSelectEl.value||'')+'&year='+encodeURIComponent(yearSelectEl.value||'')}return query}
 function setLoading(on){loadingIndicatorEl.classList.toggle('hidden',!on);refreshBtn.disabled=on;refreshBtn.textContent=on?'Refreshing...':'Refresh now'}
 function setWarning(message){warningLineEl.textContent=message||'';warningLineEl.classList.toggle('hidden',!message)}
 function refreshWarning(r){const bad=(r.steps||[]).filter(s=>!s.ok && !String(s.label||'').toLowerCase().includes('skipped'));return bad.length?'Some inverter/API refreshes failed. Showing last successful data: '+bad.slice(0,2).map(s=>s.label).join(', '):''}
@@ -1664,9 +1665,9 @@ function setupDateSelectors(){const monthNames=['January','February','March','Ap
 function renderFilters(){const oldBrand=brandFilter.value||'all', oldStatus=statusFilter.value||'all';const brands=uniq(plants.map(p=>p.brand)), statuses=uniq(plants.map(p=>p.status));brandFilter.innerHTML='<option value="all">All Brands</option>'+brands.map(x=>`<option>${x}</option>`).join('');statusFilter.innerHTML='<option value="all">All Status</option>'+statuses.map(x=>`<option>${x}</option>`).join('');brandFilter.value=brands.includes(oldBrand)?oldBrand:'all';statusFilter.value=statuses.includes(oldStatus)?oldStatus:'all'}
 function shortName(name){return String(name||'').replace(/\b(plant|solar|spv|kw)\b/gi,'').trim().slice(0,16)||'Plant'}
 function renderBars(el,totalEl,rows,key,unit='kWh',barClass=''){const top=[...rows].sort((a,b)=>Number(b[key]||0)-Number(a[key]||0));const total=rows.reduce((a,p)=>a+Number(p[key]||0),0);const max=Math.max(...top.map(p=>Number(p[key]||0)),1);totalEl.textContent=`${f(total)} ${unit}`;el.innerHTML=top.length?top.map(p=>{const value=Number(p[key]||0);const height=Math.max(value>0?2:1,value/max*100);return `<div class="bar-item" title="${h(p.site)} | Capacity: ${f(p.capacity)} kW | ${f(value)} ${unit}"><div class="bar-value">${f(value,1)}</div><div class="bar ${barClass}" style="height:${height}%"></div><div class="bar-label">${h(shortName(p.site))}</div></div>`}).join(''):'<div class="empty-history">Select one or more plants.</div>'}
-function renderPerKw(rows){const data=rows.map(p=>({...p,perKw:Number(p.capacity||0)>0?Number(p.daily||0)/Number(p.capacity||0):0}));const max=Math.max(...data.map(p=>p.perKw),1);perKwChartTotalEl.textContent=data.length?'kWh/kW':'No plants selected';perKwChartEl.innerHTML=data.length?data.map(p=>{const height=Math.max(p.perKw>0?2:1,p.perKw/max*100);const cap=Number(p.capacity||0);const title=cap>0?`${h(p.site)}: ${f(p.perKw)} kWh/kW (${f(p.daily)} kWh / ${f(cap)} kW)`:`${h(p.site)}: Capacity missing, shown as 0.00 kWh/kW`;return `<div class="bar-item" title="${title}"><div class="bar-value">${f(p.perKw)}</div><div class="bar perkw" style="height:${height}%"></div><div class="bar-label">${h(shortName(p.site))}</div></div>`}).join(''):'<div class="empty-history">Select plants to compare per-kW generation.</div>'}
+function renderPerKw(rows){const data=rows.map(p=>({...p,perKw:Number(p.capacity||0)>0?Number(p.daily||0)/Number(p.capacity||0):0}));const max=Math.max(...data.map(p=>p.perKw),1);perKwChartTotalEl.textContent=data.length?'All visible · kWh/kW':'No plant data';perKwChartEl.innerHTML=data.length?data.map(p=>{const height=Math.max(p.perKw>0?2:1,p.perKw/max*100);const cap=Number(p.capacity||0);const title=cap>0?`${h(p.site)}: ${f(p.perKw)} kWh/kW (${f(p.daily)} kWh / ${f(cap)} kW)`:`${h(p.site)}: Capacity missing, shown as 0.00 kWh/kW`;return `<div class="bar-item" title="${title}"><div class="bar-value">${f(p.perKw)}</div><div class="bar perkw" style="height:${height}%"></div><div class="bar-label">${h(shortName(p.site))}</div></div>`}).join(''):'<div class="empty-history">No visible plant data.</div>'}
 function colorFor(i){return ['#174f9c','#18b9d6','#16845f','#f59e0b','#7c3aed','#ef4444','#0891b2','#4f46e5'][i%8]}
-function renderMonthlyGrouped(data){const days=data.days||[], plantsList=data.plants||[];const allValues=days.flatMap(d=>(d.values||[]).map(v=>Number(v.generation||0)));const max=Math.max(...allValues,1);monthlyChartTotalEl.textContent=`${h(data.month||'Month')} · ${f(data.total)} kWh`;if(!plantsList.length){monthlyChartEl.innerHTML='<div class="empty-history">Select one or more plants.</div>';return}monthlyChartEl.innerHTML=days.length?days.map(d=>`<div class="day-group" title="${h(d.date)} total: ${f(d.generation)} kWh"><div class="day-bars">${plantsList.map((p,i)=>{const v=(d.values||[]).find(x=>x.plantKey===p.plantKey)||{};const gen=Number(v.generation||0);const height=Math.max(gen>0?2:1,gen/max*100);return `<div class="mini-bar" style="height:${height}%;background:${colorFor(i)}" title="${h(p.site)} · ${h(d.date)} · ${f(gen)} kWh"></div>`}).join('')}</div><div class="bar-label">${h(d.day)}</div></div>`).join(''):'<div class="empty-history">No monthly data</div>'}
+function renderMonthlyGrouped(data){const days=data.days||[], plantsList=data.plants||[];const allValues=days.flatMap(d=>(d.values||[]).map(v=>Number(v.generation||0)));const max=Math.max(...allValues,1);monthlyChartTotalEl.textContent=`${h(data.month||'Month')} · ${f(data.total)} kWh`;if(!plantsList.length){monthlyChartEl.innerHTML='<div class="empty-history">No visible plant data.</div>';return}monthlyChartEl.innerHTML=days.length?days.map(d=>`<div class="day-group" title="${h(d.date)} total: ${f(d.generation)} kWh"><div class="day-bars">${plantsList.map((p,i)=>{const v=(d.values||[]).find(x=>x.plantKey===p.plantKey)||{};const gen=Number(v.generation||0);const height=Math.max(gen>0?2:1,gen/max*100);return `<div class="mini-bar" style="height:${height}%;background:${colorFor(i)}" title="${h(p.site)} · ${h(d.date)} · ${f(gen)} kWh"></div>`}).join('')}</div><div class="bar-label">${h(d.day)}</div></div>`).join(''):'<div class="empty-history">No monthly data</div>'}
 async function loadMonthlyChart(rows){const key=rows.map(p=>`${p.plantKey}:${p.dataDate}:${p.daily}`).sort().join('|')+`|${monthSelectEl.value}|${yearSelectEl.value}`;if(key===monthlyChartKey)return;monthlyChartKey=key;monthlyChartEl.innerHTML='<div class="empty-history">Loading month...</div>';const query=rows.map(p=>'plant_key='+encodeURIComponent(p.plantKey)).join('&')+'&month='+encodeURIComponent(monthSelectEl.value||'')+'&year='+encodeURIComponent(yearSelectEl.value||'');try{renderMonthlyGrouped(await api('/api/monthly-generation?'+query))}catch(error){monthlyChartEl.innerHTML='<div class="empty-history">Monthly graph failed: '+h(error.message)+'</div>'}}
 function historyTable(title, rows, cols, open=false){if(!rows?.length)return `<details class="fold history-block"><summary>${title}</summary><div class="empty-history">No previous data yet. It will build after refreshes/uploads.</div></details>`;return `<details class="fold history-block" ${open?'open':''}><summary>${title}</summary><div class="history-scroll"><table><thead><tr>${cols.map(c=>`<th>${c[0]}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td>${c[2]?f(r[c[1]]):h(r[c[1]])}</td>`).join('')}</tr>`).join('')}</tbody></table></div></details>`}
 function opt(rows,key){return (rows||[]).map((r,i)=>`<option value="${i}">${h(r[key]||'')}</option>`).join('')}
@@ -1682,7 +1683,7 @@ async function loadHistory(active){const key=active?.plantKey||'';activeHistoryK
 function renderDetail(active){if(!active){detailEl.innerHTML='<div class="empty-history">Tap a plant name to view details.</div>';return}detailEl.innerHTML=`<div class="plant-title">${h(active.site)}</div><p>${h(active.brand)} · <span class="status ${cls(active.status)}">${h(active.status)}</span></p>${staleNote(active)?`<p class="stale">${h(staleNote(active))}</p>`:''}<div class="details"><div class="detail"><span>Data Date</span><b>${h(active.dataDate||'Unknown')}</b></div><div class="detail"><span>Capacity</span><b>${f(active.capacity)} kW</b></div><div class="detail"><span>Daily</span><b>${f(active.daily)} kWh</b></div><div class="detail"><span>Weekly</span><b>${f(active.weekly)} kWh</b></div><div class="detail"><span>Yearly</span><b>${f(active.year)} kWh</b></div><div class="detail"><span>CUF</span><b>${f(active.cuf)}%</b></div><div class="detail"><span>Total</span><b>${f(active.total)} MWh</b></div></div><div id="historyBox" class="history-block"></div>`;loadHistory(active)}
 function renderSelectedPlantDetails(rows){selectedPlantDetailsEl.innerHTML=rows.length?rows.map(p=>`<div class="selected-card ${cls(p.status)}"><b>${h(p.site)}</b><span>Capacity: ${f(p.capacity)} kW</span><span>Current Power: ${f(p.currentPower)} kW</span><span>Today's Generation: ${f(p.daily)} kWh</span><span>Status: ${h(p.status)}</span><span>Last Updated: ${h(p.timestamp||p.dataDate||'Unavailable')}</span></div>`).join(''):'<div class="empty-history">Select plants to see live details.</div>'}
 function render(){const rows=filtered(), chosen=selectedRows();let active=plants.find(p=>p.id===activePlantId);if(active && !rows.some(p=>p.id===active.id)){activePlantId=null;active=null}cardsEl.innerHTML=[['Visible',rows.length],['Selected',chosen.length],['Daily',f(rows.reduce((a,p)=>a+p.daily,0))+' kWh'],['Weekly',f(rows.reduce((a,p)=>a+p.weekly,0))+' kWh'],['Yearly',f(rows.reduce((a,p)=>a+p.year,0))+' kWh'],['CUF',f(weightedCuf(rows))+' %']].map(x=>`<div class="card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join('');
-renderPerKw(chosen);renderSelectedPlantDetails(chosen);renderBars(selectedTodayChartEl,selectedTodayTotalEl,chosen,'daily','kWh','');loadMonthlyChart(chosen);
+renderPerKw(rows);renderSelectedPlantDetails(chosen);renderBars(selectedTodayChartEl,selectedTodayTotalEl,chosen,'daily','kWh','');loadMonthlyChart(rows);
 rowsEl.innerHTML=rows.map(p=>`<tr data-id="${p.id}" style="cursor:pointer"><td data-label=""><input type="checkbox" data-id="${p.id}" ${selected.has(p.id)?'checked':''}></td><td data-label="Brand">${h(p.brand)}</td><td data-label="Plant"><span class="plant-line ${cls(p.status)}"><b>${h(p.site)}</b><span class="plant-daily">${f(p.daily)} kWh</span></span></td><td data-label="Status" class="status ${cls(p.status)}">${h(p.status)}</td><td data-label="Date" title="${h(staleNote(p))}">${h(p.dataDate||'')} <span class="pill ${pillClass(p)}">${pillText(p)}</span></td><td data-label="Daily">${f(p.daily)}</td><td data-label="Weekly">${f(p.weekly)}</td><td data-label="Yearly">${f(p.year)}</td><td data-label="CUF">${f(p.cuf)}%</td></tr>`).join('');
 rowsEl.querySelectorAll('tr[data-id]').forEach(tr=>{if(tr.dataset.id===activePlantId)tr.classList.add('open');tr.onclick=()=>{activePlantId=tr.dataset.id===activePlantId?null:tr.dataset.id;render()}});
 rowsEl.querySelectorAll('input[type=checkbox][data-id]').forEach(cb=>{cb.onclick=e=>e.stopPropagation();cb.onchange=()=>{cb.checked?selected.add(cb.dataset.id):selected.delete(cb.dataset.id);render()}});
@@ -1702,9 +1703,9 @@ reportPlantBtn.onclick=()=>{if(!activePlantId){reportResultEl.textContent='Tap a
 reportBtn.onclick=()=>{if(!selected.size){reportResultEl.textContent='Tick one or more plants first.';return}generateReport([...selected],'selected report')};
 selectAllBtn.onclick=()=>{const visible=filtered();const all=visible.every(p=>selected.has(p.id));visible.forEach(p=>all?selected.delete(p.id):selected.add(p.id));render()}
 saveScheduleBtn.onclick=async()=>{const r=await api('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({auto_report_day:autoDayEl.value,auto_report_time:autoTimeEl.value})});logEl.textContent='Saved schedule: '+r.config.auto_report_day+' '+r.config.auto_report_time}
-perKwChartCardEl.onclick=()=>window.open('/chart-detail?'+chartQuery('today'),'_blank');
-selectedTodayChartCardEl.onclick=()=>window.open('/chart-detail?'+chartQuery('today'),'_blank');
-monthlyChartCardEl.onclick=()=>window.open('/chart-detail?'+chartQuery('monthly'),'_blank');
+perKwChartCardEl.onclick=()=>window.open('/chart-detail?'+chartQuery('today',filtered()),'_blank');
+selectedTodayChartCardEl.onclick=()=>window.open('/chart-detail?'+chartQuery('today',selectedRows()),'_blank');
+monthlyChartCardEl.onclick=()=>window.open('/chart-detail?'+chartQuery('monthly',filtered()),'_blank');
 monthSelectEl.onchange=()=>{monthlyChartKey='';render()};yearSelectEl.onchange=()=>{monthlyChartKey='';render()};
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){load({preserveSelection:true,reports:false}).catch(error=>setWarning('Could not reload dashboard after returning: '+error.message));startRefresh('resume');}});
 searchInput.oninput=render;brandFilter.onchange=render;statusFilter.onchange=render;setupDateSelectors();startAutoRefresh();load({preserveSelection:false}).catch(error=>{setWarning('App load failed. Please try Refresh now. '+error.message);logEl.textContent='App load failed: '+error;});
