@@ -55,7 +55,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-12-selected-plant-smooth-curve-v40"
+APP_VERSION = "2026-07-12-selected-plant-date-picker-v44"
 IST = ZoneInfo("Asia/Kolkata")
 PLANT_COLUMNS = [
     "App ID",
@@ -821,8 +821,14 @@ class SolarLiveApp:
             "total": round(total, 3),
         }
 
-    def today_hourly_payload(self, plant_keys: list[str], user: dict[str, Any] | None = None) -> dict[str, Any]:
+    def today_hourly_payload(
+        self,
+        plant_keys: list[str],
+        user: dict[str, Any] | None = None,
+        target_date: dt.date | None = None,
+    ) -> dict[str, Any]:
         today = ist_today()
+        graph_date = target_date or today
         allowed_keys = set(plant_keys or [])
         current_rows = self.plant_payload(user or {"role": "admin", "plants": ["*"]})
         if allowed_keys:
@@ -834,7 +840,7 @@ class SolarLiveApp:
             if key not in visible_keys or not user_can_access(user, key):
                 continue
             row_date = parse_iso_date(row.get("date"))
-            if row_date != today:
+            if row_date != graph_date:
                 continue
             hour = str(row.get("hourLabel") or str(row.get("hour", ""))[11:16] or "")
             if hour:
@@ -846,16 +852,32 @@ class SolarLiveApp:
             for plant in current_rows
             if plant.get("dataDate") == today.isoformat()
         )
-        if live_total:
+        if graph_date == today and live_total:
             totals[now_hour.strftime("%H:00")] = live_total
 
         hours = []
-        cursor = today
         for hour in range(24):
             label = f"{hour:02d}:00"
-            if label in totals or hour <= ist_now().hour:
+            if label in totals or graph_date < today or hour <= ist_now().hour:
                 hours.append({"hour": label, "generation": round(totals.get(label, 0.0), 3)})
-        return {"date": today.isoformat(), "hours": hours, "total": round(max((row["generation"] for row in hours), default=0.0), 3)}
+        previous = 0.0
+        total_capacity = sum(float(plant.get("capacity") or 0) for plant in current_rows)
+        live_power = sum(float(plant.get("currentPower") or 0) for plant in current_rows)
+        for index, row in enumerate(hours):
+            generation = float(row.get("generation") or 0)
+            estimated_power = max(0.0, generation - previous)
+            if index == len(hours) - 1 and live_power > 0:
+                estimated_power = live_power
+            if total_capacity > 0:
+                estimated_power = min(estimated_power, total_capacity * 1.2)
+            row["power"] = round(estimated_power, 3)
+            previous = generation
+        return {
+            "date": graph_date.isoformat(),
+            "hours": hours,
+            "total": round(max((row["generation"] for row in hours), default=0.0), 3),
+            "capacity": round(total_capacity, 3),
+        }
 
     def chart_export_rows(
         self,
@@ -864,6 +886,7 @@ class SolarLiveApp:
         user: dict[str, Any] | None = None,
         month: int | None = None,
         year: int | None = None,
+        target_date: dt.date | None = None,
     ) -> tuple[str, list[dict[str, Any]]]:
         if chart_type == "perkw":
             allowed_keys = set(plant_keys or [])
@@ -890,7 +913,7 @@ class SolarLiveApp:
                 {"Date": item["date"], "Generation (kWh)": item["generation"]}
                 for item in payload.get("days", [])
             ]
-        payload = self.today_hourly_payload(plant_keys, user)
+        payload = self.today_hourly_payload(plant_keys, user, target_date=target_date)
         return f"Today's Generation - {payload['date']}", [
             {"Period": item["hour"], "Generation (kWh)": item["generation"]}
             for item in payload.get("hours", [])
@@ -903,8 +926,9 @@ class SolarLiveApp:
         user: dict[str, Any] | None = None,
         month: int | None = None,
         year: int | None = None,
+        target_date: dt.date | None = None,
     ) -> bytes:
-        _title, rows = self.chart_export_rows(chart_type, plant_keys, user, month=month, year=year)
+        _title, rows = self.chart_export_rows(chart_type, plant_keys, user, month=month, year=year, target_date=target_date)
         output = io.StringIO()
         fieldnames = list(rows[0].keys()) if rows else ["Period", "Generation (kWh)"]
         writer = csv.DictWriter(output, fieldnames=fieldnames)
@@ -919,13 +943,14 @@ class SolarLiveApp:
         user: dict[str, Any] | None = None,
         month: int | None = None,
         year: int | None = None,
+        target_date: dt.date | None = None,
     ) -> bytes:
         from reportlab.lib import colors
         from reportlab.lib.pagesizes import A4
         from reportlab.lib.styles import getSampleStyleSheet
         from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 
-        _title, rows = self.chart_export_rows(chart_type, plant_keys, user, month=month, year=year)
+        _title, rows = self.chart_export_rows(chart_type, plant_keys, user, month=month, year=year, target_date=target_date)
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=28, rightMargin=28, topMargin=28, bottomMargin=28)
         fieldnames = list(rows[0].keys()) if rows else ["Period", "Generation (kWh)"]
@@ -1164,6 +1189,8 @@ class Handler(BaseHTTPRequestHandler):
             parsed = urllib.parse.urlparse(self.path)
             if parsed.path == "/healthz":
                 self.send_json({"ok": True})
+            elif parsed.path == "/api/version":
+                self.send_json({"app_version": APP_VERSION})
             elif parsed.path == "/login":
                 self.send_login_page()
             elif parsed.path == "/reset-password":
@@ -1216,7 +1243,8 @@ class Handler(BaseHTTPRequestHandler):
         elif parsed.path == "/api/today-hourly-generation":
             query = urllib.parse.parse_qs(parsed.query)
             keys = [value for value in (query.get("plant_key") or []) if value]
-            self.send_json(APP.today_hourly_payload(keys, user))
+            target_date = parse_iso_date((query.get("date") or [""])[0])
+            self.send_json(APP.today_hourly_payload(keys, user, target_date=target_date))
         elif parsed.path == "/api/status":
             self.send_json(
                 {
@@ -1240,12 +1268,15 @@ class Handler(BaseHTTPRequestHandler):
             keys = [value for value in (query.get("plant_key") or []) if value]
             month = int((query.get("month") or [0])[0] or 0)
             year = int((query.get("year") or [0])[0] or 0)
-            title, rows = APP.chart_export_rows(chart_type, keys, user, month=month, year=year)
+            target_date = parse_iso_date((query.get("date") or [""])[0])
+            title, rows = APP.chart_export_rows(chart_type, keys, user, month=month, year=year, target_date=target_date)
             base_items = [("type", chart_type)] + [("plant_key", key) for key in keys]
             if month:
                 base_items.append(("month", str(month)))
             if year:
                 base_items.append(("year", str(year)))
+            if target_date:
+                base_items.append(("date", target_date.isoformat()))
             base_query = urllib.parse.urlencode(base_items)
             headers = list(rows[0].keys()) if rows else ["Period", "Generation (kWh)"]
             header_html = "".join(f"<th>{html_escape(header)}</th>" for header in headers)
@@ -1266,14 +1297,16 @@ class Handler(BaseHTTPRequestHandler):
             keys = [value for value in (query.get("plant_key") or []) if value]
             month = int((query.get("month") or [0])[0] or 0)
             year = int((query.get("year") or [0])[0] or 0)
-            self.send_bytes(APP.chart_csv_bytes(chart_type, keys, user, month=month, year=year), "text/csv; charset=utf-8", f"{chart_type}_generation.csv")
+            target_date = parse_iso_date((query.get("date") or [""])[0])
+            self.send_bytes(APP.chart_csv_bytes(chart_type, keys, user, month=month, year=year, target_date=target_date), "text/csv; charset=utf-8", f"{chart_type}_generation.csv")
         elif parsed.path == "/chart-pdf":
             query = urllib.parse.parse_qs(parsed.query)
             chart_type = (query.get("type") or ["today"])[0]
             keys = [value for value in (query.get("plant_key") or []) if value]
             month = int((query.get("month") or [0])[0] or 0)
             year = int((query.get("year") or [0])[0] or 0)
-            self.send_bytes(APP.chart_pdf_bytes(chart_type, keys, user, month=month, year=year), "application/pdf", f"{chart_type}_generation.pdf")
+            target_date = parse_iso_date((query.get("date") or [""])[0])
+            self.send_bytes(APP.chart_pdf_bytes(chart_type, keys, user, month=month, year=year, target_date=target_date), "application/pdf", f"{chart_type}_generation.pdf")
         elif parsed.path.startswith("/reports/"):
             relative = urllib.parse.unquote(parsed.path[len("/reports/") :])
             path = (APP.output_dir / relative).resolve()
@@ -1507,7 +1540,7 @@ button{height:36px;border:0;border-radius:6px;padding:0 13px;background:var(--bl
 .grid{display:grid;grid-template-columns:repeat(6,minmax(120px,1fr));gap:10px;margin-bottom:12px}.card,.panel{background:white;border:1px solid var(--line);border-radius:8px;box-shadow:0 1px 4px rgba(15,35,60,.05)}
 .card{padding:12px;min-height:78px}.card span{display:block;color:var(--muted);font-size:11px;font-weight:700;margin-bottom:10px}.card strong{font-size:20px}
 .panel{padding:14px}.split{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(340px,.85fr);gap:12px;align-items:start}h2{font-size:15px;margin:0 0 10px}
-.main-charts{display:grid;grid-template-columns:minmax(0,7fr) minmax(280px,3fr);gap:12px;margin-bottom:12px;justify-content:stretch;align-items:start}.main-chart{margin-bottom:0;min-height:0;width:100%;max-width:none}.chart-card{background:white;border:1px solid var(--line);border-radius:8px;padding:14px;box-shadow:0 1px 4px rgba(15,35,60,.05);min-height:220px;cursor:pointer}.main-chart{height:300px;overflow:hidden;padding:10px 10px 8px}.side-chart{margin-top:12px;min-height:230px}.chart-card:hover{border-color:var(--cyan);box-shadow:0 2px 8px rgba(15,35,60,.10)}.chart-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}.chart-head h2{margin:0}.chart-total{font-size:12px;font-weight:900;color:var(--green);white-space:nowrap}.bar-chart{height:180px;display:flex;align-items:end;gap:7px;border-left:1px solid var(--line);border-bottom:1px solid var(--line);padding:6px 6px 0;overflow-x:auto;overflow-y:hidden}.area-chart{height:180px;border-left:1px solid var(--line);border-bottom:1px solid var(--line);background:linear-gradient(180deg,#fbfdff,#f8fafc);border-radius:6px;padding:6px;overflow:hidden}.area-chart svg{width:100%;height:100%;display:block}.main-chart .bar-chart{height:222px;max-height:222px;gap:5px}.bar-item{min-width:28px;flex:1;max-width:72px;display:flex;flex-direction:column;align-items:center;justify-content:end;height:100%;gap:5px}.main-chart .bar-item{flex:0 0 24px;min-width:24px;max-width:24px}.bar{width:100%;min-height:2px;border-radius:4px 4px 0 0;background:linear-gradient(180deg,var(--cyan),var(--blue));position:relative}.main-chart .bar{width:14px}.bar.candle{background:linear-gradient(180deg,#34d399,var(--green))}.bar.perkw{background:linear-gradient(180deg,#22c55e,var(--green))}.bar-label{font-size:10px;color:var(--muted);max-width:64px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}.bar-value{font-size:10px;font-weight:900;color:var(--ink);white-space:nowrap}#perKwChart{height:245px;max-height:245px;padding-bottom:52px;overflow-x:auto;overflow-y:visible}#perKwChart .bar-item{height:188px;justify-content:flex-end;overflow:visible}#perKwChart .bar-label{width:96px;max-width:96px;overflow:visible;text-overflow:clip;transform:rotate(-22deg);transform-origin:top right;text-align:right;color:var(--ink);margin-top:10px;line-height:1.1}.grouped-chart{align-items:end}.day-group{flex:0 0 22px;min-width:22px;max-width:22px;height:100%;display:flex;flex-direction:column;justify-content:end;gap:3px}.day-bars{height:calc(100% - 18px);display:flex;align-items:end;justify-content:center;gap:2px}.mini-bar{flex:0 0 12px;min-width:12px;max-width:12px;border-radius:4px 4px 0 0;background:var(--blue)}#monthlyChart{height:222px;max-height:222px}.selected-monthly-chart .day-group{flex-basis:20px;min-width:20px;max-width:20px}.month-controls{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:5px}.selected-plant-list{display:grid;gap:8px;max-height:260px;overflow:auto}.selected-card{border:1px solid var(--line);border-radius:7px;background:#fbfdff;padding:9px}.selected-card.online{background:#f0fdf4;border-color:#bbf7d0}.selected-card.offline{background:#f8fafc;border-color:#d7e0ec}.selected-card b{display:block;margin-bottom:5px}.selected-card span{display:block;color:var(--muted);font-size:11px;line-height:1.55}
+.main-charts{display:grid;grid-template-columns:minmax(0,7fr) minmax(280px,3fr);gap:12px;margin-bottom:12px;justify-content:stretch;align-items:start}.main-chart{margin-bottom:0;min-height:0;width:100%;max-width:none}.chart-card{background:white;border:1px solid var(--line);border-radius:8px;padding:14px;box-shadow:0 1px 4px rgba(15,35,60,.05);min-height:220px;cursor:pointer}.main-chart{height:300px;overflow:hidden;padding:10px 10px 8px}.side-chart{margin-top:12px;min-height:230px}.production-card{padding:0;overflow:hidden}.production-card .chart-head{padding:12px 14px;margin:0;border-bottom:1px solid var(--line)}.production-card .chart-head h2{letter-spacing:.08em;text-transform:uppercase}.production-card .chart-total{font-size:24px;color:var(--green);font-weight:750}.production-footer{border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 14px;background:#fbfdff}.production-date{height:30px;width:142px;border:0;background:transparent;padding:0;font-size:13px;font-weight:900;color:var(--ink)}.production-tabs{display:flex;align-items:center;gap:3px}.production-tabs button{height:30px;background:transparent;color:var(--muted);border-radius:0;padding:0 8px;border-bottom:3px solid transparent}.production-tabs button.active{color:var(--blue);border-bottom-color:var(--blue)}.chart-card:hover{border-color:var(--cyan);box-shadow:0 2px 8px rgba(15,35,60,.10)}.chart-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}.chart-head h2{margin:0}.chart-total{font-size:12px;font-weight:900;color:var(--green);white-space:nowrap}.bar-chart{height:180px;display:flex;align-items:end;gap:7px;border-left:1px solid var(--line);border-bottom:1px solid var(--line);padding:6px 6px 0;overflow-x:auto;overflow-y:hidden}.area-chart{height:180px;border-left:1px solid var(--line);border-bottom:1px solid var(--line);background:linear-gradient(180deg,#fbfdff,#f8fafc);border-radius:6px;padding:6px;overflow:hidden}.production-chart{height:300px;border:0;border-radius:0;background:#fff;padding:0 10px 8px;overflow:hidden}.area-chart svg{width:100%;height:100%;display:block}.main-chart .bar-chart{height:222px;max-height:222px;gap:5px}.bar-item{min-width:28px;flex:1;max-width:72px;display:flex;flex-direction:column;align-items:center;justify-content:end;height:100%;gap:5px}.main-chart .bar-item{flex:0 0 24px;min-width:24px;max-width:24px}.bar{width:100%;min-height:2px;border-radius:4px 4px 0 0;background:linear-gradient(180deg,var(--cyan),var(--blue));position:relative}.main-chart .bar{width:14px}.bar.candle{background:linear-gradient(180deg,#34d399,var(--green))}.bar.perkw{background:linear-gradient(180deg,#22c55e,var(--green))}.bar-label{font-size:10px;color:var(--muted);max-width:64px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}.bar-value{font-size:10px;font-weight:900;color:var(--ink);white-space:nowrap}#perKwChart{height:245px;max-height:245px;padding-bottom:52px;overflow-x:auto;overflow-y:visible}#perKwChart .bar-item{height:188px;justify-content:flex-end;overflow:visible}#perKwChart .bar-label{width:96px;max-width:96px;overflow:visible;text-overflow:clip;transform:rotate(-22deg);transform-origin:top right;text-align:right;color:var(--ink);margin-top:10px;line-height:1.1}.grouped-chart{align-items:end}.day-group{flex:0 0 22px;min-width:22px;max-width:22px;height:100%;display:flex;flex-direction:column;justify-content:end;gap:3px}.day-bars{height:calc(100% - 18px);display:flex;align-items:end;justify-content:center;gap:2px}.mini-bar{flex:0 0 12px;min-width:12px;max-width:12px;border-radius:4px 4px 0 0;background:var(--blue)}#monthlyChart{height:222px;max-height:222px}.selected-monthly-chart .day-group{flex-basis:20px;min-width:20px;max-width:20px}.month-controls{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:5px}.selected-plant-list{display:grid;gap:8px;max-height:260px;overflow:auto}.selected-card{border:1px solid var(--line);border-radius:7px;background:#fbfdff;padding:9px}.selected-card.online{background:#f0fdf4;border-color:#bbf7d0}.selected-card.offline{background:#f8fafc;border-color:#d7e0ec}.selected-card b{display:block;margin-bottom:5px}.selected-card span{display:block;color:var(--muted);font-size:11px;line-height:1.55}
 table{width:100%;border-collapse:collapse;font-size:12px}th{background:var(--blue);color:white;text-align:left;padding:8px 7px}td{border-bottom:1px solid var(--line);padding:7px}tr:nth-child(even){background:#f8fafc}
 .status{font-weight:800}.online{color:var(--green)}.offline,.stale{color:var(--red)}.fresh{color:var(--green)}.pill{display:inline-block;border-radius:999px;padding:2px 7px;font-size:10px;font-weight:800;color:white}.pill.fresh{background:var(--green);color:white}.pill.stale{background:var(--red);color:white}.pill.offline{background:#111827;color:white}
 .plant-title{font-size:21px;font-weight:850}.details{display:grid;grid-template-columns:1fr 1fr;gap:8px}.detail{border:1px solid var(--line);border-radius:6px;background:#fbfdff;padding:10px}.detail span{display:block;color:var(--muted);font-size:11px;font-weight:700;margin-bottom:7px}
@@ -1521,7 +1554,7 @@ h1{font-size:18px;line-height:1.15}.meta{grid-column:1 / -1;margin:0;text-align:
 main{padding:10px;max-width:none;overflow-x:hidden}.toolbar{display:grid;grid-template-columns:1fr;gap:8px}.toolbar button{width:100%;height:42px}
 .update-strip{font-size:11px;gap:6px;margin-bottom:8px}.update-strip span{max-width:100%}
 .grid{grid-template-columns:1fr 1fr;gap:8px}.card{min-height:68px;padding:10px}.card span{margin-bottom:6px}.card strong{font-size:17px}
-.chart-card{padding:10px;min-height:0}.main-chart{height:255px;padding:9px}.side-chart{margin-top:8px}.chart-head{align-items:flex-start}.chart-head h2{font-size:14px}.bar-chart{height:190px;gap:5px}.main-chart .bar-chart{height:170px;max-height:170px}.grouped-chart{height:155px}.bar-item{min-width:26px}.main-chart .bar-item{flex-basis:22px;min-width:22px;max-width:22px}.main-chart .bar{width:12px}.day-group{flex-basis:20px;min-width:20px;max-width:20px}.mini-bar{flex-basis:10px;min-width:10px;max-width:10px}.bar-label{font-size:9px;max-width:50px}#perKwChart{height:202px;max-height:202px;padding-bottom:46px}#perKwChart .bar-item{height:146px}#perKwChart .bar-label{width:74px;max-width:74px;margin-top:10px;transform:rotate(-22deg)}#monthlyChart{height:170px;max-height:170px}.bar-value{display:none}.selected-plant-list{max-height:none}.selected-card{padding:8px}.month-controls select{height:36px}
+.chart-card{padding:10px;min-height:0}.main-chart{height:255px;padding:9px}.side-chart{margin-top:8px}.production-card{padding:0}.production-card .chart-head{padding:10px}.production-card .chart-total{font-size:18px}.production-footer{padding:8px 10px;align-items:flex-start}.production-date{font-size:12px;width:136px}.production-tabs{flex-wrap:wrap;justify-content:flex-end}.production-tabs button{height:28px;padding:0 6px}.chart-head{align-items:flex-start}.chart-head h2{font-size:14px}.bar-chart{height:190px;gap:5px}.production-chart{height:220px}.main-chart .bar-chart{height:170px;max-height:170px}.grouped-chart{height:155px}.bar-item{min-width:26px}.main-chart .bar-item{flex-basis:22px;min-width:22px;max-width:22px}.main-chart .bar{width:12px}.day-group{flex-basis:20px;min-width:20px;max-width:20px}.mini-bar{flex-basis:10px;min-width:10px;max-width:10px}.bar-label{font-size:9px;max-width:50px}#perKwChart{height:202px;max-height:202px;padding-bottom:46px}#perKwChart .bar-item{height:146px}#perKwChart .bar-label{width:74px;max-width:74px;margin-top:10px;transform:rotate(-22deg)}#monthlyChart{height:170px;max-height:170px}.bar-value{display:none}.selected-plant-list{max-height:none}.selected-card{padding:8px}.month-controls select{height:36px}
 .panel{padding:12px;border-radius:8px}.split{gap:10px}.details{grid-template-columns:1fr}.detail{padding:9px}
 section.panel table,section.panel thead,section.panel tbody,section.panel tr,section.panel td{display:block;width:100%}
 section.panel table{border-collapse:separate;border-spacing:0}
@@ -1592,9 +1625,18 @@ section.panel tr.open td:nth-child(3)::after{content:'-'}
         <summary>Selected Plant Details</summary>
         <div id="selectedPlantDetails" class="selected-plant-list"></div>
       </details>
-      <section class="chart-card side-chart" id="selectedTodayChartCard" title="Open hourly details">
-        <div class="chart-head"><h2>Today's Generation - Selected Plant</h2><span class="chart-total" id="selectedTodayTotal"></span></div>
-        <div class="area-chart" id="selectedTodayChart"></div>
+      <section class="chart-card side-chart production-card" id="selectedTodayChartCard" title="Open hourly details">
+        <div class="chart-head"><h2>Production - Selected Plant</h2><span class="chart-total" id="selectedTodayTotal"></span></div>
+        <div class="area-chart production-chart" id="selectedTodayChart"></div>
+        <div class="production-footer">
+          <input class="production-date" id="productionDatePick" type="date">
+          <span class="production-tabs" id="productionTabs">
+            <button type="button" data-mode="day" class="active">DAY</button>
+            <button type="button" data-mode="month">MONTH</button>
+            <button type="button" data-mode="year">YEAR</button>
+            <button type="button" data-mode="total">TOTAL</button>
+          </span>
+        </div>
       </section>
       <section class="chart-card side-chart" id="selectedMonthlyChartCard" title="Open selected plant monthly details">
         <div class="chart-head"><h2>Monthly Generation - Selected Plant</h2><span class="chart-total" id="selectedMonthlyTotal"></span></div>
@@ -1625,7 +1667,7 @@ section.panel tr.open td:nth-child(3)::after{content:'-'}
   </div>
 </main>
 <script>
-let plants=[], selected=new Set(), statusData={}, activePlantId=null, activeHistoryKey='', activeTodayChartKey='', activeMonthlyChartKey='', openRefreshStarted=false, monthlyChartKey='', refreshInFlight=false, autoRefreshTimer=null;
+let plants=[], selected=new Set(), statusData={}, activePlantId=null, activeHistoryKey='', activeTodayChartKey='', activeMonthlyChartKey='', openRefreshStarted=false, monthlyChartKey='', refreshInFlight=false, autoRefreshTimer=null, productionMode='day', productionDate='';
 const searchInput=document.querySelector('#search');
 const brandFilter=document.querySelector('#brand');
 const statusFilter=document.querySelector('#status');
@@ -1636,6 +1678,8 @@ const perKwChartTotalEl=document.querySelector('#perKwChartTotal');
 const selectedTodayChartEl=document.querySelector('#selectedTodayChart');
 const selectedTodayChartCardEl=document.querySelector('#selectedTodayChartCard');
 const selectedTodayTotalEl=document.querySelector('#selectedTodayTotal');
+const productionDatePickEl=document.querySelector('#productionDatePick');
+const productionTabsEl=document.querySelector('#productionTabs');
 const selectedMonthlyChartEl=document.querySelector('#selectedMonthlyChart');
 const selectedMonthlyChartCardEl=document.querySelector('#selectedMonthlyChartCard');
 const selectedMonthlyTotalEl=document.querySelector('#selectedMonthlyTotal');
@@ -1680,7 +1724,10 @@ function weightedCuf(rows){const cap=rows.reduce((a,p)=>a+Number(p.capacity||0),
 async function api(path,opt={}){const sep=path.includes('?')?'&':'?';const url=path+sep+'_ts='+Date.now();const r=await fetch(url,{cache:'no-store',...opt,headers:{'Cache-Control':'no-cache',...(opt.headers||{})}});const text=await r.text();let data={};try{data=text?JSON.parse(text):{};}catch(e){throw new Error(`${path} returned ${r.status}: ${text.slice(0,240)||'empty response'}`)}if(!r.ok){throw new Error(data.error||`${path} returned ${r.status}`)}return data}
 function filtered(){const q=searchInput.value.toLowerCase(), b=brandFilter.value, s=statusFilter.value;return plants.filter(p=>(b==='all'||p.brand===b)&&(s==='all'||p.status===s)&&(`${p.site} ${p.brand}`.toLowerCase().includes(q)))}
 function selectedRows(){return plants.filter(p=>selected.has(p.id))}
-function chartQuery(type,rows){rows=rows||filtered();let query='type='+encodeURIComponent(type);if(!rows.length){query+='&plant_key=__none__'}else{rows.forEach(p=>query+='&plant_key='+encodeURIComponent(p.plantKey))}if(type==='monthly'){query+='&month='+encodeURIComponent(monthSelectEl.value||'')+'&year='+encodeURIComponent(yearSelectEl.value||'')}return query}
+function chartQuery(type,rows){rows=rows||filtered();let query='type='+encodeURIComponent(type);if(!rows.length){query+='&plant_key=__none__'}else{rows.forEach(p=>query+='&plant_key='+encodeURIComponent(p.plantKey))}if(type==='monthly'){query+='&month='+encodeURIComponent(monthSelectEl.value||'')+'&year='+encodeURIComponent(yearSelectEl.value||'')}if(type==='today'){query+='&date='+encodeURIComponent(productionDateValue())}return query}
+function productionDateValue(){return productionDatePickEl.value||productionDate||todayText()}
+function productionYear(){return Number(productionDateValue().slice(0,4))||Number(todayText().slice(0,4))}
+function productionMonth(){return Number(productionDateValue().slice(5,7))||Number(todayText().slice(5,7))}
 function setLoading(on){loadingIndicatorEl.classList.toggle('hidden',!on);refreshBtn.disabled=on;refreshBtn.textContent=on?'Refreshing...':'Refresh now'}
 function setWarning(message){warningLineEl.textContent=message||'';warningLineEl.classList.toggle('hidden',!message)}
 function refreshWarning(r){const bad=(r.steps||[]).filter(s=>!s.ok && !String(s.label||'').toLowerCase().includes('skipped'));return bad.length?'Some inverter/API refreshes failed. Showing last successful data: '+bad.slice(0,2).map(s=>s.label).join(', '):''}
@@ -1694,9 +1741,13 @@ function renderPerKw(rows){const data=rows.map(p=>({...p,perKw:Number(p.capacity
 function colorFor(i){return ['#174f9c','#18b9d6','#16845f','#f59e0b','#7c3aed','#ef4444','#0891b2','#4f46e5'][i%8]}
 function renderMonthlyGrouped(data){const days=data.days||[], plantsList=data.plants||[];const max=Math.max(...days.map(d=>Number(d.generation||0)),1);monthlyChartTotalEl.textContent=`${h(data.month||'Month')} · ${f(data.total)} kWh`;if(!plantsList.length){monthlyChartEl.innerHTML='<div class="empty-history">No visible plant data.</div>';return}monthlyChartEl.innerHTML=days.length?days.map(d=>{const value=Number(d.generation||0);const height=Math.max(value>0?2:1,value/max*100);return `<div class="day-group" title="${h(d.date)} total all visible plants: ${f(value)} kWh"><div class="day-bars"><div class="mini-bar" style="height:${height}%;background:linear-gradient(180deg,#34d399,var(--green))" title="${h(d.date)} · ${f(value)} kWh"></div></div><div class="bar-label">${h(d.day)}</div></div>`}).join(''):'<div class="empty-history">No monthly data</div>'}
 async function loadMonthlyChart(rows){const key=rows.map(p=>`${p.plantKey}:${p.dataDate}:${p.daily}`).sort().join('|')+`|${monthSelectEl.value}|${yearSelectEl.value}`;if(key===monthlyChartKey)return;monthlyChartKey=key;monthlyChartEl.innerHTML='<div class="empty-history">Loading month...</div>';const query=rows.map(p=>'plant_key='+encodeURIComponent(p.plantKey)).join('&')+'&month='+encodeURIComponent(monthSelectEl.value||'')+'&year='+encodeURIComponent(yearSelectEl.value||'');try{renderMonthlyGrouped(await api('/api/monthly-generation?'+query))}catch(error){monthlyChartEl.innerHTML='<div class="empty-history">Monthly graph failed: '+h(error.message)+'</div>'}}
-function renderAreaChart(data, plant){let hours=data.hours||[];selectedTodayTotalEl.textContent=`${f(data.total)} kWh`;if(!plant){selectedTodayChartEl.innerHTML='<div class="empty-history">Click a plant name.</div>';return}const firstGen=hours.findIndex(x=>Number(x.generation||0)>0);if(firstGen>=0)hours=hours.slice(firstGen);if(!hours.length){selectedTodayChartEl.innerHTML='<div class="empty-history">Generation has not started today.</div>';return}const max=Math.max(...hours.map(x=>Number(x.generation||0)),1);const points=hours.map((x,i)=>{const px=hours.length===1?160:(i/(hours.length-1))*320;const py=124-(Number(x.generation||0)/max)*110;return [px,py,x]});function smoothPath(items){if(items.length===1)return `M ${items[0][0].toFixed(1)} ${items[0][1].toFixed(1)}`;let d=`M ${items[0][0].toFixed(1)} ${items[0][1].toFixed(1)}`;for(let i=1;i<items.length;i++){const prev=items[i-1],cur=items[i];const mx=(prev[0]+cur[0])/2;d+=` Q ${prev[0].toFixed(1)} ${prev[1].toFixed(1)} ${mx.toFixed(1)} ${((prev[1]+cur[1])/2).toFixed(1)}`}const last=items[items.length-1];d+=` T ${last[0].toFixed(1)} ${last[1].toFixed(1)}`;return d}const line=smoothPath(points);const first=points[0],last=points[points.length-1];const area=`${line} L ${last[0].toFixed(1)} 130 L ${first[0].toFixed(1)} 130 Z`;selectedTodayChartEl.innerHTML=`<svg viewBox="0 0 320 135" role="img" aria-label="Today's generation smooth area graph"><path d="${area}" fill="rgba(24,185,214,.24)"></path><path d="${line}" fill="none" stroke="#174f9c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>${points.map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3" fill="#16845f"><title>${h(p[2].hour)} · ${f(p[2].generation)} kWh</title></circle>`).join('')}<text x="4" y="12" fill="#647084" font-size="10">${h(shortName(plant.site))} · from ${h(hours[0].hour)}</text></svg>`}
+function setProductionMode(mode){productionMode=mode;productionTabsEl.querySelectorAll('button').forEach(btn=>btn.classList.toggle('active',btn.dataset.mode===mode))}
+function monthName(n){return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][Number(n)-1]||String(n)}
+function renderProductionBars(label, items, total, unit='kWh'){selectedTodayTotalEl.textContent=`${f(total)} ${unit}`;productionDatePickEl.value=productionDateValue();const w=640,hgt=300,left=42,right=10,top=28,bottom=42,plotW=w-left-right,plotH=hgt-top-bottom;const max=Math.max(...items.map(x=>Number(x.value||0)),1);const yMax=Math.ceil(max/5)*5||5;const gap=4,barW=Math.max(8,Math.min(28,(plotW/items.length)-gap));const yTicks=[0,.25,.5,.75,1].map(pct=>{const y=top+plotH-(pct*plotH);const value=yMax*pct;return `<line x1="${left}" y1="${y.toFixed(1)}" x2="${left+plotW}" y2="${y.toFixed(1)}" stroke="#e8eaed"></line><text x="8" y="${(y+4).toFixed(1)}" fill="#647084" font-size="11">${f(value,0)}</text>`}).join('');const bars=items.map((item,i)=>{const x=left+(items.length===1?plotW/2-barW/2:(i/(items.length-1))*plotW-barW/2);const height=Math.max(Number(item.value||0)>0?2:1,(Number(item.value||0)/yMax)*plotH);const y=top+plotH-height;const showLabel=items.length<=14||i%Math.ceil(items.length/12)===0;return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${height.toFixed(1)}" rx="3" fill="#18b9d6"><title>${h(item.label)} | ${f(item.value)} ${unit}</title></rect>${showLabel?`<text x="${(x+barW/2).toFixed(1)}" y="${hgt-12}" text-anchor="middle" fill="#647084" font-size="10">${h(item.short||item.label)}</text>`:''}`}).join('');selectedTodayChartEl.innerHTML=`<svg viewBox="0 0 ${w} ${hgt}" role="img" aria-label="Selected plant generation graph"><rect x="0" y="0" width="${w}" height="${hgt}" fill="#fff"></rect><text x="${left}" y="18" fill="#647084" font-size="12">${h(unit)}</text><rect x="${left+plotW/2-42}" y="10" width="9" height="9" fill="#18b9d6"></rect><text x="${left+plotW/2-28}" y="18" fill="#1e2b3f" font-size="12">Generation</text>${yTicks}<line x1="${left}" y1="${top+plotH}" x2="${left+plotW}" y2="${top+plotH}" stroke="#d7e0ec"></line>${bars}</svg>`}
+function renderAreaChart(data, plant){const hours=data.hours||[];selectedTodayTotalEl.textContent=`${f(data.total)} kWh`;productionDatePickEl.value=data.date||productionDateValue();if(!plant){selectedTodayChartEl.innerHTML='<div class="empty-history">Click a plant name.</div>';return}if(!hours.length){selectedTodayChartEl.innerHTML='<div class="empty-history">Generation has not started today.</div>';return}const byHour=new Map(hours.map(x=>[String(x.hour||''),x]));const series=[];for(let hour=0;hour<24;hour++){const label=`${String(hour).padStart(2,'0')}:00`;const item=byHour.get(label)||{hour:label,generation:0,power:0};series.push({...item,hour:label,power:Number(item.power||0),generation:Number(item.generation||0)})}const w=640,hgt=300,left=42,right=10,top=28,bottom=42,plotW=w-left-right,plotH=hgt-top-bottom;const capacity=Number(data.capacity||plant.capacity||0);const maxPower=Math.max(capacity>0?capacity:0,...series.map(x=>x.power),1);const yMax=Math.ceil(maxPower/5)*5||5;const points=series.map((x,i)=>{const px=left+(i/23)*plotW;const py=top+plotH-(Math.min(x.power,yMax)/yMax)*plotH;return [px,py,x]});function smoothPath(items){let d=`M ${items[0][0].toFixed(1)} ${items[0][1].toFixed(1)}`;for(let i=1;i<items.length;i++){const prev=items[i-1],cur=items[i];const cx=(prev[0]+cur[0])/2;d+=` C ${cx.toFixed(1)} ${prev[1].toFixed(1)} ${cx.toFixed(1)} ${cur[1].toFixed(1)} ${cur[0].toFixed(1)} ${cur[1].toFixed(1)}`}return d}const line=smoothPath(points);const area=`${line} L ${left+plotW} ${top+plotH} L ${left} ${top+plotH} Z`;const yTicks=[0,.2,.4,.6,.8,1].map(pct=>{const y=top+plotH-(pct*plotH);const value=yMax*pct;return `<line x1="${left}" y1="${y.toFixed(1)}" x2="${left+plotW}" y2="${y.toFixed(1)}" stroke="#e8eaed" stroke-width="1"></line><text x="8" y="${(y+4).toFixed(1)}" fill="#647084" font-size="11">${f(value,0)}</text>`}).join('');const xTicks=[1,3,5,7,9,11,13,15,17,19,21,23].map(hour=>{const x=left+(hour/23)*plotW;const label=hour<12?`${String(hour).padStart(2,'0')}:00 AM`:hour===12?'12:00 PM':`${String(hour-12).padStart(2,'0')}:00 PM`;return `<line x1="${x.toFixed(1)}" y1="${top+plotH}" x2="${x.toFixed(1)}" y2="${top+plotH+5}" stroke="#dfe3e8"></line><text x="${x.toFixed(1)}" y="${hgt-12}" text-anchor="middle" fill="#647084" font-size="11">${h(label)}</text>`}).join('');const title=`${h(plant.site)} | Capacity: ${f(capacity)} kW`;selectedTodayChartEl.innerHTML=`<svg viewBox="0 0 ${w} ${hgt}" role="img" aria-label="Selected plant production power graph"><rect x="0" y="0" width="${w}" height="${hgt}" fill="#fff"></rect><text x="${left}" y="18" fill="#647084" font-size="12">kW</text><rect x="${left+plotW/2-42}" y="10" width="9" height="9" fill="#18b9d6"></rect><text x="${left+plotW/2-28}" y="18" fill="#1e2b3f" font-size="12">Production</text>${yTicks}<line x1="${left}" y1="${top+plotH}" x2="${left+plotW}" y2="${top+plotH}" stroke="#d7e0ec"></line><path d="${area}" fill="rgba(24,185,214,.30)"></path><path d="${line}" fill="none" stroke="#174f9c" stroke-width="2" stroke-linejoin="round"></path>${points.map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="6" fill="transparent"><title>${h(p[2].hour)} | Power: ${f(p[2].power)} kW | Today: ${f(p[2].generation)} kWh | ${title}</title></circle>`).join('')}${xTicks}</svg>`}
 function renderSelectedMonthly(data, plant){const days=data.days||[];const values=days.map(d=>Number(d.generation||0));const max=Math.max(...values,1);selectedMonthlyTotalEl.textContent=`${h(data.month||'Month')} · ${f(data.total)} kWh`;if(!plant){selectedMonthlyChartEl.innerHTML='<div class="empty-history">Click a plant name.</div>';return}selectedMonthlyChartEl.innerHTML=days.length?days.map(d=>{const value=Number(d.generation||0);const height=Math.max(value>0?2:1,value/max*100);return `<div class="day-group" title="${h(plant.site)} · ${h(d.date)} · ${f(value)} kWh"><div class="day-bars"><div class="mini-bar" style="height:${height}%;background:linear-gradient(180deg,var(--cyan),var(--blue))"></div></div><div class="bar-label">${h(d.day)}</div></div>`}).join(''):'<div class="empty-history">No monthly data</div>'}
-async function loadActivePlantCharts(active){if(!active){activeTodayChartKey='';activeMonthlyChartKey='';selectedTodayTotalEl.textContent='';selectedMonthlyTotalEl.textContent='';selectedTodayChartEl.innerHTML='<div class="empty-history">Click a plant name.</div>';selectedMonthlyChartEl.innerHTML='<div class="empty-history">Click a plant name.</div>';return}const todayKey=`${active.plantKey}|${active.dataDate}|${active.daily}`;if(todayKey!==activeTodayChartKey){activeTodayChartKey=todayKey;selectedTodayChartEl.innerHTML='<div class="empty-history">Loading today...</div>';try{renderAreaChart(await api('/api/today-hourly-generation?plant_key='+encodeURIComponent(active.plantKey)),active)}catch(error){selectedTodayChartEl.innerHTML='<div class="empty-history">Today graph failed: '+h(error.message)+'</div>'}}const monthKey=`${active.plantKey}|${active.dataDate}|${active.daily}|${monthSelectEl.value}|${yearSelectEl.value}`;if(monthKey!==activeMonthlyChartKey){activeMonthlyChartKey=monthKey;selectedMonthlyChartEl.innerHTML='<div class="empty-history">Loading month...</div>';try{renderSelectedMonthly(await api('/api/monthly-generation?plant_key='+encodeURIComponent(active.plantKey)+'&month='+encodeURIComponent(monthSelectEl.value||'')+'&year='+encodeURIComponent(yearSelectEl.value||'')),active)}catch(error){selectedMonthlyChartEl.innerHTML='<div class="empty-history">Monthly graph failed: '+h(error.message)+'</div>'}}}
+async function loadProductionChart(active){if(!active){activeTodayChartKey='';selectedTodayTotalEl.textContent='';productionDatePickEl.value=productionDateValue();selectedTodayChartEl.innerHTML='<div class="empty-history">Click a plant name.</div>';return}productionTabsEl.querySelectorAll('button').forEach(btn=>btn.classList.toggle('active',btn.dataset.mode===productionMode));const pickedDate=productionDateValue();const key=`${productionMode}|${active.plantKey}|${active.dataDate}|${active.daily}|${pickedDate}`;if(key===activeTodayChartKey)return;activeTodayChartKey=key;selectedTodayChartEl.innerHTML='<div class="empty-history">Loading graph...</div>';try{if(productionMode==='day'){renderAreaChart(await api('/api/today-hourly-generation?plant_key='+encodeURIComponent(active.plantKey)+'&date='+encodeURIComponent(pickedDate)),active);return}if(productionMode==='month'){const data=await api('/api/monthly-generation?plant_key='+encodeURIComponent(active.plantKey)+'&month='+encodeURIComponent(productionMonth())+'&year='+encodeURIComponent(productionYear()));renderProductionBars(data.month||'Month',(data.days||[]).map(d=>({label:d.date,short:String(d.day),value:d.generation})),Number(data.total||0),'kWh');return}const data=await api('/api/history?plant_key='+encodeURIComponent(active.plantKey));if(productionMode==='year'){const selectedYear=String(productionYear());const monthly={};(data.daily||[]).forEach(row=>{if(String(row.date||'').slice(0,4)===selectedYear){const m=String(row.date).slice(5,7);monthly[m]=(monthly[m]||0)+Number(row.daily||0)}});const items=Array.from({length:12},(_,i)=>{const m=String(i+1).padStart(2,'0');return {label:`${monthName(i+1)} ${selectedYear}`,short:monthName(i+1),value:monthly[m]||0}});renderProductionBars(selectedYear,items,items.reduce((a,x)=>a+Number(x.value||0),0),'kWh');return}const items=(data.yearly||[]).map(row=>({label:String(row.year),short:String(row.year),value:Number(row.yearKwh||0)}));renderProductionBars('Total',items,items.reduce((a,x)=>a+Number(x.value||0),0),'kWh')}catch(error){selectedTodayChartEl.innerHTML='<div class="empty-history">Graph failed: '+h(error.message)+'</div>'}}
+async function loadActivePlantCharts(active){if(!active){activeTodayChartKey='';activeMonthlyChartKey='';selectedTodayTotalEl.textContent='';selectedMonthlyTotalEl.textContent='';productionDatePickEl.value=productionDateValue();selectedTodayChartEl.innerHTML='<div class="empty-history">Click a plant name.</div>';selectedMonthlyChartEl.innerHTML='<div class="empty-history">Click a plant name.</div>';return}loadProductionChart(active);const monthKey=`${active.plantKey}|${active.dataDate}|${active.daily}|${monthSelectEl.value}|${yearSelectEl.value}`;if(monthKey!==activeMonthlyChartKey){activeMonthlyChartKey=monthKey;selectedMonthlyChartEl.innerHTML='<div class="empty-history">Loading month...</div>';try{renderSelectedMonthly(await api('/api/monthly-generation?plant_key='+encodeURIComponent(active.plantKey)+'&month='+encodeURIComponent(monthSelectEl.value||'')+'&year='+encodeURIComponent(yearSelectEl.value||'')),active)}catch(error){selectedMonthlyChartEl.innerHTML='<div class="empty-history">Monthly graph failed: '+h(error.message)+'</div>'}}}
 function historyTable(title, rows, cols, open=false){if(!rows?.length)return `<details class="fold history-block"><summary>${title}</summary><div class="empty-history">No previous data yet. It will build after refreshes/uploads.</div></details>`;return `<details class="fold history-block" ${open?'open':''}><summary>${title}</summary><div class="history-scroll"><table><thead><tr>${cols.map(c=>`<th>${c[0]}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td>${c[2]?f(r[c[1]]):h(r[c[1]])}</td>`).join('')}</tr>`).join('')}</tbody></table></div></details>`}
 function opt(rows,key){return (rows||[]).map((r,i)=>`<option value="${i}">${h(r[key]||'')}</option>`).join('')}
 function pickedLine(type,row,fallback=''){if(type==='day'){const item=row||{date:fallback||todayText(),daily:0,status:'No data'};return `${h(item.date)} · ${f(item.daily)} kWh · ${h(item.status)}`}if(!row)return '0.00 kWh · No data for this selection.';if(type==='week')return `${h(row.week)} · ${f(row.weekly || row.dailySum)} kWh`;return `${h(row.year)} · ${f(row.yearKwh)} kWh · latest ${h(row.lastDate)}`}
@@ -1734,10 +1785,12 @@ saveScheduleBtn.onclick=async()=>{const r=await api('/api/config',{method:'POST'
 perKwChartCardEl.onclick=()=>window.open('/chart-detail?'+chartQuery('perkw',filtered()),'_blank');
 selectedMonthlyChartCardEl.onclick=()=>{const active=plants.find(p=>p.id===activePlantId);window.open('/chart-detail?'+chartQuery('monthly',active?[active]:[]),'_blank')};
 monthlyChartCardEl.onclick=()=>window.open('/chart-detail?'+chartQuery('monthly',filtered()),'_blank');
-selectedTodayChartCardEl.onclick=()=>{const active=plants.find(p=>p.id===activePlantId);window.open('/chart-detail?'+chartQuery('today',active?[active]:[]),'_blank')};
-monthSelectEl.onchange=()=>{monthlyChartKey='';activeMonthlyChartKey='';render()};yearSelectEl.onchange=()=>{monthlyChartKey='';activeMonthlyChartKey='';render()};
+selectedTodayChartCardEl.onclick=e=>{if(e.target.closest('.production-footer'))return;const active=plants.find(p=>p.id===activePlantId);if(!active)return;let query='type='+(productionMode==='month'?'monthly':'today')+'&plant_key='+encodeURIComponent(active.plantKey);if(productionMode==='month')query+='&month='+encodeURIComponent(productionMonth())+'&year='+encodeURIComponent(productionYear());else query+='&date='+encodeURIComponent(productionDateValue());window.open('/chart-detail?'+query,'_blank')};
+productionTabsEl.querySelectorAll('button').forEach(btn=>{btn.onclick=e=>{e.stopPropagation();setProductionMode(btn.dataset.mode);activeTodayChartKey='';render()}});
+productionDatePickEl.onchange=e=>{productionDate=e.target.value||todayText();activeTodayChartKey='';if(productionMode==='month'||productionMode==='year'){monthSelectEl.value=String(productionMonth());yearSelectEl.value=String(productionYear());activeMonthlyChartKey=''}render()};
+monthSelectEl.onchange=()=>{monthlyChartKey='';activeMonthlyChartKey='';activeTodayChartKey='';render()};yearSelectEl.onchange=()=>{monthlyChartKey='';activeMonthlyChartKey='';activeTodayChartKey='';render()};
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){load({preserveSelection:true,reports:false}).catch(error=>setWarning('Could not reload dashboard after returning: '+error.message));startRefresh('resume');}});
-searchInput.oninput=render;brandFilter.onchange=render;statusFilter.onchange=render;setupDateSelectors();startAutoRefresh();load({preserveSelection:false}).catch(error=>{setWarning('App load failed. Please try Refresh now. '+error.message);logEl.textContent='App load failed: '+error;});
+searchInput.oninput=render;brandFilter.onchange=render;statusFilter.onchange=render;productionDate=todayText();productionDatePickEl.value=productionDate;setupDateSelectors();startAutoRefresh();load({preserveSelection:false}).catch(error=>{setWarning('App load failed. Please try Refresh now. '+error.message);logEl.textContent='App load failed: '+error;});
 </script>
 </body></html>"""
 
