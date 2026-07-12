@@ -55,7 +55,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-12-blank-dashboard-js-fix-v48"
+APP_VERSION = "2026-07-13-dashboard-bootstrap-fix-v49"
 IST = ZoneInfo("Asia/Kolkata")
 PLANT_COLUMNS = [
     "App ID",
@@ -1218,9 +1218,10 @@ class Handler(BaseHTTPRequestHandler):
                     },
                     "today": ist_today().isoformat(),
                 }
+                bootstrap_json = json.dumps(bootstrap).replace("</", "<\\/")
                 body = (
                     LIVE_HTML.replace("__USER__", (user or {}).get("username", "Local"))
-                    .replace("__BOOTSTRAP__", json.dumps(bootstrap))
+                    .replace("__BOOTSTRAP_JSON__", bootstrap_json)
                 ).encode("utf-8")
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
@@ -1501,7 +1502,6 @@ iframe{display:block;width:100%;height:calc(100vh - 58px);border:0;background:wh
   <button class="print" onclick="frames.reportFrame.focus();frames.reportFrame.print()">Print</button>
 </header>
 <iframe name="reportFrame" src="__DOWNLOAD_URL__"></iframe>
-<script>window.__BOOTSTRAP__=__BOOTSTRAP__;</script>
 <script>
 document.querySelector('#share').onclick=async()=>{const url=new URL('__DOWNLOAD_URL__', location.origin).href;if(navigator.share){try{await navigator.share({title:document.title,url});return}catch(e){}}navigator.clipboard?.writeText(url);alert('Report link copied.');};
 </script>
@@ -1679,6 +1679,7 @@ section.panel tr.open td:nth-child(3)::after{content:'-'}
     </aside>
   </div>
 </main>
+<script>window.__BOOTSTRAP__=__BOOTSTRAP_JSON__;</script>
 <script>
 let plants=[], selected=new Set(), statusData={}, activePlantId=null, activeHistoryKey='', activeTodayChartKey='', openRefreshStarted=false, monthlyChartKey='', refreshInFlight=false, autoRefreshTimer=null, productionMode='day', productionDate='';
 const searchInput=document.querySelector('#search');
