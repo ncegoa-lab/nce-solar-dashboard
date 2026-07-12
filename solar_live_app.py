@@ -55,7 +55,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-13-dashboard-bootstrap-fix-v49"
+APP_VERSION = "2026-07-13-fimer-ist-freshness-fix-v50"
 IST = ZoneInfo("Asia/Kolkata")
 PLANT_COLUMNS = [
     "App ID",
@@ -99,6 +99,24 @@ def ist_now() -> dt.datetime:
 
 def ist_today() -> dt.date:
     return ist_now().date()
+
+
+def timestamp_to_ist_date(value: Any) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    if len(text) == 10:
+        try:
+            return dt.date.fromisoformat(text).isoformat()
+        except ValueError:
+            return text
+    try:
+        parsed = dt.datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return text[:10] if len(text) >= 10 else ""
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=IST)
+    return parsed.astimezone(IST).date().isoformat()
 
 
 def parse_iso_date(value: Any) -> dt.date | None:
@@ -333,7 +351,7 @@ class SolarLiveApp:
             if not user_can_access(user, key):
                 continue
             timestamp = str(row.get("Timestamp") or "")
-            data_date = timestamp[:10] if len(timestamp) >= 10 else ""
+            data_date = timestamp_to_ist_date(timestamp)
             rows.append(
                 {
                     "id": row["App ID"],
