@@ -55,7 +55,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-12-selected-plant-production-collapse-v45"
+APP_VERSION = "2026-07-12-blank-dashboard-js-fix-v48"
 IST = ZoneInfo("Asia/Kolkata")
 PLANT_COLUMNS = [
     "App ID",
@@ -1205,7 +1205,23 @@ class Handler(BaseHTTPRequestHandler):
                 if load_users() and not user:
                     return
                 APP.refresh_on_open()
-                body = LIVE_HTML.replace("__USER__", (user or {}).get("username", "Local")).encode("utf-8")
+                bootstrap = {
+                    "plants": APP.plant_payload(user),
+                    "status": {
+                        "auth_enabled": bool(load_users()),
+                        "user": {"username": (user or {}).get("username", "Local"), "role": (user or {}).get("role", "admin")},
+                        "config": APP.config,
+                        "app_version": APP_VERSION,
+                        "last_refresh": APP.last_refresh,
+                        "local_url": f"http://127.0.0.1:{APP.port}",
+                        "mobile_url": f"http://{local_ip()}:{APP.port}",
+                    },
+                    "today": ist_today().isoformat(),
+                }
+                body = (
+                    LIVE_HTML.replace("__USER__", (user or {}).get("username", "Local"))
+                    .replace("__BOOTSTRAP__", json.dumps(bootstrap))
+                ).encode("utf-8")
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
                 self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
@@ -1485,6 +1501,7 @@ iframe{display:block;width:100%;height:calc(100vh - 58px);border:0;background:wh
   <button class="print" onclick="frames.reportFrame.focus();frames.reportFrame.print()">Print</button>
 </header>
 <iframe name="reportFrame" src="__DOWNLOAD_URL__"></iframe>
+<script>window.__BOOTSTRAP__=__BOOTSTRAP__;</script>
 <script>
 document.querySelector('#share').onclick=async()=>{const url=new URL('__DOWNLOAD_URL__', location.origin).href;if(navigator.share){try{await navigator.share({title:document.title,url});return}catch(e){}}navigator.clipboard?.writeText(url);alert('Report link copied.');};
 </script>
@@ -1714,7 +1731,7 @@ function staleNote(p){return !fresh(p)&&!offline(p)&&String(p.brand||'').toLower
 function uniq(a){return [...new Set(a)].filter(Boolean).sort()}
 function h(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function weightedCuf(rows){const cap=rows.reduce((a,p)=>a+Number(p.capacity||0),0),year=rows.reduce((a,p)=>a+Number(p.year||0),0);const p=istParts();const days=Math.max(1,Math.floor((Date.UTC(Number(p.year),Number(p.month)-1,Number(p.day))-Date.UTC(2026,0,1))/86400000)+1);return cap&&year?year/(cap*24*days)*100:0}
-async function api(path,opt={}){const sep=path.includes('?')?'&':'?';const url=path+sep+'_ts='+Date.now();const r=await fetch(url,{cache:'no-store',...opt,headers:{'Cache-Control':'no-cache',...(opt.headers||{})}});const text=await r.text();let data={};try{data=text?JSON.parse(text):{};}catch(e){throw new Error(`${path} returned ${r.status}: ${text.slice(0,240)||'empty response'}`)}if(!r.ok){throw new Error(data.error||`${path} returned ${r.status}`)}return data}
+async function api(path,opt={}){const sep=path.includes('?')?'&':'?';const url=path+sep+'_ts='+Date.now();const r=await fetch(url,{cache:'no-store',...opt,headers:{'Cache-Control':'no-cache',...(opt.headers||{})}});const text=await r.text();let data={};try{data=text?JSON.parse(text):{};}catch(e){throw new Error(`${path} returned ${r.status}: ${text.slice(0,240)||'empty response'}`)}if(r.status===401){window.location='/login';throw new Error('Login required')}if(!r.ok){throw new Error(data.error||`${path} returned ${r.status}`)}return data}
 function filtered(){const q=searchInput.value.toLowerCase(), b=brandFilter.value, s=statusFilter.value;return plants.filter(p=>(b==='all'||p.brand===b)&&(s==='all'||p.status===s)&&(`${p.site} ${p.brand}`.toLowerCase().includes(q)))}
 function selectedRows(){return plants.filter(p=>selected.has(p.id))}
 function chartQuery(type,rows){rows=rows||filtered();let query='type='+encodeURIComponent(type);if(!rows.length){query+='&plant_key=__none__'}else{rows.forEach(p=>query+='&plant_key='+encodeURIComponent(p.plantKey))}if(type==='monthly'){query+='&month='+encodeURIComponent(monthSelectEl.value||'')+'&year='+encodeURIComponent(yearSelectEl.value||'')}if(type==='today'){query+='&date='+encodeURIComponent(productionDateValue())}return query}
@@ -1763,7 +1780,9 @@ renderDetail(active);
 function refreshText(r){const lines=(r.steps||[]).map(s=>`${s.ok?'OK':'SKIP'} - ${s.label}: ${s.message||''}`);if(r.running)lines.push('RUNNING - Refresh still in progress...');if(r.finished)lines.push('DONE - Finished '+r.finished);return lines.join('\\n')||'Ready.'}
 async function loadReports(){try{const r=await api('/api/reports');reportListEl.innerHTML=(r.reports||[]).length?(r.reports||[]).map(x=>`<a class="report-item" href="${x.url}">${h(x.name)}<span>${h(x.modified)} · ${h(x.size_kb)} KB</span></a>`).join(''):'No reports generated yet.';}catch(error){reportListEl.textContent='Could not load reports: '+error.message;}}
 async function triggerOpenRefresh(){if(openRefreshStarted)return;openRefreshStarted=true;return startRefresh('open')}
-async function load(opts={}){const keep=new Set(selected);const p=await api('/api/plants');plants=p.plants||[];if(opts.preserveSelection!==false){const ids=new Set(plants.map(p=>p.id));selected=new Set([...keep].filter(id=>ids.has(id)))}else{selected=new Set()}renderFilters();render();const s=await api('/api/status');statusData=s;dateLineEl.textContent=istNowText();versionLineEl.textContent='Build: '+(s.app_version||'old');mobileLineEl.textContent='iPhone: '+s.mobile_url;lastUpdatedEl.textContent=backendUpdatedText(s);autoDayEl.value=s.config.auto_report_day;autoTimeEl.value=s.config.auto_report_time;logEl.textContent=refreshText(s.last_refresh||{});if(opts.reports!==false)loadReports();const staleRows=staleOnlineRows();if(opts.openCheck!==false && s.config?.auto_refresh_on_open && !openRefreshStarted){if(staleRows.length)setWarning(`${staleRows.length} plants show previous-day data. Refreshing latest data now...`);setTimeout(triggerOpenRefresh,50);}}
+function applyStatus(s){statusData=s||{};dateLineEl.textContent=istNowText();versionLineEl.textContent='Build: '+(statusData.app_version||'old');mobileLineEl.textContent='iPhone: '+(statusData.mobile_url||'');lastUpdatedEl.textContent=backendUpdatedText(statusData);if(statusData.config){autoDayEl.value=statusData.config.auto_report_day||autoDayEl.value;autoTimeEl.value=statusData.config.auto_report_time||autoTimeEl.value}logEl.textContent=refreshText(statusData.last_refresh||{})}
+function applyPlants(nextPlants,opts={}){const keep=new Set(selected);plants=nextPlants||[];if(opts.preserveSelection!==false){const ids=new Set(plants.map(p=>p.id));selected=new Set([...keep].filter(id=>ids.has(id)))}else{selected=new Set()}renderFilters();render()}
+async function load(opts={}){const p=await api('/api/plants');applyPlants(p.plants||[],opts);const s=await api('/api/status');applyStatus(s);if(opts.reports!==false)loadReports();const staleRows=staleOnlineRows();if(opts.openCheck!==false && s.config?.auto_refresh_on_open && !openRefreshStarted){if(staleRows.length)setWarning(`${staleRows.length} plants show previous-day data. Refreshing latest data now...`);setTimeout(triggerOpenRefresh,50);}}
 async function pollRefresh(){let finalStatus={};for(let i=0;i<90;i++){const s=await api('/api/status');finalStatus=s.last_refresh||{};logEl.textContent=refreshText(finalStatus);await load({preserveSelection:true,reports:false});if(!finalStatus.running)return finalStatus;await new Promise(r=>setTimeout(r,3000));}return finalStatus}
 async function startRefresh(reason='manual'){if(refreshInFlight)return;if(reason==='auto' && document.hidden)return;refreshInFlight=true;setLoading(true);setWarning('');try{logEl.textContent='Starting background refresh...';const r=await api('/api/refresh',{method:'POST'});logEl.textContent=refreshText(r);const finalStatus=(r.accepted||r.running)?await pollRefresh():r;const warn=refreshWarning(finalStatus);if(warn)setWarning(warn);await load({preserveSelection:true,reports:reason!=='auto'});}catch(error){setWarning('Live refresh failed. Last successful data is still shown. '+error.message);logEl.textContent='Refresh failed: '+error.message;}finally{setLoading(false);refreshInFlight=false;}}
 function startAutoRefresh(){if(autoRefreshTimer)clearInterval(autoRefreshTimer);autoRefreshTimer=setInterval(()=>startRefresh('auto'),60000)}
@@ -1774,14 +1793,14 @@ reportPlantBtn.onclick=()=>{if(!activePlantId){reportResultEl.textContent='Tap a
 reportBtn.onclick=()=>{if(!selected.size){reportResultEl.textContent='Tick one or more plants first.';return}generateReport([...selected],'selected report')};
 selectAllBtn.onclick=()=>{const visible=filtered();const all=visible.every(p=>selected.has(p.id));visible.forEach(p=>all?selected.delete(p.id):selected.add(p.id));render()}
 saveScheduleBtn.onclick=async()=>{const r=await api('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({auto_report_day:autoDayEl.value,auto_report_time:autoTimeEl.value})});logEl.textContent='Saved schedule: '+r.config.auto_report_day+' '+r.config.auto_report_time}
-perKwChartCardEl.onclick=()=>window.open('/chart-detail?'+chartQuery('perkw',filtered()),'_blank');window.open('/chart-detail?'+chartQuery('monthly',active?[active]:[]),'_blank')};
+perKwChartCardEl.onclick=()=>window.open('/chart-detail?'+chartQuery('perkw',filtered()),'_blank');
 monthlyChartCardEl.onclick=()=>window.open('/chart-detail?'+chartQuery('monthly',filtered()),'_blank');
 selectedTodayChartCardEl.onclick=e=>{if(e.target.closest('.production-footer'))return;const active=plants.find(p=>p.id===activePlantId);if(!active)return;let query='type='+(productionMode==='month'?'monthly':'today')+'&plant_key='+encodeURIComponent(active.plantKey);if(productionMode==='month')query+='&month='+encodeURIComponent(productionMonth())+'&year='+encodeURIComponent(productionYear());else query+='&date='+encodeURIComponent(productionDateValue());window.open('/chart-detail?'+query,'_blank')};
 productionTabsEl.querySelectorAll('button').forEach(btn=>{btn.onclick=e=>{e.stopPropagation();setProductionMode(btn.dataset.mode);activeTodayChartKey='';render()}});
 productionDatePickEl.onchange=e=>{productionDate=e.target.value||todayText();activeTodayChartKey='';if(productionMode==='month'||productionMode==='year'){monthSelectEl.value=String(productionMonth());yearSelectEl.value=String(productionYear())}render()};
 monthSelectEl.onchange=()=>{monthlyChartKey='';render()};yearSelectEl.onchange=()=>{monthlyChartKey='';render()};
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){load({preserveSelection:true,reports:false}).catch(error=>setWarning('Could not reload dashboard after returning: '+error.message));startRefresh('resume');}});
-searchInput.oninput=render;brandFilter.onchange=render;statusFilter.onchange=render;productionDate=todayText();productionDatePickEl.value=productionDate;setupDateSelectors();startAutoRefresh();load({preserveSelection:false}).catch(error=>{setWarning('App load failed. Please try Refresh now. '+error.message);logEl.textContent='App load failed: '+error;});
+searchInput.oninput=render;brandFilter.onchange=render;statusFilter.onchange=render;productionDate=todayText();productionDatePickEl.value=productionDate;setupDateSelectors();const boot=window.__BOOTSTRAP__||{};if(Array.isArray(boot.plants)){applyPlants(boot.plants,{preserveSelection:false});if(boot.status)applyStatus(boot.status)}startAutoRefresh();load({preserveSelection:true}).catch(error=>{setWarning('App load failed. Showing last loaded data. '+error.message);logEl.textContent='App load failed: '+error;});
 </script>
 </body></html>"""
 
