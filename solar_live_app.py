@@ -65,7 +65,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-13-user-change-password-v54"
+APP_VERSION = "2026-07-13-solis-weekly-history-fix-v55"
 IST = ZoneInfo("Asia/Kolkata")
 VALID_ROLES = {"admin", "manager", "customer", "viewer"}
 PLANT_COLUMNS = [

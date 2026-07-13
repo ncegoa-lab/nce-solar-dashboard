@@ -38,7 +38,7 @@ Render deployment:
 1. Replace the two files above in GitHub.
 2. Commit changes.
 3. Let Render auto-deploy, or press Manual Deploy > Deploy latest commit.
-4. Open the app and confirm Build: 2026-07-13-user-change-password-v54.
+4. Open the app and confirm Build: 2026-07-13-solis-weekly-history-fix-v55.
 
 No new Render environment variables are required.
 No database migration is required.

@@ -331,6 +331,31 @@ def _capacity_from_name(name: str | None) -> float:
     return float(match.group(1)) if match else 0.0
 
 
+def _plant_key(brand: Any, site: Any) -> str:
+    return f"{str(brand).strip()}::{str(site).strip()}"
+
+
+def _history_weekly_generation(brand: str, site: str | None, today_generation: Any = None, timestamp: Any = None) -> float:
+    history = _read_json("solar_generation_history.json") or []
+    today = ist_today()
+    week_start = today - dt.timedelta(days=today.weekday())
+    key = _plant_key(brand, site)
+    by_date: dict[str, float] = {}
+    for row in history:
+        if row.get("plantKey") != key:
+            continue
+        try:
+            row_date = dt.date.fromisoformat(str(row.get("date") or "")[:10])
+        except ValueError:
+            continue
+        if week_start <= row_date <= today:
+            by_date[row_date.isoformat()] = safe_float(row.get("daily"))
+    timestamp_text = str(timestamp or "")
+    if timestamp_text[:10] == today.isoformat() or not timestamp_text:
+        by_date[today.isoformat()] = safe_float(today_generation)
+    return round(sum(by_date.values()), 3)
+
+
 def _load_current_project_rows() -> list[dict[str, Any]]:
     """Collect all currently captured vendor data into one flat list."""
 
@@ -407,14 +432,19 @@ def _load_current_project_rows() -> list[dict[str, Any]]:
                 timestamp = payload.get("captured_at") or payload.get("generated_at") or payload.get("uploaded_at")
             else:
                 timestamp = payload.get("uploaded_at") or payload.get("generated_at") or payload.get("captured_at")
+            site_name = system.get("name") or system.get("station_name")
+            daily_generation = system.get("today_generation_kwh")
+            weekly_generation = system.get("weekly_generation_kwh")
+            if safe_float(weekly_generation) <= 0:
+                weekly_generation = _history_weekly_generation(brand, site_name, daily_generation, timestamp)
             rows.append(
                 {
                     "Brand": brand,
-                    "Site Name": system.get("name") or system.get("station_name"),
+                    "Site Name": site_name,
                     "Plant Capacity (kW)": system.get("capacity_kw") or system.get("capacity"),
                     "Current Status": system.get("status"),
-                    "Daily Generation (kWh)": system.get("today_generation_kwh"),
-                    "Weekly Generation (kWh)": system.get("weekly_generation_kwh"),
+                    "Daily Generation (kWh)": daily_generation,
+                    "Weekly Generation (kWh)": weekly_generation,
                     "Year Generation (kWh)": system.get("year_generation_kwh"),
                     "Current Power (kW)": system.get("current_power_kw") or system.get("current_power"),
                     "Total Generation (kWh)": system.get("total_generation_kwh"),
