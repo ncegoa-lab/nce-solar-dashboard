@@ -1,3 +1,4 @@
 openpyxl
 requests
 selenium
+psycopg[binary]>=3.2

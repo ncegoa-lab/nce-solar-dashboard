@@ -8,7 +8,7 @@ import getpass
 import json
 from pathlib import Path
 
-from solar_live_app import hash_password
+from solar_live_app import db_upsert_user, hash_password, postgres_enabled
 
 
 USERS_FILE = Path("solar_users.json")
@@ -26,7 +26,6 @@ def save_payload(payload: dict) -> None:
 
 
 def upsert_user(username: str, role: str, plants: list[str], password_arg: str | None = None) -> None:
-    payload = load_payload()
     if password_arg is None:
         password = getpass.getpass(f"Password for {username}: ")
         confirm = getpass.getpass("Confirm password: ")
@@ -34,6 +33,11 @@ def upsert_user(username: str, role: str, plants: list[str], password_arg: str |
             raise SystemExit("Passwords did not match.")
     else:
         password = password_arg
+    if postgres_enabled():
+        db_upsert_user(username, role, plants, password, disabled=False)
+        print(f"Saved {username} to PostgreSQL")
+        return
+    payload = load_payload()
     users = payload.setdefault("users", [])
     entry = {
         "username": username,
@@ -54,7 +58,7 @@ def upsert_user(username: str, role: str, plants: list[str], password_arg: str |
 def main() -> None:
     parser = argparse.ArgumentParser(description="Create or update NCE Solar Dashboard users.")
     parser.add_argument("username")
-    parser.add_argument("--role", choices=["admin", "customer"], default="customer")
+    parser.add_argument("--role", choices=["admin", "manager", "customer", "viewer"], default="customer")
     parser.add_argument(
         "--plant",
         action="append",
@@ -63,8 +67,8 @@ def main() -> None:
     )
     parser.add_argument("--password", help="Set password non-interactively.")
     args = parser.parse_args()
-    if args.role == "customer" and not args.plant:
-        raise SystemExit("Customer users need at least one --plant entry.")
+    if args.role != "admin" and not args.plant:
+        raise SystemExit("Non-admin users need at least one --plant entry.")
     upsert_user(args.username, args.role, args.plant, args.password)
 
 
