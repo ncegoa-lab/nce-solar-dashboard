@@ -55,7 +55,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-13-production-export-match-v51"
+APP_VERSION = "2026-07-13-monthly-ytd-backfill-v52"
 IST = ZoneInfo("Asia/Kolkata")
 PLANT_COLUMNS = [
     "App ID",
@@ -800,15 +800,28 @@ class SolarLiveApp:
         }
 
         by_day_plant: dict[tuple[str, str], float] = {}
+        history_by_key: dict[str, list[dict[str, Any]]] = {}
         for row in self.load_history():
             key = row.get("plantKey")
             if key not in visible_keys or not user_can_access(user, key):
                 continue
             row_date = parse_iso_date(row.get("date"))
-            if not row_date or not (month_start <= row_date <= month_end):
+            if not row_date:
                 continue
-            date_key = row_date.isoformat()
-            by_day_plant[(date_key, key)] = float(row.get("daily") or 0)
+            history_by_key.setdefault(str(key), []).append({**row, "_date": row_date})
+
+        for key, rows_for_key in history_by_key.items():
+            previous_year_total: float | None = None
+            for row in sorted(rows_for_key, key=lambda item: item["_date"]):
+                row_date = row["_date"]
+                current_year_total = float(row.get("year") or 0)
+                daily = float(row.get("daily") or 0)
+                if daily <= 0 and previous_year_total is not None and current_year_total > previous_year_total:
+                    daily = current_year_total - previous_year_total
+                previous_year_total = current_year_total if current_year_total > 0 else previous_year_total
+                if not (month_start <= row_date <= month_end):
+                    continue
+                by_day_plant[(row_date.isoformat(), key)] = daily
 
         if month_start <= today <= month_end:
             for plant in current_rows:
