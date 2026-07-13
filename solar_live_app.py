@@ -55,7 +55,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-13-fimer-ist-freshness-fix-v50"
+APP_VERSION = "2026-07-13-production-export-match-v51"
 IST = ZoneInfo("Asia/Kolkata")
 PLANT_COLUMNS = [
     "App ID",
@@ -932,10 +932,21 @@ class SolarLiveApp:
                 for item in payload.get("days", [])
             ]
         payload = self.today_hourly_payload(plant_keys, user, target_date=target_date)
-        return f"Today's Generation - {payload['date']}", [
-            {"Period": item["hour"], "Generation (kWh)": item["generation"]}
-            for item in payload.get("hours", [])
-        ]
+        previous = 0.0
+        rows = []
+        for item in payload.get("hours", []):
+            generation = float(item.get("generation") or 0)
+            increment = max(0.0, generation - previous)
+            rows.append(
+                {
+                    "Hour": item.get("hour"),
+                    "Power (kW)": round(float(item.get("power") or 0), 3),
+                    "Cumulative Generation (kWh)": round(generation, 3),
+                    "Hourly Generation (kWh)": round(increment, 3),
+                }
+            )
+            previous = generation
+        return f"Production - Selected Plant - {payload['date']}", rows
 
     def chart_csv_bytes(
         self,
