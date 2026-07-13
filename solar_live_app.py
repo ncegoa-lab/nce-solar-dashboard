@@ -34,6 +34,16 @@ import pandas as pd
 
 from solar_performance_report_app import DEFAULT_LOGO, generate_compact_pdf, load_data
 
+try:
+    import psycopg
+    from psycopg.rows import dict_row
+
+    HAS_PSYCOPG = True
+except Exception:  # pragma: no cover - local fallback when PostgreSQL driver is unavailable.
+    psycopg = None
+    dict_row = None
+    HAS_PSYCOPG = False
+
 
 PROJECT_DIR = Path(__file__).resolve().parent
 DEFAULT_OUTPUT_DIR = Path(
@@ -55,8 +65,9 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-13-monthly-ytd-backfill-v52"
+APP_VERSION = "2026-07-13-postgres-multi-user-v53"
 IST = ZoneInfo("Asia/Kolkata")
+VALID_ROLES = {"admin", "manager", "customer", "viewer"}
 PLANT_COLUMNS = [
     "App ID",
     "Brand",
@@ -183,6 +194,17 @@ def week_start(value: dt.date) -> dt.date:
     return value - dt.timedelta(days=value.weekday())
 
 
+def normalize_role(value: Any) -> str:
+    role = str(value or "viewer").strip().lower()
+    return role if role in VALID_ROLES else "viewer"
+
+
+def safe_username(value: Any) -> str:
+    text = str(value or "user").strip()
+    safe = "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in text)
+    return safe or "user"
+
+
 def hash_password(password: str, salt: str | None = None, iterations: int = 260000) -> str:
     salt = salt or secrets.token_hex(16)
     digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), iterations)
@@ -200,7 +222,82 @@ def verify_password(password: str, stored: str) -> bool:
     return hmac.compare_digest(password, stored)
 
 
-def load_users() -> dict[str, dict[str, Any]]:
+def database_url() -> str:
+    return os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL") or ""
+
+
+def postgres_enabled() -> bool:
+    return bool(database_url() and HAS_PSYCOPG)
+
+
+def db_connect():
+    if not postgres_enabled():
+        raise RuntimeError("PostgreSQL is not configured. Set DATABASE_URL on Render.")
+    return psycopg.connect(database_url(), row_factory=dict_row)
+
+
+def migrate_database() -> None:
+    if not postgres_enabled():
+        return
+    with db_connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS solar_app_users (
+                    id BIGSERIAL PRIMARY KEY,
+                    username TEXT NOT NULL UNIQUE,
+                    password_hash TEXT NOT NULL,
+                    role TEXT NOT NULL CHECK (role IN ('admin', 'manager', 'customer', 'viewer')),
+                    disabled BOOLEAN NOT NULL DEFAULT FALSE,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                )
+                """
+            )
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS solar_app_user_plants (
+                    user_id BIGINT NOT NULL REFERENCES solar_app_users(id) ON DELETE CASCADE,
+                    plant_key TEXT NOT NULL,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    PRIMARY KEY (user_id, plant_key)
+                )
+                """
+            )
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_solar_app_user_plants_key ON solar_app_user_plants (plant_key)")
+            cur.execute("SELECT COUNT(*) AS count FROM solar_app_users")
+            if int(cur.fetchone()["count"] or 0) == 0:
+                seed_users = load_file_users(include_env_admin=True)
+                for user in seed_users.values():
+                    seeded_hash = str(user["password_hash"] or "")
+                    if seeded_hash and not seeded_hash.startswith("pbkdf2_sha256$"):
+                        seeded_hash = hash_password(seeded_hash)
+                    cur.execute(
+                        """
+                        INSERT INTO solar_app_users (username, password_hash, role, disabled)
+                        VALUES (%s, %s, %s, %s)
+                        ON CONFLICT (username) DO NOTHING
+                        RETURNING id
+                        """,
+                        (
+                            user["username"],
+                            seeded_hash,
+                            normalize_role(user.get("role")),
+                            bool(user.get("disabled", False)),
+                        ),
+                    )
+                    inserted = cur.fetchone()
+                    if not inserted:
+                        continue
+                    for plant in user.get("plants") or []:
+                        cur.execute(
+                            "INSERT INTO solar_app_user_plants (user_id, plant_key) VALUES (%s, %s) ON CONFLICT DO NOTHING",
+                            (inserted["id"], str(plant)),
+                        )
+        conn.commit()
+
+
+def load_file_users(include_env_admin: bool = True) -> dict[str, dict[str, Any]]:
     payload: dict[str, Any] = {}
     if USERS_FILE.exists():
         try:
@@ -218,34 +315,184 @@ def load_users() -> dict[str, dict[str, Any]]:
         username = str(item.get("username") or "").strip()
         if not username:
             continue
+        role = normalize_role(item.get("role") or "customer")
         users[username] = {
             "username": username,
             "password_hash": item.get("password_hash") or item.get("password") or "",
-            "role": item.get("role") or "customer",
-            "plants": item.get("plants") or [],
+            "role": role,
+            "plants": item.get("plants") or ([] if role != "admin" else ["*"]),
+            "disabled": bool(item.get("disabled", False)),
         }
 
-    if AUTH_PASSWORD and AUTH_USER not in users:
+    if include_env_admin and AUTH_PASSWORD and AUTH_USER not in users:
         users[AUTH_USER] = {
             "username": AUTH_USER,
             "password_hash": AUTH_PASSWORD,
             "role": "admin",
             "plants": ["*"],
+            "disabled": False,
         }
     return users
+
+
+def load_db_users() -> dict[str, dict[str, Any]]:
+    migrate_database()
+    users: dict[str, dict[str, Any]] = {}
+    with db_connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT u.id, u.username, u.password_hash, u.role, u.disabled,
+                       COALESCE(array_agg(p.plant_key ORDER BY p.plant_key) FILTER (WHERE p.plant_key IS NOT NULL), '{}') AS plants
+                FROM solar_app_users u
+                LEFT JOIN solar_app_user_plants p ON p.user_id = u.id
+                GROUP BY u.id
+                ORDER BY lower(u.username)
+                """
+            )
+            for row in cur.fetchall():
+                users[row["username"]] = {
+                    "id": row["id"],
+                    "username": row["username"],
+                    "password_hash": row["password_hash"],
+                    "role": normalize_role(row["role"]),
+                    "plants": list(row["plants"] or []),
+                    "disabled": bool(row["disabled"]),
+                }
+    return users
+
+
+def load_users() -> dict[str, dict[str, Any]]:
+    if postgres_enabled():
+        try:
+            return load_db_users()
+        except Exception:
+            if os.environ.get("RENDER"):
+                raise
+    return load_file_users()
+
+
+def public_user(user: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "username": user.get("username", ""),
+        "role": normalize_role(user.get("role")),
+        "plants": list(user.get("plants") or []),
+        "disabled": bool(user.get("disabled", False)),
+    }
+
+
+def db_upsert_user(username: str, role: str, plants: list[str], password: str | None = None, disabled: bool = False) -> dict[str, Any]:
+    if not postgres_enabled():
+        raise RuntimeError("PostgreSQL is not configured.")
+    migrate_database()
+    username = str(username or "").strip()
+    if not username:
+        raise ValueError("Username is required.")
+    role = normalize_role(role)
+    plants = ["*"] if role == "admin" else sorted({str(plant) for plant in plants if str(plant).strip()})
+    with db_connect() as conn:
+        with conn.cursor() as cur:
+            if password:
+                cur.execute(
+                    """
+                    INSERT INTO solar_app_users (username, password_hash, role, disabled, updated_at)
+                    VALUES (%s, %s, %s, %s, NOW())
+                    ON CONFLICT (username)
+                    DO UPDATE SET password_hash = EXCLUDED.password_hash,
+                                  role = EXCLUDED.role,
+                                  disabled = EXCLUDED.disabled,
+                                  updated_at = NOW()
+                    RETURNING id, username, role, disabled
+                    """,
+                    (username, hash_password(password), role, disabled),
+                )
+            else:
+                cur.execute("SELECT id FROM solar_app_users WHERE username = %s", (username,))
+                if not cur.fetchone():
+                    raise ValueError("Password is required for a new user.")
+                cur.execute(
+                    """
+                    UPDATE solar_app_users
+                    SET role = %s,
+                        disabled = %s,
+                        updated_at = NOW()
+                    WHERE username = %s
+                    RETURNING id, username, role, disabled
+                    """,
+                    (role, disabled, username),
+                )
+            user_row = cur.fetchone()
+            cur.execute("DELETE FROM solar_app_user_plants WHERE user_id = %s", (user_row["id"],))
+            for plant in plants:
+                cur.execute(
+                    "INSERT INTO solar_app_user_plants (user_id, plant_key) VALUES (%s, %s) ON CONFLICT DO NOTHING",
+                    (user_row["id"], plant),
+                )
+        conn.commit()
+    return {"ok": True, "user": {**dict(user_row), "plants": plants}}
+
+
+def db_reset_user_password(username: str, password: str) -> dict[str, Any]:
+    if not postgres_enabled():
+        raise RuntimeError("PostgreSQL is not configured.")
+    username = str(username or "").strip()
+    if not username or not password:
+        raise ValueError("Username and password are required.")
+    with db_connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE solar_app_users SET password_hash = %s, updated_at = NOW() WHERE username = %s RETURNING username",
+                (hash_password(password), username),
+            )
+            row = cur.fetchone()
+            if not row:
+                raise ValueError("User not found.")
+        conn.commit()
+    return {"ok": True, "username": username}
+
+
+def db_set_user_disabled(username: str, disabled: bool) -> dict[str, Any]:
+    if not postgres_enabled():
+        raise RuntimeError("PostgreSQL is not configured.")
+    username = str(username or "").strip()
+    if not username:
+        raise ValueError("Username is required.")
+    with db_connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE solar_app_users SET disabled = %s, updated_at = NOW() WHERE username = %s RETURNING username, disabled",
+                (disabled, username),
+            )
+            row = cur.fetchone()
+            if not row:
+                raise ValueError("User not found.")
+        conn.commit()
+    return {"ok": True, **dict(row)}
 
 
 def user_can_access(user: dict[str, Any] | None, key: str) -> bool:
     if not user:
         return not bool(load_users())
-    if user.get("role") == "admin":
+    if user.get("disabled"):
+        return False
+    if normalize_role(user.get("role")) == "admin":
         return True
     allowed = set(user.get("plants") or [])
     return "*" in allowed or key in allowed
 
 
 def is_admin(user: dict[str, Any] | None) -> bool:
-    return not load_users() or bool(user and user.get("role") == "admin")
+    return not load_users() or bool(user and not user.get("disabled") and normalize_role(user.get("role")) == "admin")
+
+
+def can_generate_report(user: dict[str, Any] | None) -> bool:
+    if not load_users():
+        return True
+    return bool(user and not user.get("disabled") and normalize_role(user.get("role")) in {"admin", "manager", "customer"})
+
+
+def can_refresh_data(user: dict[str, Any] | None) -> bool:
+    return bool(user and not user.get("disabled") and normalize_role(user.get("role")) in {"admin", "manager"})
 
 
 def sign_session(username: str, expires: int) -> str:
@@ -374,6 +621,14 @@ class SolarLiveApp:
                 }
             )
         return rows
+
+    def all_plant_options(self) -> list[dict[str, Any]]:
+        df = self.plant_dataframe()
+        options = []
+        for row in df.to_dict(orient="records"):
+            key = plant_key(row["Brand"], row["Site Name"])
+            options.append({"plantKey": key, "brand": row["Brand"], "site": row["Site Name"]})
+        return options
 
     def load_history(self) -> list[dict[str, Any]]:
         if not HISTORY_FILE.exists():
@@ -754,7 +1009,7 @@ class SolarLiveApp:
             if plant.get("dataDate") != today and str(plant.get("status", "")).lower() != "offline"
         )
 
-    def brand_debug(self, brand: str) -> list[dict[str, Any]]:
+    def brand_debug(self, brand: str, user: dict[str, Any] | None = None) -> list[dict[str, Any]]:
         return [
             {
                 "site": plant.get("site"),
@@ -763,7 +1018,7 @@ class SolarLiveApp:
                 "dataDate": plant.get("dataDate"),
                 "timestamp": plant.get("timestamp"),
             }
-            for plant in self.plant_payload({"role": "admin", "plants": ["*"]})
+            for plant in self.plant_payload(user or {"role": "admin", "plants": ["*"]})
             if str(plant.get("brand", "")).lower() == brand.lower()
         ]
 
@@ -1022,9 +1277,11 @@ class SolarLiveApp:
         return self.refresh_async()
 
     def generate_selected_report(self, plant_ids: list[str], user: dict[str, Any] | None = None, all_plants: bool = False) -> dict[str, Any]:
+        if not can_generate_report(user):
+            return {"ok": False, "message": "Report generation is not allowed for this user role."}
         df = self.plant_dataframe()
         df["Plant Key"] = df.apply(lambda row: plant_key(row["Brand"], row["Site Name"]), axis=1)
-        if user and user.get("role") != "admin":
+        if user and normalize_role(user.get("role")) != "admin":
             df = df[df["Plant Key"].apply(lambda key: user_can_access(user, key))]
         if all_plants:
             selected = df.drop(columns=["App ID"])
@@ -1036,7 +1293,10 @@ class SolarLiveApp:
             selected = selected.drop(columns=["Plant Key"])
         if selected.empty:
             return {"ok": False, "message": "No plants selected"}
-        report_dir = self.output_dir / "Selected Plant Reports"
+        if user and normalize_role(user.get("role")) != "admin":
+            report_dir = self.output_dir / "User Reports" / safe_username(user.get("username"))
+        else:
+            report_dir = self.output_dir / "Selected Plant Reports"
         report_dir.mkdir(parents=True, exist_ok=True)
         stamp = ist_now().strftime("%Y%m%d_%H%M")
         if len(selected) == len(df):
@@ -1057,13 +1317,26 @@ class SolarLiveApp:
             "count": int(len(selected)),
         }
 
-    def latest_reports(self, limit: int = 3) -> list[dict[str, Any]]:
+    def user_can_access_report_path(self, user: dict[str, Any] | None, path: Path) -> bool:
+        if is_admin(user):
+            return True
+        if not user:
+            return False
+        try:
+            path.relative_to((self.output_dir / "User Reports" / safe_username(user.get("username"))).resolve())
+            return True
+        except ValueError:
+            return False
+
+    def latest_reports(self, user: dict[str, Any] | None = None, limit: int = 3) -> list[dict[str, Any]]:
         root = self.output_dir
         if not root.exists():
             return []
         reports = []
         for path in root.rglob("*.pdf"):
             if not path.is_file():
+                continue
+            if not self.user_can_access_report_path(user, path.resolve()):
                 continue
             try:
                 relative = path.relative_to(root).as_posix()
@@ -1113,7 +1386,7 @@ class Handler(BaseHTTPRequestHandler):
         if not users:
             return None
         username = read_session(self.cookie_value(SESSION_COOKIE))
-        if username and username in users:
+        if username and username in users and not users[username].get("disabled"):
             return users[username]
         header = self.headers.get("Authorization", "")
         if header.startswith("Basic "):
@@ -1121,7 +1394,7 @@ class Handler(BaseHTTPRequestHandler):
                 userpass = base64.b64decode(header.split(" ", 1)[1]).decode("utf-8")
                 username, _, password = userpass.partition(":")
                 user = users.get(username)
-                if user and verify_password(password, user.get("password_hash", "")):
+                if user and not user.get("disabled") and verify_password(password, user.get("password_hash", "")):
                     return user
             except Exception:
                 return None
@@ -1163,7 +1436,16 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def send_report_viewer(self, relative: str) -> None:
+    def send_admin_users_page(self) -> None:
+        body = ADMIN_USERS_HTML.encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def send_report_viewer(self, relative: str, user: dict[str, Any] | None) -> None:
         assert APP is not None
         path = (APP.output_dir / relative).resolve()
         try:
@@ -1173,6 +1455,9 @@ class Handler(BaseHTTPRequestHandler):
             return
         if not path.exists() or not path.is_file():
             self.send_json({"error": "Report not found"}, 404)
+            return
+        if not APP.user_can_access_report_path(user, path):
+            self.send_json({"error": "You do not have access to this report."}, 403)
             return
         download_url = f"/reports/{urllib.parse.quote(relative)}"
         body = (
@@ -1251,7 +1536,11 @@ class Handler(BaseHTTPRequestHandler):
                     "plants": APP.plant_payload(user),
                     "status": {
                         "auth_enabled": bool(load_users()),
-                        "user": {"username": (user or {}).get("username", "Local"), "role": (user or {}).get("role", "admin")},
+                        "user": {
+                            "username": (user or {}).get("username", "Local"),
+                            "role": normalize_role((user or {}).get("role", "admin")),
+                            "is_admin": is_admin(user),
+                        },
                         "config": APP.config,
                         "app_version": APP_VERSION,
                         "last_refresh": APP.last_refresh,
@@ -1273,7 +1562,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_header("Content-Length", str(len(body)))
                 self.end_headers()
                 self.wfile.write(body)
-            elif parsed.path.startswith("/api/") or parsed.path.startswith("/reports/") or parsed.path in {"/view-report", "/chart-detail", "/chart-csv", "/chart-pdf"}:
+            elif parsed.path == "/admin/users" or parsed.path.startswith("/api/") or parsed.path.startswith("/reports/") or parsed.path in {"/view-report", "/chart-detail", "/chart-csv", "/chart-pdf"}:
                 user = self.require_auth()
                 if load_users() and not user:
                     return
@@ -1292,7 +1581,17 @@ class Handler(BaseHTTPRequestHandler):
             key = (query.get("plant_key") or [""])[0]
             self.send_json(APP.history_payload(key, user))
         elif parsed.path == "/api/reports":
-            self.send_json({"reports": APP.latest_reports()})
+            self.send_json({"reports": APP.latest_reports(user)})
+        elif parsed.path == "/admin/users":
+            if not is_admin(user):
+                self.send_json({"error": "Admin access required"}, 403)
+                return
+            self.send_admin_users_page()
+        elif parsed.path == "/api/admin/users":
+            if not is_admin(user):
+                self.send_json({"error": "Admin access required"}, 403)
+                return
+            self.send_json({"users": [public_user(row) for row in load_users().values()], "plants": APP.all_plant_options(), "roles": sorted(VALID_ROLES), "postgres": postgres_enabled()})
         elif parsed.path == "/api/monthly-generation":
             query = urllib.parse.parse_qs(parsed.query)
             keys = [value for value in (query.get("plant_key") or []) if value]
@@ -1308,11 +1607,15 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(
                 {
                     "auth_enabled": bool(load_users()),
-                    "user": {"username": (user or {}).get("username", "Local"), "role": (user or {}).get("role", "admin")},
+                    "user": {
+                        "username": (user or {}).get("username", "Local"),
+                        "role": normalize_role((user or {}).get("role", "admin")),
+                        "is_admin": is_admin(user),
+                    },
                     "config": APP.config,
                     "app_version": APP_VERSION,
                     "last_refresh": APP.last_refresh,
-                    "solax_debug": APP.brand_debug("SolaX"),
+                    "solax_debug": APP.brand_debug("SolaX", user),
                     "local_url": f"http://127.0.0.1:{APP.port}",
                     "mobile_url": f"http://{local_ip()}:{APP.port}",
                 }
@@ -1320,7 +1623,7 @@ class Handler(BaseHTTPRequestHandler):
         elif parsed.path == "/view-report":
             query = urllib.parse.parse_qs(parsed.query)
             relative = (query.get("file") or [""])[0]
-            self.send_report_viewer(relative)
+            self.send_report_viewer(relative, user)
         elif parsed.path == "/chart-detail":
             query = urllib.parse.parse_qs(parsed.query)
             chart_type = (query.get("type") or ["today"])[0]
@@ -1377,6 +1680,9 @@ class Handler(BaseHTTPRequestHandler):
             if not path.exists() or not path.is_file():
                 self.send_json({"error": "Report not found"}, 404)
                 return
+            if not APP.user_can_access_report_path(user, path):
+                self.send_json({"error": "You do not have access to this report."}, 403)
+                return
             body = path.read_bytes()
             self.send_response(200)
             self.send_header("Content-Type", mimetypes.guess_type(path.name)[0] or "application/octet-stream")
@@ -1413,7 +1719,7 @@ class Handler(BaseHTTPRequestHandler):
                 username = (form.get("username") or [""])[0].strip()
                 password = (form.get("password") or [""])[0]
                 user = load_users().get(username)
-                if not user or not verify_password(password, user.get("password_hash", "")):
+                if not user or user.get("disabled") or not verify_password(password, user.get("password_hash", "")):
                     self.send_login_page("Invalid username or password")
                     return
                 expires = int(time.time()) + SESSION_SECONDS
@@ -1432,18 +1738,55 @@ class Handler(BaseHTTPRequestHandler):
             if load_users() and not user:
                 return
             if parsed.path == "/api/refresh":
-                if not is_admin(user):
-                    self.send_json({"error": "Admin access required"}, 403)
+                if not can_refresh_data(user):
+                    self.send_json({"error": "Admin or Manager access required"}, 403)
                     return
                 self.send_json(APP.refresh_async())
             elif parsed.path == "/api/refresh-on-open":
-                if not is_admin(user):
-                    self.send_json({"error": "Admin access required"}, 403)
+                if not can_refresh_data(user):
+                    self.send_json({"error": "Admin or Manager access required"}, 403)
                     return
                 self.send_json(APP.refresh_on_open_result())
             elif parsed.path == "/api/report":
                 payload = self.read_json()
                 self.send_json(APP.generate_selected_report(payload.get("plant_ids") or [], user, bool(payload.get("all_plants"))))
+            elif parsed.path == "/api/admin/users":
+                if not is_admin(user):
+                    self.send_json({"error": "Admin access required"}, 403)
+                    return
+                if not postgres_enabled():
+                    self.send_json({"error": "PostgreSQL is not configured. Set DATABASE_URL on Render before using User Management."}, 503)
+                    return
+                payload = self.read_json()
+                result = db_upsert_user(
+                    payload.get("username"),
+                    payload.get("role"),
+                    payload.get("plants") or [],
+                    payload.get("password") or None,
+                    bool(payload.get("disabled", False)),
+                )
+                self.send_json(result)
+            elif parsed.path == "/api/admin/users/reset":
+                if not is_admin(user):
+                    self.send_json({"error": "Admin access required"}, 403)
+                    return
+                if not postgres_enabled():
+                    self.send_json({"error": "PostgreSQL is not configured. Set DATABASE_URL on Render before using User Management."}, 503)
+                    return
+                payload = self.read_json()
+                self.send_json(db_reset_user_password(payload.get("username"), payload.get("password")))
+            elif parsed.path == "/api/admin/users/disable":
+                if not is_admin(user):
+                    self.send_json({"error": "Admin access required"}, 403)
+                    return
+                if not postgres_enabled():
+                    self.send_json({"error": "PostgreSQL is not configured. Set DATABASE_URL on Render before using User Management."}, 503)
+                    return
+                payload = self.read_json()
+                if str(payload.get("username") or "") == str(user.get("username") or "") and bool(payload.get("disabled", False)):
+                    self.send_json({"error": "You cannot disable your own active admin account."}, 400)
+                    return
+                self.send_json(db_set_user_disabled(payload.get("username"), bool(payload.get("disabled", False))))
             elif parsed.path == "/api/config":
                 if not is_admin(user):
                     self.send_json({"error": "Admin access required"}, 403)
@@ -1507,14 +1850,72 @@ h1{font-size:24px;margin:0 0 8px;color:#174f9c}.sub{margin:0 0 18px;color:#64708
 <body>
 <main class="box">
   <h1>Reset Password</h1>
-  <p class="sub">For safety, password reset is done on the Mac. The public web page cannot change the admin password.</p>
-  <div class="step"><b>1.</b> On the Mac, double-click <b>Reset App Login Password.command</b>.</div>
-  <div class="step"><b>2.</b> Enter the new app password twice.</div>
-  <div class="step"><b>3.</b> Upload the updated <b>solar_users.json</b> to GitHub root.</div>
-  <div class="step"><b>4.</b> Redeploy Render, then login as <b>admin</b>.</div>
-  <p class="warn">Do not upload APP_LOGIN_DETAILS_PRIVATE.txt.</p>
+  <p class="sub">An Admin can reset user passwords from <b>Users</b> inside the dashboard.</p>
+  <div class="step"><b>1.</b> Login as an Admin user.</div>
+  <div class="step"><b>2.</b> Open <b>Users</b> from the dashboard header.</div>
+  <div class="step"><b>3.</b> Press <b>Reset</b> next to the user and enter a new password.</div>
+  <div class="step"><b>4.</b> If the Admin password itself is lost, update <b>NCE_APP_PASSWORD</b> in Render and restart before first database seeding, or use the Mac reset command for the local fallback.</div>
+  <p class="warn">Never share passwords in chat or upload APP_LOGIN_DETAILS_PRIVATE.txt.</p>
   <a class="btn" href="/login">Back to Login</a>
 </main>
+</body>
+</html>"""
+
+
+ADMIN_USERS_HTML = r"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NCE Solar Users</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:#eef3f8;color:#1e2b3f}
+header{background:#174f9c;color:white;padding:14px 18px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}h1{font-size:20px;margin:0;flex:1}
+a{color:#174f9c;background:white;text-decoration:none;border-radius:7px;padding:9px 12px;font-weight:900}.wrap{max-width:1200px;margin:auto;padding:16px}
+.panel{background:white;border:1px solid #d7e0ec;border-radius:8px;padding:14px;margin-bottom:14px;box-shadow:0 1px 4px rgba(15,35,60,.05)}
+.grid{display:grid;grid-template-columns:1fr 170px 1fr 130px;gap:10px;align-items:end}label{font-size:12px;font-weight:800;color:#647084;display:block;margin-bottom:5px}
+input,select{height:38px;width:100%;border:1px solid #d7e0ec;border-radius:7px;padding:0 10px;background:white}button{height:38px;border:0;border-radius:7px;background:#174f9c;color:white;font-weight:900;padding:0 12px;cursor:pointer}
+button.alt{background:#18b9d6}button.warn{background:#c73e3e}.plants{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:7px;margin-top:10px;max-height:260px;overflow:auto;border:1px solid #d7e0ec;border-radius:8px;padding:8px;background:#fbfdff}
+.plant{display:flex;gap:8px;align-items:flex-start;font-size:12px}.plant input{width:auto;height:auto;margin-top:2px}table{width:100%;border-collapse:collapse;font-size:13px}th{background:#174f9c;color:white;text-align:left;padding:9px}td{border-bottom:1px solid #d7e0ec;padding:8px;vertical-align:top}
+.pill{display:inline-block;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:900;color:white;background:#16845f}.disabled{background:#c73e3e}.muted{color:#647084;font-size:12px}.msg{font-weight:900;color:#16845f}.err{font-weight:900;color:#c73e3e}
+@media(max-width:760px){.grid{grid-template-columns:1fr}header{display:grid}a{text-align:center}table,thead,tbody,tr,td{display:block}thead{display:none}tr{border:1px solid #d7e0ec;border-radius:8px;background:white;margin:8px 0;padding:8px}td{border:0;padding:5px}td::before{content:attr(data-label);display:block;font-size:11px;color:#647084;font-weight:900}}
+</style>
+</head>
+<body>
+<header><h1>Admin User Management</h1><a href="/">Back to Dashboard</a><a href="/logout">Logout</a></header>
+<main class="wrap">
+  <section class="panel">
+    <h2>Create or Edit User</h2>
+    <div class="grid">
+      <div><label>Username</label><input id="username" autocomplete="off"></div>
+      <div><label>Role</label><select id="role"></select></div>
+      <div><label>Password</label><input id="password" type="password" placeholder="Required for new user"></div>
+      <button id="save">Save User</button>
+    </div>
+    <p class="muted">Admin sees all plants. Manager, Customer and Viewer see only selected plants. Leave password blank while editing if you do not want to change it.</p>
+    <div class="plants" id="plants"></div>
+    <p id="message"></p>
+  </section>
+  <section class="panel">
+    <h2>Existing Users</h2>
+    <table><thead><tr><th>Username</th><th>Role</th><th>Status</th><th>Plants</th><th>Actions</th></tr></thead><tbody id="users"></tbody></table>
+  </section>
+</main>
+<script>
+let state={users:[],plants:[],roles:[]};
+const $=s=>document.querySelector(s);
+function h(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+async function api(path,opt={}){const r=await fetch(path,{cache:'no-store',...opt,headers:{'Content-Type':'application/json','Cache-Control':'no-cache',...(opt.headers||{})}});const text=await r.text();const data=text?JSON.parse(text):{};if(!r.ok)throw new Error(data.error||text||r.status);return data}
+function selectedPlants(){return [...document.querySelectorAll('.plant input:checked')].map(x=>x.value)}
+function setMessage(text,bad=false){$('#message').className=bad?'err':'msg';$('#message').textContent=text||''}
+function editUser(username){const u=state.users.find(x=>x.username===username);if(!u)return;$('#username').value=u.username;$('#role').value=u.role;$('#password').value='';const allowed=new Set(u.plants||[]);document.querySelectorAll('.plant input').forEach(cb=>{cb.checked=allowed.has('*')||allowed.has(cb.value)});window.scrollTo({top:0,behavior:'smooth'})}
+async function disableUser(username,disabled){await api('/api/admin/users/disable',{method:'POST',body:JSON.stringify({username,disabled})});await load();setMessage(disabled?'User disabled.':'User enabled.')}
+async function resetUser(username){const password=prompt('Enter new password for '+username);if(!password)return;await api('/api/admin/users/reset',{method:'POST',body:JSON.stringify({username,password})});setMessage('Password reset for '+username+'.')}
+function render(){const role=$('#role');role.innerHTML=state.roles.map(r=>`<option value="${h(r)}">${h(r)}</option>`).join('');$('#plants').innerHTML=state.plants.map(p=>`<label class="plant"><input type="checkbox" value="${h(p.plantKey)}"><span><b>${h(p.site)}</b><br><span class="muted">${h(p.brand)} · ${h(p.plantKey)}</span></span></label>`).join('');$('#users').innerHTML=state.users.map(u=>`<tr><td data-label="Username"><b>${h(u.username)}</b></td><td data-label="Role">${h(u.role)}</td><td data-label="Status"><span class="pill ${u.disabled?'disabled':''}">${u.disabled?'Disabled':'Active'}</span></td><td data-label="Plants">${h((u.plants||[]).includes('*')?'All plants':(u.plants||[]).length+' plants')}</td><td data-label="Actions"><button class="alt" onclick="editUser('${h(u.username)}')">Edit</button> <button onclick="resetUser('${h(u.username)}')">Reset</button> <button class="warn" onclick="disableUser('${h(u.username)}',${!u.disabled})">${u.disabled?'Enable':'Disable'}</button></td></tr>`).join('');if(!state.postgres)setMessage('PostgreSQL is not configured. Add DATABASE_URL on Render to enable user management.',true)}
+async function load(){state=await api('/api/admin/users');render()}
+$('#save').onclick=async()=>{try{const body={username:$('#username').value.trim(),role:$('#role').value,password:$('#password').value,plants:selectedPlants(),disabled:false};await api('/api/admin/users',{method:'POST',body:JSON.stringify(body)});$('#password').value='';await load();setMessage('User saved.')}catch(e){setMessage(e.message,true)}}
+load().catch(e=>setMessage(e.message,true));
+</script>
 </body>
 </html>"""
 
@@ -1591,7 +1992,7 @@ LIVE_HTML = r"""<!doctype html>
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:#eef3f8;color:var(--ink)}
 header{background:var(--blue);color:white;padding:14px 22px;display:flex;gap:16px;align-items:center;position:sticky;top:0;z-index:10}
 h1{font-size:20px;margin:0}.meta{margin-left:auto;text-align:right;font-size:12px;line-height:1.4}
-a.logout{color:white;text-decoration:none;border:1px solid rgba(255,255,255,.55);border-radius:6px;padding:7px 10px;font-weight:800;font-size:12px}
+a.logout,.admin-link{color:white;text-decoration:none;border:1px solid rgba(255,255,255,.55);border-radius:6px;padding:7px 10px;font-weight:800;font-size:12px}
 main{padding:16px;max-width:1440px;margin:auto}.toolbar{display:grid;grid-template-columns:1.2fr .8fr .8fr auto auto auto auto auto;gap:10px;align-items:end;margin-bottom:10px}
 label{font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:5px}select,input{height:36px;border:1px solid var(--line);border-radius:6px;padding:0 10px;width:100%;background:white}
 button{height:36px;border:0;border-radius:6px;padding:0 13px;background:var(--blue);color:white;font-weight:800;cursor:pointer;white-space:nowrap}button.alt{background:var(--cyan)}button.gray{background:#5c6f8b}
@@ -1609,7 +2010,7 @@ table{width:100%;border-collapse:collapse;font-size:12px}th{background:var(--blu
 @media(max-width:640px){
 body{background:#f3f7fb}
 header{display:grid;grid-template-columns:1fr auto;gap:8px;padding:12px 14px;align-items:start}
-h1{font-size:18px;line-height:1.15}.meta{grid-column:1 / -1;margin:0;text-align:left;font-size:11px;opacity:.95}a.logout{padding:8px 10px}
+h1{font-size:18px;line-height:1.15}.meta{grid-column:1 / -1;margin:0;text-align:left;font-size:11px;opacity:.95}a.logout,.admin-link{padding:8px 10px}
 main{padding:10px;max-width:none;overflow-x:hidden}.toolbar{display:grid;grid-template-columns:1fr;gap:8px}.toolbar button{width:100%;height:42px}
 .update-strip{font-size:11px;gap:6px;margin-bottom:8px}.update-strip span{max-width:100%}
 .grid{grid-template-columns:1fr 1fr;gap:8px}.card{min-height:68px;padding:10px}.card span{margin-bottom:6px}.card strong{font-size:17px}
@@ -1639,7 +2040,7 @@ section.panel tr.open td:nth-child(3)::after{content:'-'}
 </style>
 </head>
 <body>
-<header><h1>NCE Live Solar App</h1><div class="meta"><div>Signed in: __USER__</div><div id="dateLine"></div><div id="versionLine"></div><div id="mobileLine"></div></div><a class="logout" href="/logout">Logout</a></header>
+<header><h1>NCE Live Solar App</h1><div class="meta"><div>Signed in: __USER__</div><div id="dateLine"></div><div id="versionLine"></div><div id="mobileLine"></div></div><a id="adminLink" class="admin-link hidden" href="/admin/users">Users</a><a class="logout" href="/logout">Logout</a></header>
 <main>
   <div class="toolbar">
     <div><label>Search</label><input id="search" placeholder="Search any plant"></div>
@@ -1761,6 +2162,7 @@ const logEl=document.querySelector('#log');
 const lastUpdatedEl=document.querySelector('#lastUpdated');
 const loadingIndicatorEl=document.querySelector('#loadingIndicator');
 const warningLineEl=document.querySelector('#warningLine');
+const adminLinkEl=document.querySelector('#adminLink');
 function istParts(){const values={};new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date()).forEach(p=>{values[p.type]=p.value});return values}
 function todayText(){const p=istParts();return `${p.year}-${p.month}-${p.day}`}
 function istNowText(){const p=istParts();return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute} IST`}
@@ -1782,6 +2184,7 @@ function productionDateValue(){return productionDatePickEl.value||productionDate
 function productionYear(){return Number(productionDateValue().slice(0,4))||Number(todayText().slice(0,4))}
 function productionMonth(){return Number(productionDateValue().slice(5,7))||Number(todayText().slice(5,7))}
 function setLoading(on){loadingIndicatorEl.classList.toggle('hidden',!on);refreshBtn.disabled=on;refreshBtn.textContent=on?'Refreshing...':'Refresh now'}
+function applyRoleUi(){const role=String(statusData.user?.role||'admin').toLowerCase();const isAdmin=!!statusData.user?.is_admin||role==='admin';const canRefresh=isAdmin||role==='manager';const canReport=isAdmin||role==='manager'||role==='customer';adminLinkEl.classList.toggle('hidden',!isAdmin);refreshBtn.classList.toggle('hidden',!canRefresh);saveScheduleBtn.classList.toggle('hidden',!isAdmin);autoDayEl.disabled=!isAdmin;autoTimeEl.disabled=!isAdmin;[reportAllBtn,reportPlantBtn,reportBtn].forEach(btn=>btn.classList.toggle('hidden',!canReport));selectAllBtn.classList.toggle('hidden',!canReport)}
 function setWarning(message){warningLineEl.textContent=message||'';warningLineEl.classList.toggle('hidden',!message)}
 function refreshWarning(r){const bad=(r.steps||[]).filter(s=>!s.ok && !String(s.label||'').toLowerCase().includes('skipped'));return bad.length?'Some inverter/API refreshes failed. Showing last successful data: '+bad.slice(0,2).map(s=>s.label).join(', '):''}
 function backendUpdatedText(s){const finished=s?.last_refresh?.finished, started=s?.last_refresh?.started;if(finished)return finished.replace('T',' ')+' IST';if(started)return 'Refresh running since '+started.replace('T',' ')+' IST';return istNowText()}
@@ -1823,11 +2226,11 @@ renderDetail(active);
 function refreshText(r){const lines=(r.steps||[]).map(s=>`${s.ok?'OK':'SKIP'} - ${s.label}: ${s.message||''}`);if(r.running)lines.push('RUNNING - Refresh still in progress...');if(r.finished)lines.push('DONE - Finished '+r.finished);return lines.join('\\n')||'Ready.'}
 async function loadReports(){try{const r=await api('/api/reports');reportListEl.innerHTML=(r.reports||[]).length?(r.reports||[]).map(x=>`<a class="report-item" href="${x.url}">${h(x.name)}<span>${h(x.modified)} · ${h(x.size_kb)} KB</span></a>`).join(''):'No reports generated yet.';}catch(error){reportListEl.textContent='Could not load reports: '+error.message;}}
 async function triggerOpenRefresh(){if(openRefreshStarted)return;openRefreshStarted=true;return startRefresh('open')}
-function applyStatus(s){statusData=s||{};dateLineEl.textContent=istNowText();versionLineEl.textContent='Build: '+(statusData.app_version||'old');mobileLineEl.textContent='iPhone: '+(statusData.mobile_url||'');lastUpdatedEl.textContent=backendUpdatedText(statusData);if(statusData.config){autoDayEl.value=statusData.config.auto_report_day||autoDayEl.value;autoTimeEl.value=statusData.config.auto_report_time||autoTimeEl.value}logEl.textContent=refreshText(statusData.last_refresh||{})}
+function applyStatus(s){statusData=s||{};dateLineEl.textContent=istNowText();versionLineEl.textContent='Build: '+(statusData.app_version||'old');mobileLineEl.textContent='iPhone: '+(statusData.mobile_url||'');lastUpdatedEl.textContent=backendUpdatedText(statusData);if(statusData.config){autoDayEl.value=statusData.config.auto_report_day||autoDayEl.value;autoTimeEl.value=statusData.config.auto_report_time||autoTimeEl.value}applyRoleUi();logEl.textContent=refreshText(statusData.last_refresh||{})}
 function applyPlants(nextPlants,opts={}){const keep=new Set(selected);plants=nextPlants||[];if(opts.preserveSelection!==false){const ids=new Set(plants.map(p=>p.id));selected=new Set([...keep].filter(id=>ids.has(id)))}else{selected=new Set()}renderFilters();render()}
 async function load(opts={}){const p=await api('/api/plants');applyPlants(p.plants||[],opts);const s=await api('/api/status');applyStatus(s);if(opts.reports!==false)loadReports();const staleRows=staleOnlineRows();if(opts.openCheck!==false && s.config?.auto_refresh_on_open && !openRefreshStarted){if(staleRows.length)setWarning(`${staleRows.length} plants show previous-day data. Refreshing latest data now...`);setTimeout(triggerOpenRefresh,50);}}
 async function pollRefresh(){let finalStatus={};for(let i=0;i<90;i++){const s=await api('/api/status');finalStatus=s.last_refresh||{};logEl.textContent=refreshText(finalStatus);await load({preserveSelection:true,reports:false});if(!finalStatus.running)return finalStatus;await new Promise(r=>setTimeout(r,3000));}return finalStatus}
-async function startRefresh(reason='manual'){if(refreshInFlight)return;if(reason==='auto' && document.hidden)return;refreshInFlight=true;setLoading(true);setWarning('');try{logEl.textContent='Starting background refresh...';const r=await api('/api/refresh',{method:'POST'});logEl.textContent=refreshText(r);const finalStatus=(r.accepted||r.running)?await pollRefresh():r;const warn=refreshWarning(finalStatus);if(warn)setWarning(warn);await load({preserveSelection:true,reports:reason!=='auto'});}catch(error){setWarning('Live refresh failed. Last successful data is still shown. '+error.message);logEl.textContent='Refresh failed: '+error.message;}finally{setLoading(false);refreshInFlight=false;}}
+async function startRefresh(reason='manual'){const role=String(statusData.user?.role||'admin').toLowerCase();const canRefresh=role==='admin'||role==='manager';if(!canRefresh){if(reason==='manual')setWarning('Your user role can view data but cannot refresh inverter clouds.');return}if(refreshInFlight)return;if(reason==='auto' && document.hidden)return;refreshInFlight=true;setLoading(true);setWarning('');try{logEl.textContent='Starting background refresh...';const r=await api('/api/refresh',{method:'POST'});logEl.textContent=refreshText(r);const finalStatus=(r.accepted||r.running)?await pollRefresh():r;const warn=refreshWarning(finalStatus);if(warn)setWarning(warn);await load({preserveSelection:true,reports:reason!=='auto'});}catch(error){setWarning('Live refresh failed. Last successful data is still shown. '+error.message);logEl.textContent='Refresh failed: '+error.message;}finally{setLoading(false);refreshInFlight=false;}}
 function startAutoRefresh(){if(autoRefreshTimer)clearInterval(autoRefreshTimer);autoRefreshTimer=setInterval(()=>startRefresh('auto'),60000)}
 refreshBtn.onclick=()=>startRefresh('manual');
 async function generateReport(ids,label,all=false){reportResultEl.textContent='Generating '+label+'...';const r=await api('/api/report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plant_ids:ids,all_plants:all})});reportResultEl.innerHTML=r.ok?`Saved ${r.count} plant report.<br><a class="download-btn" href="${r.viewer_url}">Open Report</a>`:'Failed: '+h(r.message);if(r.ok)loadReports();}
