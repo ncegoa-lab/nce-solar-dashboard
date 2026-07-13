@@ -65,7 +65,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-13-postgres-multi-user-v53"
+APP_VERSION = "2026-07-13-user-change-password-v54"
 IST = ZoneInfo("Asia/Kolkata")
 VALID_ROLES = {"admin", "manager", "customer", "viewer"}
 PLANT_COLUMNS = [
@@ -468,6 +468,39 @@ def db_set_user_disabled(username: str, disabled: bool) -> dict[str, Any]:
                 raise ValueError("User not found.")
         conn.commit()
     return {"ok": True, **dict(row)}
+
+
+def file_change_user_password(username: str, new_password: str) -> dict[str, Any]:
+    payload = {"users": []}
+    if USERS_FILE.exists():
+        payload = json.loads(USERS_FILE.read_text(encoding="utf-8"))
+    changed = False
+    for item in payload.get("users", []):
+        if item.get("username") == username:
+            item["password_hash"] = hash_password(new_password)
+            item.pop("password", None)
+            changed = True
+            break
+    if not changed:
+        raise ValueError("Local file user not found.")
+    USERS_FILE.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    USERS_FILE.chmod(0o600)
+    return {"ok": True, "username": username}
+
+
+def change_own_password(user: dict[str, Any], current_password: str, new_password: str) -> dict[str, Any]:
+    if not user or user.get("disabled"):
+        raise ValueError("User not found.")
+    if not current_password or not new_password:
+        raise ValueError("Current password and new password are required.")
+    if len(new_password) < 8:
+        raise ValueError("New password must be at least 8 characters.")
+    if not verify_password(current_password, user.get("password_hash", "")):
+        raise ValueError("Current password is incorrect.")
+    username = str(user.get("username") or "")
+    if postgres_enabled():
+        return db_reset_user_password(username, new_password)
+    return file_change_user_password(username, new_password)
 
 
 def user_can_access(user: dict[str, Any] | None, key: str) -> bool:
@@ -1750,6 +1783,9 @@ class Handler(BaseHTTPRequestHandler):
             elif parsed.path == "/api/report":
                 payload = self.read_json()
                 self.send_json(APP.generate_selected_report(payload.get("plant_ids") or [], user, bool(payload.get("all_plants"))))
+            elif parsed.path == "/api/change-password":
+                payload = self.read_json()
+                self.send_json(change_own_password(user, payload.get("current_password") or "", payload.get("new_password") or ""))
             elif parsed.path == "/api/admin/users":
                 if not is_admin(user):
                     self.send_json({"error": "Admin access required"}, 403)
@@ -1992,7 +2028,7 @@ LIVE_HTML = r"""<!doctype html>
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:#eef3f8;color:var(--ink)}
 header{background:var(--blue);color:white;padding:14px 22px;display:flex;gap:16px;align-items:center;position:sticky;top:0;z-index:10}
 h1{font-size:20px;margin:0}.meta{margin-left:auto;text-align:right;font-size:12px;line-height:1.4}
-a.logout,.admin-link{color:white;text-decoration:none;border:1px solid rgba(255,255,255,.55);border-radius:6px;padding:7px 10px;font-weight:800;font-size:12px}
+a.logout,.admin-link,.password-link{color:white;text-decoration:none;border:1px solid rgba(255,255,255,.55);border-radius:6px;padding:7px 10px;font-weight:800;font-size:12px;background:transparent}
 main{padding:16px;max-width:1440px;margin:auto}.toolbar{display:grid;grid-template-columns:1.2fr .8fr .8fr auto auto auto auto auto;gap:10px;align-items:end;margin-bottom:10px}
 label{font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:5px}select,input{height:36px;border:1px solid var(--line);border-radius:6px;padding:0 10px;width:100%;background:white}
 button{height:36px;border:0;border-radius:6px;padding:0 13px;background:var(--blue);color:white;font-weight:800;cursor:pointer;white-space:nowrap}button.alt{background:var(--cyan)}button.gray{background:#5c6f8b}
@@ -2010,7 +2046,7 @@ table{width:100%;border-collapse:collapse;font-size:12px}th{background:var(--blu
 @media(max-width:640px){
 body{background:#f3f7fb}
 header{display:grid;grid-template-columns:1fr auto;gap:8px;padding:12px 14px;align-items:start}
-h1{font-size:18px;line-height:1.15}.meta{grid-column:1 / -1;margin:0;text-align:left;font-size:11px;opacity:.95}a.logout,.admin-link{padding:8px 10px}
+h1{font-size:18px;line-height:1.15}.meta{grid-column:1 / -1;margin:0;text-align:left;font-size:11px;opacity:.95}a.logout,.admin-link,.password-link{padding:8px 10px}
 main{padding:10px;max-width:none;overflow-x:hidden}.toolbar{display:grid;grid-template-columns:1fr;gap:8px}.toolbar button{width:100%;height:42px}
 .update-strip{font-size:11px;gap:6px;margin-bottom:8px}.update-strip span{max-width:100%}
 .grid{grid-template-columns:1fr 1fr;gap:8px}.card{min-height:68px;padding:10px}.card span{margin-bottom:6px}.card strong{font-size:17px}
@@ -2040,7 +2076,7 @@ section.panel tr.open td:nth-child(3)::after{content:'-'}
 </style>
 </head>
 <body>
-<header><h1>NCE Live Solar App</h1><div class="meta"><div>Signed in: __USER__</div><div id="dateLine"></div><div id="versionLine"></div><div id="mobileLine"></div></div><a id="adminLink" class="admin-link hidden" href="/admin/users">Users</a><a class="logout" href="/logout">Logout</a></header>
+<header><h1>NCE Live Solar App</h1><div class="meta"><div>Signed in: __USER__</div><div id="dateLine"></div><div id="versionLine"></div><div id="mobileLine"></div></div><a id="adminLink" class="admin-link hidden" href="/admin/users">Users</a><button id="changePassword" class="password-link">Change Password</button><a class="logout" href="/logout">Logout</a></header>
 <main>
   <div class="toolbar">
     <div><label>Search</label><input id="search" placeholder="Search any plant"></div>
@@ -2163,6 +2199,7 @@ const lastUpdatedEl=document.querySelector('#lastUpdated');
 const loadingIndicatorEl=document.querySelector('#loadingIndicator');
 const warningLineEl=document.querySelector('#warningLine');
 const adminLinkEl=document.querySelector('#adminLink');
+const changePasswordBtn=document.querySelector('#changePassword');
 function istParts(){const values={};new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date()).forEach(p=>{values[p.type]=p.value});return values}
 function todayText(){const p=istParts();return `${p.year}-${p.month}-${p.day}`}
 function istNowText(){const p=istParts();return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute} IST`}
@@ -2239,6 +2276,7 @@ reportPlantBtn.onclick=()=>{if(!activePlantId){reportResultEl.textContent='Tap a
 reportBtn.onclick=()=>{if(!selected.size){reportResultEl.textContent='Tick one or more plants first.';return}generateReport([...selected],'selected report')};
 selectAllBtn.onclick=()=>{const visible=filtered();const all=visible.every(p=>selected.has(p.id));visible.forEach(p=>all?selected.delete(p.id):selected.add(p.id));render()}
 saveScheduleBtn.onclick=async()=>{const r=await api('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({auto_report_day:autoDayEl.value,auto_report_time:autoTimeEl.value})});logEl.textContent='Saved schedule: '+r.config.auto_report_day+' '+r.config.auto_report_time}
+changePasswordBtn.onclick=async()=>{const current=prompt('Enter current password');if(!current)return;const next=prompt('Enter new password, minimum 8 characters');if(!next)return;const confirm=prompt('Confirm new password');if(next!==confirm){setWarning('Passwords did not match.');return}try{await api('/api/change-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({current_password:current,new_password:next})});setWarning('');alert('Password changed successfully. Use the new password next time.')}catch(error){setWarning(error.message)}};
 perKwChartCardEl.onclick=()=>window.open('/chart-detail?'+chartQuery('perkw',filtered()),'_blank');
 monthlyChartCardEl.onclick=()=>window.open('/chart-detail?'+chartQuery('monthly',filtered()),'_blank');
 selectedTodayChartCardEl.onclick=e=>{if(e.target.closest('.production-footer'))return;const active=plants.find(p=>p.id===activePlantId);if(!active)return;let query='type='+(productionMode==='month'?'monthly':'today')+'&plant_key='+encodeURIComponent(active.plantKey);if(productionMode==='month')query+='&month='+encodeURIComponent(productionMonth())+'&year='+encodeURIComponent(productionYear());else query+='&date='+encodeURIComponent(productionDateValue());window.open('/chart-detail?'+query,'_blank')};
