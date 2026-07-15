@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-10T10:28:06",
+  "generated_at": "2026-07-15T13:00:51",
   "api_base": "https://hk.semsportal.com/api/",
   "stations": [
     {
@@ -42,19 +42,19 @@
             },
             "status": "ok",
             "now": {
-              "cloud": "20",
-              "cond_code": "501",
-              "cond_txt": "Fog",
-              "fl": "3",
-              "hum": "88",
+              "cloud": "35",
+              "cond_code": "153",
+              "cond_txt": "Partly Cloudy",
+              "fl": "2",
+              "hum": "73",
               "pcpn": "0.0",
               "pres": "1010",
               "tmp": "28",
-              "vis": "5",
+              "vis": "6",
               "wind_deg": "270",
               "wind_dir": "W",
-              "wind_sc": "3",
-              "wind_spd": "13"
+              "wind_sc": "2",
+              "wind_spd": "9"
             }
           }
         ]
@@ -105,19 +105,19 @@
             },
             "status": "ok",
             "now": {
-              "cloud": "99",
+              "cloud": "98",
               "cond_code": "151",
               "cond_txt": "Cloudy",
               "fl": "2",
-              "hum": "88",
+              "hum": "90",
               "pcpn": "0.0",
               "pres": "1010",
-              "tmp": "27",
-              "vis": "8",
-              "wind_deg": "270",
-              "wind_dir": "W",
+              "tmp": "26",
+              "vis": "11",
+              "wind_deg": "293",
+              "wind_dir": "WNW",
               "wind_sc": "2",
-              "wind_spd": "11"
+              "wind_spd": "9"
             }
           }
         ]
@@ -136,19 +136,19 @@
       "adcode": "040400360003",
       "location": "Sapana Solitaire, villa1, Colva Goa\n",
       "status": 1,
-      "pac": 5083.0,
+      "pac": 3407.0,
       "capacity": 10.0,
-      "eday": 7.4,
-      "emonth": 210.8,
-      "eday_income": 1.6280000000000001,
-      "etotal": 4316.3,
+      "eday": 18.6,
+      "emonth": 418.0,
+      "eday_income": 4.0920000000000005,
+      "etotal": 4523.4,
       "powerstation_type": "Residential",
       "pre_org_id": null,
       "org_id": null,
       "longitude": "73.9117496",
       "latitude": "15.2908882",
-      "pac_kw": 0.5083,
-      "to_hour": 0.74,
+      "pac_kw": 0.3407,
+      "to_hour": 1.86,
       "weather": {
         "HeWeather6": [
           {
@@ -199,19 +199,19 @@
       "adcode": "017100100032",
       "location": "Colva",
       "status": 1,
-      "pac": 3561.0,
+      "pac": 2435.0,
       "capacity": 6.0,
-      "eday": 6.2,
-      "emonth": 144.89999999999998,
-      "eday_income": 45.26,
-      "etotal": 5787.1,
+      "eday": 13.1,
+      "emonth": 281.3,
+      "eday_income": 95.63,
+      "etotal": 5923.4,
       "powerstation_type": "Residential",
       "pre_org_id": null,
       "org_id": null,
       "longitude": "73.9139183",
       "latitude": "15.2811065",
-      "pac_kw": 0.5935,
-      "to_hour": 1.0333333333333334,
+      "pac_kw": 0.4058333333333333,
+      "to_hour": 2.183333333333333,
       "weather": {
         "HeWeather6": [
           {
@@ -231,19 +231,19 @@
             },
             "status": "ok",
             "now": {
-              "cloud": "100",
+              "cloud": "91",
               "cond_code": "151",
               "cond_txt": "Cloudy",
               "fl": "2",
-              "hum": "91",
+              "hum": "90",
               "pcpn": "0.0",
               "pres": "1010",
-              "tmp": "26",
-              "vis": "8",
-              "wind_deg": "270",
-              "wind_dir": "W",
+              "tmp": "25",
+              "vis": "11",
+              "wind_deg": "293",
+              "wind_dir": "WNW",
               "wind_sc": "2",
-              "wind_spd": "11"
+              "wind_spd": "9"
             }
           }
         ]
@@ -262,19 +262,19 @@
       "adcode": "017100100035",
       "location": "Guirdolim Chandor",
       "status": 1,
-      "pac": 3360.0,
+      "pac": 6915.0,
       "capacity": 10.0,
-      "eday": 5.0,
-      "emonth": 134.8,
-      "eday_income": 1.1,
-      "etotal": 7141.2,
+      "eday": 16.0,
+      "emonth": 302.3,
+      "eday_income": 3.52,
+      "etotal": 7308.7,
       "powerstation_type": "Residential",
       "pre_org_id": null,
       "org_id": null,
       "longitude": "74.0468901",
       "latitude": "15.2663903",
-      "pac_kw": 0.33599999999999997,
-      "to_hour": 0.5,
+      "pac_kw": 0.6915,
+      "to_hour": 1.6,
       "weather": {
         "HeWeather6": [
           {
@@ -294,19 +294,19 @@
             },
             "status": "ok",
             "now": {
-              "cloud": "100",
+              "cloud": "91",
               "cond_code": "151",
               "cond_txt": "Cloudy",
               "fl": "2",
-              "hum": "91",
+              "hum": "90",
               "pcpn": "0.0",
               "pres": "1010",
-              "tmp": "26",
-              "vis": "8",
-              "wind_deg": "270",
-              "wind_dir": "W",
+              "tmp": "25",
+              "vis": "11",
+              "wind_deg": "293",
+              "wind_dir": "WNW",
               "wind_sc": "2",
-              "wind_spd": "11"
+              "wind_spd": "9"
             }
           }
         ]
@@ -325,19 +325,19 @@
       "adcode": "017100100033",
       "location": "H.no-02, Gauthan, Khandepar, Ponda 403406 Goa",
       "status": 1,
-      "pac": 2280.0,
+      "pac": 2894.0,
       "capacity": 10.53,
-      "eday": 9.0,
-      "emonth": 197.8,
-      "eday_income": 1.98,
-      "etotal": 2908.3,
+      "eday": 24.1,
+      "emonth": 450.5,
+      "eday_income": 5.3020000000000005,
+      "etotal": 3161.0,
       "powerstation_type": "Residential",
       "pre_org_id": null,
       "org_id": null,
       "longitude": "74.0382991",
       "latitude": "15.4355232",
-      "pac_kw": 0.21652421652421652,
-      "to_hour": 0.8547008547008548,
+      "pac_kw": 0.27483380816714154,
+      "to_hour": 2.2886989553656223,
       "weather": {
         "HeWeather6": [
           {
@@ -357,19 +357,19 @@
             },
             "status": "ok",
             "now": {
-              "cloud": "100",
+              "cloud": "91",
               "cond_code": "151",
               "cond_txt": "Cloudy",
               "fl": "2",
-              "hum": "91",
+              "hum": "90",
               "pcpn": "0.0",
               "pres": "1010",
-              "tmp": "26",
-              "vis": "8",
-              "wind_deg": "270",
-              "wind_dir": "W",
+              "tmp": "25",
+              "vis": "11",
+              "wind_deg": "293",
+              "wind_dir": "WNW",
               "wind_sc": "2",
-              "wind_spd": "11"
+              "wind_spd": "9"
             }
           }
         ]
@@ -388,19 +388,19 @@
       "adcode": "017100100020",
       "location": "Ravish Narvekar\nNear Saibaba Mandir, Piligao, Bicholim",
       "status": 1,
-      "pac": 4412.0,
+      "pac": 8458.0,
       "capacity": 10.71,
-      "eday": 7.1,
-      "emonth": 181.7,
-      "eday_income": 1.5619999999999998,
-      "etotal": 1453.9,
+      "eday": 23.5,
+      "emonth": 386.7,
+      "eday_income": 5.17,
+      "etotal": 1658.9,
       "powerstation_type": "Residential",
       "pre_org_id": null,
       "org_id": null,
       "longitude": "73.9490223",
       "latitude": "15.5512691",
-      "pac_kw": 0.4119514472455649,
-      "to_hour": 0.6629318394024275,
+      "pac_kw": 0.7897292250233426,
+      "to_hour": 2.1942110177404293,
       "weather": {
         "HeWeather6": [
           {
@@ -420,19 +420,19 @@
             },
             "status": "ok",
             "now": {
-              "cloud": "99",
+              "cloud": "98",
               "cond_code": "151",
               "cond_txt": "Cloudy",
               "fl": "2",
-              "hum": "88",
+              "hum": "90",
               "pcpn": "0.0",
               "pres": "1010",
-              "tmp": "27",
-              "vis": "8",
-              "wind_deg": "270",
-              "wind_dir": "W",
+              "tmp": "26",
+              "vis": "11",
+              "wind_deg": "293",
+              "wind_dir": "WNW",
               "wind_sc": "2",
-              "wind_spd": "11"
+              "wind_spd": "9"
             }
           }
         ]
@@ -451,19 +451,19 @@
       "adcode": "017100100031",
       "location": "Pomburpa Goa",
       "status": 1,
-      "pac": 4961.0,
+      "pac": 7626.0,
       "capacity": 10.0,
-      "eday": 7.0,
-      "emonth": 182.9,
-      "eday_income": 51.1,
-      "etotal": 8546.2,
+      "eday": 16.6,
+      "emonth": 368.0,
+      "eday_income": 121.18,
+      "etotal": 8731.2,
       "powerstation_type": "Residential",
       "pre_org_id": null,
       "org_id": null,
       "longitude": "73.8657652",
       "latitude": "15.5493088",
-      "pac_kw": 0.49610000000000004,
-      "to_hour": 0.7,
+      "pac_kw": 0.7626000000000001,
+      "to_hour": 1.6600000000000001,
       "weather": {
         "HeWeather6": [
           {
@@ -483,19 +483,19 @@
             },
             "status": "ok",
             "now": {
-              "cloud": "99",
+              "cloud": "98",
               "cond_code": "151",
               "cond_txt": "Cloudy",
               "fl": "2",
-              "hum": "88",
+              "hum": "90",
               "pcpn": "0.0",
               "pres": "1010",
-              "tmp": "27",
-              "vis": "8",
-              "wind_deg": "270",
-              "wind_dir": "W",
+              "tmp": "26",
+              "vis": "11",
+              "wind_deg": "293",
+              "wind_dir": "WNW",
               "wind_sc": "2",
-              "wind_spd": "11"
+              "wind_spd": "9"
             }
           }
         ]
@@ -514,19 +514,19 @@
       "adcode": "017100100030",
       "location": "Yashoda Sadan, near Donbosco, Fatorda Goa",
       "status": 1,
-      "pac": 6847.0,
+      "pac": 6102.0,
       "capacity": 10.7,
-      "eday": 9.3,
-      "emonth": 264.0,
-      "eday_income": 2.0460000000000003,
-      "etotal": 3565.6,
+      "eday": 22.2,
+      "emonth": 513.4,
+      "eday_income": 4.8839999999999995,
+      "etotal": 3814.9,
       "powerstation_type": "Residential",
       "pre_org_id": null,
       "org_id": null,
       "longitude": "73.9690846",
       "latitude": "15.291974",
-      "pac_kw": 0.6399065420560749,
-      "to_hour": 0.869158878504673,
+      "pac_kw": 0.5702803738317758,
+      "to_hour": 2.074766355140187,
       "weather": {
         "HeWeather6": [
           {
@@ -546,19 +546,19 @@
             },
             "status": "ok",
             "now": {
-              "cloud": "100",
+              "cloud": "91",
               "cond_code": "151",
               "cond_txt": "Cloudy",
               "fl": "2",
-              "hum": "91",
+              "hum": "90",
               "pcpn": "0.0",
               "pres": "1010",
-              "tmp": "26",
-              "vis": "8",
-              "wind_deg": "270",
-              "wind_dir": "W",
+              "tmp": "25",
+              "vis": "11",
+              "wind_deg": "293",
+              "wind_dir": "WNW",
               "wind_sc": "2",
-              "wind_spd": "11"
+              "wind_spd": "9"
             }
           }
         ]
@@ -577,19 +577,19 @@
       "adcode": "017100100030",
       "location": "Shantai Niwas, lane-3, New colony, Mondop Navelim Goa",
       "status": 1,
-      "pac": 8038.0,
+      "pac": 4456.0,
       "capacity": 10.0,
-      "eday": 10.4,
-      "emonth": 247.1,
-      "eday_income": 78.0,
-      "etotal": 7834.9,
+      "eday": 28.4,
+      "emonth": 515.7,
+      "eday_income": 213.0,
+      "etotal": 8103.5,
       "powerstation_type": "Residential",
       "pre_org_id": null,
       "org_id": null,
       "longitude": "73.977407",
       "latitude": "15.2589651",
-      "pac_kw": 0.8038000000000001,
-      "to_hour": 1.04,
+      "pac_kw": 0.44560000000000005,
+      "to_hour": 2.84,
       "weather": {
         "HeWeather6": [
           {
@@ -609,19 +609,19 @@
             },
             "status": "ok",
             "now": {
-              "cloud": "100",
+              "cloud": "91",
               "cond_code": "151",
               "cond_txt": "Cloudy",
               "fl": "2",
-              "hum": "91",
+              "hum": "90",
               "pcpn": "0.0",
               "pres": "1010",
-              "tmp": "26",
-              "vis": "8",
-              "wind_deg": "270",
-              "wind_dir": "W",
+              "tmp": "25",
+              "vis": "11",
+              "wind_deg": "293",
+              "wind_dir": "WNW",
               "wind_sc": "2",
-              "wind_spd": "11"
+              "wind_spd": "9"
             }
           }
         ]
@@ -640,19 +640,19 @@
       "adcode": "017100100030",
       "location": "H.no. 259/1,\nMandop, Shantinagar, Goa",
       "status": 1,
-      "pac": 2761.0,
+      "pac": 10186.0,
       "capacity": 10.7,
-      "eday": 8.4,
-      "emonth": 257.8,
-      "eday_income": 1.848,
-      "etotal": 3061.4,
+      "eday": 22.7,
+      "emonth": 502.59999999999997,
+      "eday_income": 4.994,
+      "etotal": 3306.1,
       "powerstation_type": "Residential",
       "pre_org_id": null,
       "org_id": null,
       "longitude": "73.9806627",
       "latitude": "15.2616388",
-      "pac_kw": 0.25803738317757013,
-      "to_hour": 0.7850467289719627,
+      "pac_kw": 0.95196261682243,
+      "to_hour": 2.121495327102804,
       "weather": {
         "HeWeather6": [
           {
@@ -672,19 +672,19 @@
             },
             "status": "ok",
             "now": {
-              "cloud": "100",
+              "cloud": "91",
               "cond_code": "151",
               "cond_txt": "Cloudy",
               "fl": "2",
-              "hum": "91",
+              "hum": "90",
               "pcpn": "0.0",
               "pres": "1010",
-              "tmp": "26",
-              "vis": "8",
-              "wind_deg": "270",
-              "wind_dir": "W",
+              "tmp": "25",
+              "vis": "11",
+              "wind_deg": "293",
+              "wind_dir": "WNW",
               "wind_sc": "2",
-              "wind_spd": "11"
+              "wind_spd": "9"
             }
           }
         ]

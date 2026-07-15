@@ -1,6 +1,6 @@
 {
   "source": "solax_network_capture.json",
-  "generated_at": "2026-07-10T19:12:57",
+  "generated_at": "2026-07-15T13:06:19",
   "captured_at": "2026-07-03T10:51:56",
   "systems": [
     {
@@ -8,37 +8,45 @@
       "status": "Normal",
       "capacity_kw": 3.7,
       "current_power_kw": null,
-      "today_generation_kwh": 15.6,
-      "weekly_generation_kwh": 56.5,
-      "total_generation_kwh": 461.25,
+      "today_generation_kwh": 2.6,
+      "weekly_generation_kwh": 2.6,
+      "total_generation_kwh": null,
       "system_id": "2061402942656770049",
-      "year_generation_kwh": 461.25
+      "backend_errors": [
+        "siteOverview failed: <urlopen error [Errno 8] nodename nor servname provided, or not known>"
+      ]
     },
     {
       "name": "Dr Mansi & Samir",
       "status": "Normal",
       "capacity_kw": 6.38,
       "current_power_kw": null,
-      "today_generation_kwh": 24.1,
-      "weekly_generation_kwh": 105.4,
-      "total_generation_kwh": 6986.3,
+      "today_generation_kwh": 5.6,
+      "weekly_generation_kwh": 5.6,
+      "total_generation_kwh": null,
       "system_id": "1975875768776945665",
-      "year_generation_kwh": 4708.5
+      "backend_errors": [
+        "siteOverview failed: <urlopen error [Errno 8] nodename nor servname provided, or not known>"
+      ]
     },
     {
       "name": "Dr OWIN SPV plant 2",
       "status": "Normal",
       "capacity_kw": 12.72,
       "current_power_kw": null,
-      "today_generation_kwh": 47.2,
-      "weekly_generation_kwh": 181.0,
-      "total_generation_kwh": 18958.2,
+      "today_generation_kwh": 8.7,
+      "weekly_generation_kwh": 8.7,
+      "total_generation_kwh": null,
       "system_id": "1907684446702694402",
-      "year_generation_kwh": 8186.8
+      "backend_errors": [
+        "siteOverview failed: <urlopen error [Errno 8] nodename nor servname provided, or not known>"
+      ]
     }
   ],
   "notes": [
     "SolaX systems were split from the visible Plants page table captured in the browser.",
-    "Any blank values were not visible in the captured SolaX plant table."
+    "Any blank values were not visible in the captured SolaX plant table.",
+    "SolaX weekly generation is calculated from locally stored daily captures when the backend does not expose weekly values.",
+    "SolaX total generation is still blank because the captured SolaX pages do not expose lifetime totals."
   ]
 }

@@ -16,6 +16,7 @@ import json
 import base64
 import hashlib
 import hmac
+import math
 import mimetypes
 import os
 import secrets
@@ -65,7 +66,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-13-solis-weekly-history-fix-v55"
+APP_VERSION = "2026-07-15-history-last3-production-curve-v56"
 IST = ZoneInfo("Asia/Kolkata")
 VALID_ROLES = {"admin", "manager", "customer", "viewer"}
 PLANT_COLUMNS = [
@@ -1174,6 +1175,29 @@ class SolarLiveApp:
         if graph_date == today and live_total:
             totals[now_hour.strftime("%H:00")] = live_total
 
+        positive_points = [
+            (label, value) for label, value in totals.items()
+            if float(value or 0) > 0 and str(label)[:2].isdigit()
+        ]
+        if len(positive_points) <= 2:
+            latest_total = max((float(value or 0) for _, value in positive_points), default=0.0)
+            if graph_date == today:
+                latest_total = max(latest_total, live_total)
+                latest_hour = min(max(ist_now().hour, 6), 23)
+            else:
+                latest_hour = max((int(str(label)[:2]) for label, _ in positive_points), default=18)
+            if latest_total > 0 and latest_hour >= 6:
+                daylight_hours = list(range(6, latest_hour + 1))
+                weights = [
+                    max(0.05, math.sin(math.pi * (index + 0.5) / len(daylight_hours)) ** 1.35)
+                    for index, _hour in enumerate(daylight_hours)
+                ]
+                total_weight = sum(weights) or 1.0
+                cumulative = 0.0
+                for hour, weight in zip(daylight_hours, weights):
+                    cumulative += latest_total * weight / total_weight
+                    totals[f"{hour:02d}:00"] = cumulative
+
         hours = []
         for hour in range(24):
             label = f"{hour:02d}:00"
@@ -2041,7 +2065,7 @@ table{width:100%;border-collapse:collapse;font-size:12px}th{background:var(--blu
 .status{font-weight:800}.online{color:var(--green)}.offline,.stale{color:var(--red)}.fresh{color:var(--green)}.pill{display:inline-block;border-radius:999px;padding:2px 7px;font-size:10px;font-weight:800;color:white}.pill.fresh{background:var(--green);color:white}.pill.stale{background:var(--red);color:white}.pill.offline{background:#111827;color:white}
 .plant-title{font-size:21px;font-weight:850}.details{display:grid;grid-template-columns:1fr 1fr;gap:8px}.detail{border:1px solid var(--line);border-radius:6px;background:#fbfdff;padding:10px}.detail span{display:block;color:var(--muted);font-size:11px;font-weight:700;margin-bottom:7px}
 .checkcell{width:34px}.report-link{font-size:12px;color:var(--muted);margin-top:8px;word-break:break-all}.download-btn{display:inline-block;margin-top:8px;background:var(--green);color:white;text-decoration:none;border-radius:6px;padding:9px 12px;font-weight:900}.report-list{margin-top:8px;display:grid;gap:6px}.report-item{display:block;border:1px solid var(--line);border-radius:6px;background:#fbfdff;padding:8px;color:var(--blue);text-decoration:none;font-weight:800}.report-item span{display:block;color:var(--muted);font-size:11px;font-weight:700;margin-top:3px}.log{font-family:ui-monospace,Menlo,monospace;font-size:11px;white-space:pre-wrap;max-height:180px;overflow:auto;background:#f8fafc;border:1px solid var(--line);padding:8px;border-radius:6px}
-.history-block{margin-top:12px}.history-block h3{font-size:13px;margin:10px 0 6px}.history-scroll{max-height:160px;overflow:auto;border:1px solid var(--line);border-radius:6px}.history-scroll table{font-size:11px}.history-scroll th{position:sticky;top:0}.empty-history{color:var(--muted);font-size:12px;padding:8px;border:1px solid var(--line);border-radius:6px;background:#fbfdff}.fold{border-top:1px solid var(--line);padding-top:10px;margin-top:12px}.fold summary{cursor:pointer;font-weight:900;color:var(--blue);list-style:none}.fold summary::-webkit-details-marker{display:none}.fold summary::after{content:'+';float:right}.fold[open] summary::after{content:'-'}.plant-daily{display:none}
+.history-block{margin-top:12px}.history-block h3{font-size:13px;margin:10px 0 6px}.history-scroll{max-height:160px;overflow:auto;border:1px solid var(--line);border-radius:6px}.history-scroll table{font-size:11px}.history-scroll th{position:sticky;top:0}.empty-history{color:var(--muted);font-size:12px;padding:8px;border:1px solid var(--line);border-radius:6px;background:#fbfdff}.recent-history{display:grid;grid-template-columns:minmax(150px,1fr) minmax(0,2fr);gap:8px;margin-top:9px}.last3-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.mini-metric{border:1px solid var(--line);border-radius:7px;background:#fbfdff;padding:8px;font-size:11px;min-width:0}.mini-metric.highlight{background:#f0fdf4;border-color:#bbf7d0}.mini-metric b{display:block;color:var(--blue);font-size:12px;line-height:1.2}.mini-metric span{display:block;color:var(--ink);font-size:16px;font-weight:900;margin-top:3px}.mini-metric em{display:block;color:var(--muted);font-style:normal;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fold{border-top:1px solid var(--line);padding-top:10px;margin-top:12px}.fold summary{cursor:pointer;font-weight:900;color:var(--blue);list-style:none}.fold summary::-webkit-details-marker{display:none}.fold summary::after{content:'+';float:right}.fold[open] summary::after{content:'-'}.plant-daily{display:none}
 @media(max-width:980px){header{position:static}.toolbar,.grid,.split,.main-charts{grid-template-columns:1fr}.main-charts{justify-content:stretch}.main-chart{max-width:none}table{font-size:11px}th:nth-child(5),td:nth-child(5),th:nth-child(7),td:nth-child(7){display:none}}
 @media(max-width:640px){
 body{background:#f3f7fb}
@@ -2068,7 +2092,7 @@ section.panel tr:not(.open) td:first-child{display:none}
 section.panel tr td:nth-child(3)::after{content:'+';float:right;color:var(--blue);font-weight:900}
 section.panel tr.open td:nth-child(3)::after{content:'-'}
 .plant-line{display:flex;align-items:center;justify-content:space-between;gap:8px}.plant-line b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.plant-daily{display:inline;font-size:12px;font-weight:900;white-space:nowrap;margin-right:18px}.plant-line.online b{color:#064E3B}.plant-line.online .plant-daily{color:#16A34A}.plant-line.offline b,.plant-line.offline .plant-daily{color:#111827}
-.history-picker{display:grid;grid-template-columns:1fr;gap:8px;margin-top:8px}.picked{border:1px solid var(--line);border-radius:6px;background:#fbfdff;padding:9px;margin-top:8px;font-size:12px}.picked b{font-size:15px}
+.recent-history{grid-template-columns:1fr}.last3-grid{grid-template-columns:1fr}.mini-metric{padding:7px}.mini-metric span{font-size:15px}.history-picker{display:grid;grid-template-columns:1fr;gap:8px;margin-top:8px}.picked{border:1px solid var(--line);border-radius:6px;background:#fbfdff;padding:9px;margin-top:8px;font-size:12px}.picked b{font-size:15px}
 .history-scroll{max-height:220px}.history-scroll table{display:table}.history-scroll thead{display:table-header-group}.history-scroll tbody{display:table-row-group}.history-scroll tr{display:table-row;border:0;box-shadow:none;margin:0;padding:0}.history-scroll td,.history-scroll th{display:table-cell;width:auto;padding:7px;font-size:11px}.history-scroll td::before{content:none}
 .report-item{font-size:12px}.log{max-height:140px}.plant-title{font-size:18px}
 .mobile-fold{display:block}.mobile-fold:not([open]){padding-bottom:10px}.mobile-fold summary{font-size:14px}
@@ -2245,7 +2269,9 @@ function opt(rows,key){return (rows||[]).map((r,i)=>`<option value="${i}">${h(r[
 function pickedLine(type,row,fallback=''){if(type==='day'){const item=row||{date:fallback||todayText(),daily:0,status:'No data'};return `${h(item.date)} · ${f(item.daily)} kWh · ${h(item.status)}`}if(!row)return '0.00 kWh · No data for this selection.';if(type==='week')return `${h(row.week)} · ${f(row.weekly || row.dailySum)} kWh`;return `${h(row.year)} · ${f(row.yearKwh)} kWh · latest ${h(row.lastDate)}`}
 function renderPickedHistory(data){const pickedDate=document.querySelector('#dailyDatePick')?.value||todayText();const dayRow=(data.daily||[]).find(r=>r.date===pickedDate);const weekIndex=Number(document.querySelector('#weekPick')?.value||0);const yearIndex=Number(document.querySelector('#yearPick')?.value||0);document.querySelector('#pickedHistory').innerHTML=`<div class="picked"><b>Daily</b><br>${pickedLine('day',dayRow,pickedDate)}</div><div class="picked"><b>Week</b><br>${pickedLine('week',(data.weekly||[])[weekIndex])}</div><div class="picked"><b>Year</b><br>${pickedLine('year',(data.yearly||[])[yearIndex])}</div>`}
 function wireHistoryPickers(data){const d=document.querySelector('#dailyDatePick'), w=document.querySelector('#weekPick'), y=document.querySelector('#yearPick');[d,w,y].forEach(el=>{if(el)el.onchange=()=>renderPickedHistory(data)});renderPickedHistory(data)}
-function renderHistory(data){const daily=data.daily||[], weekly=data.weekly||[], yearly=data.yearly||[];const latestDay=todayText();return `<details class="fold history-block" open><summary>Past History</summary><div class="history-picker"><div><label>Date</label><input id="dailyDatePick" type="date" value="${h(latestDay)}"></div><div><label>Week</label><select id="weekPick">${opt(weekly,'week')}</select></div><div><label>Year</label><select id="yearPick">${opt(yearly,'year')}</select></div></div><div id="pickedHistory"></div></details>`+[
+function usableDailyRows(daily){return (daily||[]).filter(row=>row?.date && String(row.status||'').toLowerCase()!=='no data')}
+function recentHistorySummary(daily){const rows=usableDailyRows(daily);const today=todayText();const previous=rows.find(row=>row.date<today)||rows[1]||null;const last3=rows.slice(0,3);const cards=last3.length?last3.map(row=>`<div class="mini-metric"><b>${h(row.date)}</b><span>${f(row.daily)} kWh</span><em>${h(row.status||'')}</em></div>`).join(''):'<div class="mini-metric"><b>No saved days</b><span>0.00 kWh</span><em>Refresh will build history</em></div>';return `<div class="recent-history"><div class="mini-metric highlight"><b>Previous Day</b><span>${previous?f(previous.daily):'0.00'} kWh</span><em>${previous?h(previous.date)+' · '+h(previous.status||''):'No previous saved data'}</em></div><div class="last3-grid">${cards}</div></div>`}
+function renderHistory(data){const daily=data.daily||[], weekly=data.weekly||[], yearly=data.yearly||[];const latestDay=(usableDailyRows(daily)[0]?.date)||todayText();return `<details class="fold history-block" open><summary>Past History</summary>${recentHistorySummary(daily)}<div class="history-picker"><div><label>Date</label><input id="dailyDatePick" type="date" value="${h(latestDay)}"></div><div><label>Week</label><select id="weekPick">${opt(weekly,'week')}</select></div><div><label>Year</label><select id="yearPick">${opt(yearly,'year')}</select></div></div><div id="pickedHistory"></div></details>`+[
 historyTable('All Daily',daily,[['Date','date'],['Daily kWh','daily',1],['Status','status']],false),
 historyTable('All Weekly',weekly,[['Week','week'],['Daily Sum','dailySum',1],['Weekly kWh','weekly',1]],false),
 historyTable('All Yearly',yearly,[['Year','year'],['Year kWh','yearKwh',1],['Latest Date','lastDate']],false)

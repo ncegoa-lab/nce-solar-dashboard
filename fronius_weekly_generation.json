@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-07-10T10:29:05",
-  "start_date": "2026-07-06",
-  "end_date": "2026-07-12",
+  "generated_at": "2026-07-15T13:01:57",
+  "start_date": "2026-07-13",
+  "end_date": "2026-07-19",
   "systems": [
     {
       "brand": "Fronius",
@@ -10,44 +10,44 @@
       "status": "Afley 6kw --.- kW",
       "daily": [
         {
-          "date": "2026-07-06",
-          "generation_kwh": 13.09,
-          "source_value": "13.09 kWh"
+          "date": "2026-07-13",
+          "generation_kwh": 32.9,
+          "source_value": "32.90 kWh"
         },
         {
-          "date": "2026-07-07",
-          "generation_kwh": 12.49,
-          "source_value": "12.49 kWh"
+          "date": "2026-07-14",
+          "generation_kwh": 32.8,
+          "source_value": "32.80 kWh"
         },
         {
-          "date": "2026-07-08",
-          "generation_kwh": 25.42,
-          "source_value": "25.42 kWh"
+          "date": "2026-07-15",
+          "generation_kwh": 9.05,
+          "source_value": "9.05 kWh"
         },
         {
-          "date": "2026-07-09",
-          "generation_kwh": 27.38,
-          "source_value": "27.38 kWh"
-        },
-        {
-          "date": "2026-07-10",
-          "generation_kwh": 4.212,
-          "source_value": "4,212 Wh"
-        },
-        {
-          "date": "2026-07-11",
+          "date": "2026-07-16",
           "generation_kwh": 0.0,
           "source_value": "0 Wh"
         },
         {
-          "date": "2026-07-12",
+          "date": "2026-07-17",
+          "generation_kwh": 0.0,
+          "source_value": "0 Wh"
+        },
+        {
+          "date": "2026-07-18",
+          "generation_kwh": 0.0,
+          "source_value": "0 Wh"
+        },
+        {
+          "date": "2026-07-19",
           "generation_kwh": 0.0,
           "source_value": "0 Wh"
         }
       ],
-      "weekly_generation_kwh": 82.592,
-      "year_generation_kwh": 4807.75,
-      "year_source_value": "4,807.75 kWh"
+      "weekly_generation_kwh": 74.75,
+      "year_generation_kwh": 4958.16,
+      "year_source_value": "4,958.16 kWh"
     },
     {
       "brand": "Fronius",
@@ -56,44 +56,44 @@
       "status": "BITS D-Mess 21kw --.- kW",
       "daily": [
         {
-          "date": "2026-07-06",
-          "generation_kwh": 53.84,
-          "source_value": "53.84 kWh"
+          "date": "2026-07-13",
+          "generation_kwh": 88.09,
+          "source_value": "88.09 kWh"
         },
         {
-          "date": "2026-07-07",
-          "generation_kwh": 58.89,
-          "source_value": "58.89 kWh"
+          "date": "2026-07-14",
+          "generation_kwh": 106.93,
+          "source_value": "106.93 kWh"
         },
         {
-          "date": "2026-07-08",
-          "generation_kwh": 90.46,
-          "source_value": "90.46 kWh"
+          "date": "2026-07-15",
+          "generation_kwh": 37.3,
+          "source_value": "37.30 kWh"
         },
         {
-          "date": "2026-07-09",
-          "generation_kwh": 84.95,
-          "source_value": "84.95 kWh"
-        },
-        {
-          "date": "2026-07-10",
-          "generation_kwh": 18.85,
-          "source_value": "18.85 kWh"
-        },
-        {
-          "date": "2026-07-11",
+          "date": "2026-07-16",
           "generation_kwh": 0.0,
           "source_value": "0 Wh"
         },
         {
-          "date": "2026-07-12",
+          "date": "2026-07-17",
+          "generation_kwh": 0.0,
+          "source_value": "0 Wh"
+        },
+        {
+          "date": "2026-07-18",
+          "generation_kwh": 0.0,
+          "source_value": "0 Wh"
+        },
+        {
+          "date": "2026-07-19",
           "generation_kwh": 0.0,
           "source_value": "0 Wh"
         }
       ],
-      "weekly_generation_kwh": 306.99,
-      "year_generation_kwh": 17570.0,
-      "year_source_value": "17.57 MWh"
+      "weekly_generation_kwh": 232.32,
+      "year_generation_kwh": 18060.0,
+      "year_source_value": "18.06 MWh"
     },
     {
       "brand": "Fronius",
@@ -102,44 +102,44 @@
       "status": "BITS- PCC 1-10Kw --.- kW",
       "daily": [
         {
-          "date": "2026-07-06",
-          "generation_kwh": 26.28,
-          "source_value": "26.28 kWh"
+          "date": "2026-07-13",
+          "generation_kwh": 43.44,
+          "source_value": "43.44 kWh"
         },
         {
-          "date": "2026-07-07",
-          "generation_kwh": 28.15,
-          "source_value": "28.15 kWh"
+          "date": "2026-07-14",
+          "generation_kwh": 50.62,
+          "source_value": "50.62 kWh"
         },
         {
-          "date": "2026-07-08",
-          "generation_kwh": 44.74,
-          "source_value": "44.74 kWh"
+          "date": "2026-07-15",
+          "generation_kwh": 18.77,
+          "source_value": "18.77 kWh"
         },
         {
-          "date": "2026-07-09",
-          "generation_kwh": 42.18,
-          "source_value": "42.18 kWh"
-        },
-        {
-          "date": "2026-07-10",
-          "generation_kwh": 8.85,
-          "source_value": "8.85 kWh"
-        },
-        {
-          "date": "2026-07-11",
+          "date": "2026-07-16",
           "generation_kwh": 0.0,
           "source_value": "0 Wh"
         },
         {
-          "date": "2026-07-12",
+          "date": "2026-07-17",
+          "generation_kwh": 0.0,
+          "source_value": "0 Wh"
+        },
+        {
+          "date": "2026-07-18",
+          "generation_kwh": 0.0,
+          "source_value": "0 Wh"
+        },
+        {
+          "date": "2026-07-19",
           "generation_kwh": 0.0,
           "source_value": "0 Wh"
         }
       ],
-      "weekly_generation_kwh": 150.2,
-      "year_generation_kwh": 7540.0,
-      "year_source_value": "7.54 MWh"
+      "weekly_generation_kwh": 112.83,
+      "year_generation_kwh": 7780.0,
+      "year_source_value": "7.78 MWh"
     },
     {
       "brand": "Fronius",
@@ -148,44 +148,44 @@
       "status": "BITS-Amess 50kw --.- kW",
       "daily": [
         {
-          "date": "2026-07-06",
-          "generation_kwh": 131.52,
-          "source_value": "131.52 kWh"
+          "date": "2026-07-13",
+          "generation_kwh": 225.38,
+          "source_value": "225.38 kWh"
         },
         {
-          "date": "2026-07-07",
-          "generation_kwh": 145.07,
-          "source_value": "145.07 kWh"
+          "date": "2026-07-14",
+          "generation_kwh": 251.37,
+          "source_value": "251.37 kWh"
         },
         {
-          "date": "2026-07-08",
-          "generation_kwh": 218.21,
-          "source_value": "218.21 kWh"
+          "date": "2026-07-15",
+          "generation_kwh": 76.36,
+          "source_value": "76.36 kWh"
         },
         {
-          "date": "2026-07-09",
-          "generation_kwh": 214.13,
-          "source_value": "214.13 kWh"
-        },
-        {
-          "date": "2026-07-10",
-          "generation_kwh": 52.24,
-          "source_value": "52.24 kWh"
-        },
-        {
-          "date": "2026-07-11",
+          "date": "2026-07-16",
           "generation_kwh": 0.0,
           "source_value": "0 Wh"
         },
         {
-          "date": "2026-07-12",
+          "date": "2026-07-17",
+          "generation_kwh": 0.0,
+          "source_value": "0 Wh"
+        },
+        {
+          "date": "2026-07-18",
+          "generation_kwh": 0.0,
+          "source_value": "0 Wh"
+        },
+        {
+          "date": "2026-07-19",
           "generation_kwh": 0.0,
           "source_value": "0 Wh"
         }
       ],
-      "weekly_generation_kwh": 761.17,
-      "year_generation_kwh": 40940.0,
-      "year_source_value": "40.94 MWh"
+      "weekly_generation_kwh": 553.11,
+      "year_generation_kwh": 42140.0,
+      "year_source_value": "42.14 MWh"
     },
     {
       "brand": "Fronius",
@@ -194,37 +194,37 @@
       "status": "BITS-PCC1-10kw --.- kW",
       "daily": [
         {
-          "date": "2026-07-06",
+          "date": "2026-07-13",
           "generation_kwh": 0.0,
           "source_value": "0 Wh"
         },
         {
-          "date": "2026-07-07",
+          "date": "2026-07-14",
           "generation_kwh": 0.0,
           "source_value": "0 Wh"
         },
         {
-          "date": "2026-07-08",
+          "date": "2026-07-15",
           "generation_kwh": 0.0,
           "source_value": "0 Wh"
         },
         {
-          "date": "2026-07-09",
+          "date": "2026-07-16",
           "generation_kwh": 0.0,
           "source_value": "0 Wh"
         },
         {
-          "date": "2026-07-10",
+          "date": "2026-07-17",
           "generation_kwh": 0.0,
           "source_value": "0 Wh"
         },
         {
-          "date": "2026-07-11",
+          "date": "2026-07-18",
           "generation_kwh": 0.0,
           "source_value": "0 Wh"
         },
         {
-          "date": "2026-07-12",
+          "date": "2026-07-19",
           "generation_kwh": 0.0,
           "source_value": "0 Wh"
         }
@@ -240,37 +240,37 @@
       "status": "Dr Buvaji res6kw --.- kW",
       "daily": [
         {
-          "date": "2026-07-06",
+          "date": "2026-07-13",
           "generation_kwh": 0.0,
           "source_value": "0 Wh"
         },
         {
-          "date": "2026-07-07",
+          "date": "2026-07-14",
           "generation_kwh": 0.0,
           "source_value": "0 Wh"
         },
         {
-          "date": "2026-07-08",
+          "date": "2026-07-15",
           "generation_kwh": 0.0,
           "source_value": "0 Wh"
         },
         {
-          "date": "2026-07-09",
+          "date": "2026-07-16",
           "generation_kwh": 0.0,
           "source_value": "0 Wh"
         },
         {
-          "date": "2026-07-10",
+          "date": "2026-07-17",
           "generation_kwh": 0.0,
           "source_value": "0 Wh"
         },
         {
-          "date": "2026-07-11",
+          "date": "2026-07-18",
           "generation_kwh": 0.0,
           "source_value": "0 Wh"
         },
         {
-          "date": "2026-07-12",
+          "date": "2026-07-19",
           "generation_kwh": 0.0,
           "source_value": "0 Wh"
         }
@@ -286,44 +286,44 @@
       "status": "Xisto 10Kw --.- kW",
       "daily": [
         {
-          "date": "2026-07-06",
-          "generation_kwh": 18.0,
-          "source_value": "18.00 kWh"
+          "date": "2026-07-13",
+          "generation_kwh": 41.05,
+          "source_value": "41.05 kWh"
         },
         {
-          "date": "2026-07-07",
-          "generation_kwh": 22.98,
-          "source_value": "22.98 kWh"
+          "date": "2026-07-14",
+          "generation_kwh": 42.09,
+          "source_value": "42.09 kWh"
         },
         {
-          "date": "2026-07-08",
-          "generation_kwh": 33.17,
-          "source_value": "33.17 kWh"
+          "date": "2026-07-15",
+          "generation_kwh": 16.85,
+          "source_value": "16.85 kWh"
         },
         {
-          "date": "2026-07-09",
-          "generation_kwh": 33.67,
-          "source_value": "33.67 kWh"
-        },
-        {
-          "date": "2026-07-10",
-          "generation_kwh": 7.51,
-          "source_value": "7.51 kWh"
-        },
-        {
-          "date": "2026-07-11",
+          "date": "2026-07-16",
           "generation_kwh": 0.0,
           "source_value": "0 Wh"
         },
         {
-          "date": "2026-07-12",
+          "date": "2026-07-17",
+          "generation_kwh": 0.0,
+          "source_value": "0 Wh"
+        },
+        {
+          "date": "2026-07-18",
+          "generation_kwh": 0.0,
+          "source_value": "0 Wh"
+        },
+        {
+          "date": "2026-07-19",
           "generation_kwh": 0.0,
           "source_value": "0 Wh"
         }
       ],
-      "weekly_generation_kwh": 115.33,
-      "year_generation_kwh": 5640.0,
-      "year_source_value": "5.64 MWh"
+      "weekly_generation_kwh": 99.99,
+      "year_generation_kwh": 5840.0,
+      "year_source_value": "5.84 MWh"
     },
     {
       "brand": "Fronius",
@@ -332,37 +332,37 @@
       "status": "Dr Oween 10.0 --.- kW",
       "daily": [
         {
-          "date": "2026-07-06",
+          "date": "2026-07-13",
           "generation_kwh": 0.0,
           "source_value": "0 Wh"
         },
         {
-          "date": "2026-07-07",
+          "date": "2026-07-14",
           "generation_kwh": 0.0,
           "source_value": "0 Wh"
         },
         {
-          "date": "2026-07-08",
+          "date": "2026-07-15",
           "generation_kwh": 0.0,
           "source_value": "0 Wh"
         },
         {
-          "date": "2026-07-09",
+          "date": "2026-07-16",
           "generation_kwh": 0.0,
           "source_value": "0 Wh"
         },
         {
-          "date": "2026-07-10",
+          "date": "2026-07-17",
           "generation_kwh": 0.0,
           "source_value": "0 Wh"
         },
         {
-          "date": "2026-07-11",
+          "date": "2026-07-18",
           "generation_kwh": 0.0,
           "source_value": "0 Wh"
         },
         {
-          "date": "2026-07-12",
+          "date": "2026-07-19",
           "generation_kwh": 0.0,
           "source_value": "0 Wh"
         }
