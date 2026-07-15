@@ -1,49 +1,49 @@
 {
   "source": "solax_web_api",
-  "generated_at": "2026-07-15T14:17:28+05:30",
-  "captured_at": "2026-07-15T14:17:28+05:30",
+  "generated_at": "2026-07-15T16:57:47+05:30",
+  "captured_at": "2026-07-15T16:57:47+05:30",
   "systems": [
     {
       "name": "EUFREGINO 3kw",
       "status": "Online",
       "capacity_kw": 3.7,
-      "current_power_kw": 2.442,
-      "today_generation_kwh": 11.3,
-      "weekly_generation_kwh": 46.8,
+      "current_power_kw": 0.541,
+      "today_generation_kwh": 15.6,
+      "weekly_generation_kwh": 51.3,
       "month_generation_kwh": null,
-      "year_generation_kwh": 538.65,
-      "total_generation_kwh": 538.85,
+      "year_generation_kwh": 543.15,
+      "total_generation_kwh": 543.15,
       "system_id": "2061402942656770049",
       "source_sno": "HC2061402942656770049",
-      "data_timestamp": "2026-07-15T14:17:28+05:30"
+      "data_timestamp": "2026-07-15T16:57:47+05:30"
     },
     {
       "name": "Dr Mansi & Samir",
       "status": "Online",
       "capacity_kw": 6.38,
-      "current_power_kw": 4.812,
-      "today_generation_kwh": 20.2,
-      "weekly_generation_kwh": 96.9,
+      "current_power_kw": 1.319,
+      "today_generation_kwh": 27.6,
+      "weekly_generation_kwh": 104.3,
       "month_generation_kwh": null,
-      "year_generation_kwh": 4861.0,
-      "total_generation_kwh": 7138.8,
+      "year_generation_kwh": 4868.4,
+      "total_generation_kwh": 7146.2,
       "system_id": "1975875768776945665",
       "source_sno": "HC1975875768776945665",
-      "data_timestamp": "2026-07-15T14:17:28+05:30"
+      "data_timestamp": "2026-07-15T16:57:47+05:30"
     },
     {
       "name": "Dr OWIN SPV plant 2",
       "status": "Online",
       "capacity_kw": 12.72,
-      "current_power_kw": 3.02,
-      "today_generation_kwh": 34.1,
-      "weekly_generation_kwh": 140.0,
+      "current_power_kw": 1.9,
+      "today_generation_kwh": 46.8,
+      "weekly_generation_kwh": 152.7,
       "month_generation_kwh": null,
-      "year_generation_kwh": 8417.3,
-      "total_generation_kwh": 19188.7,
+      "year_generation_kwh": 8430.0,
+      "total_generation_kwh": 19201.4,
       "system_id": "1907684446702694402",
       "source_sno": "HC1907684446702694402",
-      "data_timestamp": "2026-07-15T14:17:28+05:30"
+      "data_timestamp": "2026-07-15T16:57:47+05:30"
     }
   ],
   "notes": [

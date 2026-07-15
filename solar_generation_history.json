@@ -68,14 +68,14 @@
     "plantKey": "FIMER::Birla Campus Goa C-mess 50kw",
     "status": "Online",
     "capacity": 50.0,
-    "daily": 145.779999999999,
-    "weekly": 557.811999999991,
-    "year": 40045.693999999996,
+    "daily": 181.308000000005,
+    "weekly": 593.339999999996,
+    "year": 40081.222,
     "currentPower": 0.0,
-    "total": 47.001996,
-    "cuf": 17.026230442176868,
-    "timestamp": "2026-07-15T08:46:57.830Z",
-    "recordedAt": "2026-07-15T14:17:41+05:30"
+    "total": 47.03752399999999,
+    "cuf": 17.041335884353742,
+    "timestamp": "2026-07-15T11:27:27.196Z",
+    "recordedAt": "2026-07-15T16:57:59+05:30"
   },
   {
     "date": "2026-07-10",
@@ -146,14 +146,14 @@
     "plantKey": "FIMER::Birla campus goa",
     "status": "Online",
     "capacity": 100.0,
-    "daily": 211.967999999993,
-    "weekly": 912.959999999963,
-    "year": 72681.984,
+    "daily": 292.991999999969,
+    "weekly": 993.983999999938,
+    "year": 72763.00799999997,
     "currentPower": 0.0,
-    "total": 131.911968,
-    "cuf": 15.451102040816325,
-    "timestamp": "2026-07-15T08:46:57.830Z",
-    "recordedAt": "2026-07-15T14:17:41+05:30"
+    "total": 131.99299199999996,
+    "cuf": 15.46832653061224,
+    "timestamp": "2026-07-15T11:27:27.196Z",
+    "recordedAt": "2026-07-15T16:57:59+05:30"
   },
   {
     "date": "2026-07-10",
@@ -224,14 +224,14 @@
     "plantKey": "Fronius::Afley 6kw",
     "status": "Online",
     "capacity": 6.0,
-    "daily": 13.93,
-    "weekly": 79.63,
-    "year": 4963.04,
+    "daily": 25.41,
+    "weekly": 91.11,
+    "year": 4974.52,
     "currentPower": 0.0,
-    "total": 20.49,
-    "cuf": 17.584467120181404,
+    "total": 20.5,
+    "cuf": 17.625141723356013,
     "timestamp": "2026-07-15",
-    "recordedAt": "2026-07-15T14:17:41+05:30"
+    "recordedAt": "2026-07-15T16:57:59+05:30"
   },
   {
     "date": "2026-07-10",
@@ -302,14 +302,14 @@
     "plantKey": "Fronius::BITS D-Mess 21kw",
     "status": "Online",
     "capacity": 21.0,
-    "daily": 50.44,
-    "weekly": 245.46,
-    "year": 18080.0,
+    "daily": 74.27,
+    "weekly": 269.29,
+    "year": 18100.0,
     "currentPower": 0.0,
-    "total": 55.21,
-    "cuf": 18.30255911888565,
+    "total": 55.23,
+    "cuf": 18.322805312601233,
     "timestamp": "2026-07-15",
-    "recordedAt": "2026-07-15T14:17:41+05:30"
+    "recordedAt": "2026-07-15T16:57:59+05:30"
   },
   {
     "date": "2026-07-10",
@@ -380,14 +380,14 @@
     "plantKey": "Fronius::BITS- PCC 1-10Kw",
     "status": "Online",
     "capacity": 10.0,
-    "daily": 25.09,
-    "weekly": 119.15,
-    "year": 7780.0,
+    "daily": 38.07,
+    "weekly": 132.13,
+    "year": 7800.0,
     "currentPower": 0.0,
-    "total": 30.04,
-    "cuf": 16.539115646258505,
+    "total": 30.06,
+    "cuf": 16.581632653061224,
     "timestamp": "2026-07-15",
-    "recordedAt": "2026-07-15T14:17:41+05:30"
+    "recordedAt": "2026-07-15T16:57:59+05:30"
   },
   {
     "date": "2026-07-10",
@@ -458,14 +458,14 @@
     "plantKey": "Fronius::BITS-Amess 50kw",
     "status": "Online",
     "capacity": 50.0,
-    "daily": 117.94,
-    "weekly": 594.69,
-    "year": 42190.0,
+    "daily": 182.98,
+    "weekly": 659.73,
+    "year": 42250.0,
     "currentPower": 0.0,
-    "total": 183.7,
-    "cuf": 17.937925170068027,
+    "total": 183.77,
+    "cuf": 17.96343537414966,
     "timestamp": "2026-07-15",
-    "recordedAt": "2026-07-15T14:17:41+05:30"
+    "recordedAt": "2026-07-15T16:57:59+05:30"
   },
   {
     "date": "2026-07-10",
@@ -543,7 +543,7 @@
     "total": 0.7120299999999999,
     "cuf": 0.0,
     "timestamp": "2026-07-15",
-    "recordedAt": "2026-07-15T14:17:41+05:30"
+    "recordedAt": "2026-07-15T16:57:59+05:30"
   },
   {
     "date": "2026-07-10",
@@ -621,7 +621,7 @@
     "total": 7.63,
     "cuf": 0.0,
     "timestamp": "2026-07-15",
-    "recordedAt": "2026-07-15T14:17:41+05:30"
+    "recordedAt": "2026-07-15T16:57:59+05:30"
   },
   {
     "date": "2026-07-10",
@@ -699,7 +699,7 @@
     "total": 26.75,
     "cuf": 0.0,
     "timestamp": "2026-07-15",
-    "recordedAt": "2026-07-15T14:17:41+05:30"
+    "recordedAt": "2026-07-15T16:57:59+05:30"
   },
   {
     "date": "2026-07-10",
@@ -770,14 +770,14 @@
     "plantKey": "Fronius::Xisto 10Kw",
     "status": "Online",
     "capacity": 10.0,
-    "daily": 22.97,
-    "weekly": 106.11,
-    "year": 5850.0,
+    "daily": 34.07,
+    "weekly": 117.21,
+    "year": 5860.0,
     "currentPower": 0.0,
-    "total": 21.89,
-    "cuf": 12.436224489795919,
+    "total": 21.9,
+    "cuf": 12.45748299319728,
     "timestamp": "2026-07-15",
-    "recordedAt": "2026-07-15T14:17:41+05:30"
+    "recordedAt": "2026-07-15T16:57:59+05:30"
   },
   {
     "date": "2026-07-10",
@@ -848,14 +848,14 @@
     "plantKey": "GoodWe::Balkusht Lotlicar 10kw",
     "status": "Online",
     "capacity": 10.0,
-    "daily": 25.0,
-    "weekly": 110.4,
-    "year": 473.4,
-    "currentPower": 4539.0,
-    "total": 4.5299,
-    "cuf": 1.006377551020408,
-    "timestamp": "2026-07-15T14:15:44",
-    "recordedAt": "2026-07-15T14:17:41+05:30"
+    "daily": 34.3,
+    "weekly": 119.7,
+    "year": 482.7,
+    "currentPower": 1474.0,
+    "total": 4.5391,
+    "cuf": 1.0261479591836735,
+    "timestamp": "2026-07-15T16:56:22",
+    "recordedAt": "2026-07-15T16:57:59+05:30"
   },
   {
     "date": "2026-07-10",
@@ -926,14 +926,14 @@
     "plantKey": "GoodWe::MIRANDA 6kw",
     "status": "Online",
     "capacity": 6.0,
-    "daily": 17.1,
-    "weekly": 71.6,
-    "year": 602.1,
-    "currentPower": 3816.0,
-    "total": 5.9274,
-    "cuf": 2.133290816326531,
-    "timestamp": "2026-07-15T14:15:44",
-    "recordedAt": "2026-07-15T14:17:41+05:30"
+    "daily": 22.7,
+    "weekly": 77.2,
+    "year": 607.7,
+    "currentPower": 665.0,
+    "total": 5.933,
+    "cuf": 2.1531320861678007,
+    "timestamp": "2026-07-15T16:56:22",
+    "recordedAt": "2026-07-15T16:57:59+05:30"
   },
   {
     "date": "2026-07-10",
@@ -1004,14 +1004,14 @@
     "plantKey": "GoodWe::Mark Revlon 10kw Chandor",
     "status": "Online",
     "capacity": 10.0,
-    "daily": 21.4,
-    "weekly": 91.6,
-    "year": 739.8,
-    "currentPower": 7095.0,
-    "total": 7.314100000000001,
-    "cuf": 1.5727040816326527,
-    "timestamp": "2026-07-15T14:15:44",
-    "recordedAt": "2026-07-15T14:17:41+05:30"
+    "daily": 32.3,
+    "weekly": 102.5,
+    "year": 750.7,
+    "currentPower": 1228.0,
+    "total": 7.325,
+    "cuf": 1.5958758503401362,
+    "timestamp": "2026-07-15T16:56:22",
+    "recordedAt": "2026-07-15T16:57:59+05:30"
   },
   {
     "date": "2026-07-10",
@@ -1082,14 +1082,14 @@
     "plantKey": "GoodWe::NIKHIL 10kw",
     "status": "Online",
     "capacity": 10.53,
-    "daily": 30.9,
-    "weekly": 141.6,
-    "year": 1034.7,
-    "currentPower": 9620.0,
-    "total": 3.1678,
-    "cuf": 2.088905362714887,
-    "timestamp": "2026-07-15T14:15:44",
-    "recordedAt": "2026-07-15T14:17:41+05:30"
+    "daily": 40.7,
+    "weekly": 151.4,
+    "year": 1044.5,
+    "currentPower": 1372.0,
+    "total": 3.1776,
+    "cuf": 2.108690104721851,
+    "timestamp": "2026-07-15T16:56:22",
+    "recordedAt": "2026-07-15T16:57:59+05:30"
   },
   {
     "date": "2026-07-10",
@@ -1166,8 +1166,8 @@
     "currentPower": 0.0,
     "total": 0.014199999999999999,
     "cuf": 0.0,
-    "timestamp": "2026-07-15T14:15:44",
-    "recordedAt": "2026-07-15T14:17:41+05:30"
+    "timestamp": "2026-07-15T16:56:22",
+    "recordedAt": "2026-07-15T16:57:59+05:30"
   },
   {
     "date": "2026-07-10",
@@ -1238,14 +1238,14 @@
     "plantKey": "GoodWe::Ravish 10kw",
     "status": "Online",
     "capacity": 10.71,
-    "daily": 31.7,
-    "weekly": 111.5,
-    "year": 909.9,
-    "currentPower": 6850.0,
-    "total": 1.6670999999999998,
-    "cuf": 1.8060795746870175,
-    "timestamp": "2026-07-15T14:15:44",
-    "recordedAt": "2026-07-15T14:17:41+05:30"
+    "daily": 42.1,
+    "weekly": 121.9,
+    "year": 920.3,
+    "currentPower": 2948.0,
+    "total": 1.6776,
+    "cuf": 1.8267227525931005,
+    "timestamp": "2026-07-15T16:56:22",
+    "recordedAt": "2026-07-15T16:57:59+05:30"
   },
   {
     "date": "2026-07-10",
@@ -1316,14 +1316,14 @@
     "plantKey": "GoodWe::Raymond Franco 10kw Pomburpa",
     "status": "Online",
     "capacity": 10.0,
-    "daily": 22.4,
-    "weekly": 97.5,
-    "year": 831.2,
-    "currentPower": 5973.0,
-    "total": 8.737,
-    "cuf": 1.7670068027210888,
-    "timestamp": "2026-07-15T14:15:44",
-    "recordedAt": "2026-07-15T14:17:41+05:30"
+    "daily": 28.8,
+    "weekly": 103.9,
+    "year": 837.6,
+    "currentPower": 1096.0,
+    "total": 8.7434,
+    "cuf": 1.7806122448979593,
+    "timestamp": "2026-07-15T16:56:22",
+    "recordedAt": "2026-07-15T16:57:59+05:30"
   },
   {
     "date": "2026-07-10",
@@ -1394,14 +1394,14 @@
     "plantKey": "GoodWe::SANJIV LOTLICAR 10kw",
     "status": "Online",
     "capacity": 10.7,
-    "daily": 30.5,
-    "weekly": 138.3,
-    "year": 1142.4,
-    "currentPower": 7436.0,
-    "total": 3.8233,
-    "cuf": 2.2696929238985324,
-    "timestamp": "2026-07-15T14:15:44",
-    "recordedAt": "2026-07-15T14:17:41+05:30"
+    "daily": 43.8,
+    "weekly": 151.6,
+    "year": 1155.7,
+    "currentPower": 3129.0,
+    "total": 3.8366,
+    "cuf": 2.2961170449488213,
+    "timestamp": "2026-07-15T16:56:22",
+    "recordedAt": "2026-07-15T16:57:59+05:30"
   },
   {
     "date": "2026-07-10",
@@ -1478,8 +1478,8 @@
     "currentPower": 0.0,
     "total": 0.0038,
     "cuf": 0.0,
-    "timestamp": "2026-07-15T14:15:44",
-    "recordedAt": "2026-07-15T14:17:41+05:30"
+    "timestamp": "2026-07-15T16:56:22",
+    "recordedAt": "2026-07-15T16:57:59+05:30"
   },
   {
     "date": "2026-07-10",
@@ -1550,14 +1550,14 @@
     "plantKey": "GoodWe::Vikas 10Kw",
     "status": "Online",
     "capacity": 10.0,
-    "daily": 36.6,
-    "weekly": 150.2,
-    "year": 1160.2,
-    "currentPower": 8189.0,
-    "total": 8.111699999999999,
-    "cuf": 2.4664115646258504,
-    "timestamp": "2026-07-15T14:15:44",
-    "recordedAt": "2026-07-15T14:17:41+05:30"
+    "daily": 50.4,
+    "weekly": 163.7,
+    "year": 1173.7,
+    "currentPower": 1929.0,
+    "total": 8.1255,
+    "cuf": 2.4951105442176873,
+    "timestamp": "2026-07-15T16:56:22",
+    "recordedAt": "2026-07-15T16:57:59+05:30"
   },
   {
     "date": "2026-07-10",
@@ -1628,14 +1628,14 @@
     "plantKey": "GoodWe::kunal 10kw",
     "status": "Online",
     "capacity": 10.7,
-    "daily": 31.8,
-    "weekly": 134.4,
-    "year": 1112.9,
-    "currentPower": 8227.0,
-    "total": 3.3152,
-    "cuf": 2.211083031343379,
-    "timestamp": "2026-07-15T14:15:44",
-    "recordedAt": "2026-07-15T14:17:41+05:30"
+    "daily": 46.1,
+    "weekly": 148.7,
+    "year": 1127.2,
+    "currentPower": 3445.0,
+    "total": 3.3295,
+    "cuf": 2.2394939284124873,
+    "timestamp": "2026-07-15T16:56:22",
+    "recordedAt": "2026-07-15T16:57:59+05:30"
   },
   {
     "date": "2026-07-10",
@@ -1706,14 +1706,14 @@
     "plantKey": "SolaX::Dr Mansi & Samir",
     "status": "Online",
     "capacity": 6.38,
-    "daily": 20.2,
-    "weekly": 96.9,
-    "year": 4861.0,
-    "currentPower": 4.812,
-    "total": 7.1388,
-    "cuf": 16.197113641694923,
-    "timestamp": "2026-07-15T14:17:28+05:30",
-    "recordedAt": "2026-07-15T14:17:41+05:30"
+    "daily": 27.6,
+    "weekly": 104.3,
+    "year": 4868.4,
+    "currentPower": 1.319,
+    "total": 7.146199999999999,
+    "cuf": 16.22177083999744,
+    "timestamp": "2026-07-15T16:57:47+05:30",
+    "recordedAt": "2026-07-15T16:57:59+05:30"
   },
   {
     "date": "2026-07-10",
@@ -1784,14 +1784,14 @@
     "plantKey": "SolaX::Dr OWIN SPV plant 2",
     "status": "Online",
     "capacity": 12.72,
-    "daily": 34.1,
-    "weekly": 140.0,
-    "year": 8417.3,
-    "currentPower": 3.02,
-    "total": 19.1887,
-    "cuf": 14.067547223291829,
-    "timestamp": "2026-07-15T14:17:28+05:30",
-    "recordedAt": "2026-07-15T14:17:41+05:30"
+    "daily": 46.8,
+    "weekly": 152.7,
+    "year": 8430.0,
+    "currentPower": 1.9,
+    "total": 19.201400000000003,
+    "cuf": 14.088772301373378,
+    "timestamp": "2026-07-15T16:57:47+05:30",
+    "recordedAt": "2026-07-15T16:57:59+05:30"
   },
   {
     "date": "2026-07-10",
@@ -1862,14 +1862,14 @@
     "plantKey": "SolaX::EUFREGINO 3kw",
     "status": "Online",
     "capacity": 3.7,
-    "daily": 11.3,
-    "weekly": 46.8,
-    "year": 538.65,
-    "currentPower": 2.442,
-    "total": 0.53885,
-    "cuf": 3.0948359073359066,
-    "timestamp": "2026-07-15T14:17:28+05:30",
-    "recordedAt": "2026-07-15T14:17:41+05:30"
+    "daily": 15.6,
+    "weekly": 51.3,
+    "year": 543.15,
+    "currentPower": 0.541,
+    "total": 0.54315,
+    "cuf": 3.120690843905129,
+    "timestamp": "2026-07-15T16:57:47+05:30",
+    "recordedAt": "2026-07-15T16:57:59+05:30"
   },
   {
     "date": "2026-06-16",
@@ -1946,8 +1946,8 @@
     "currentPower": 0.0,
     "total": 3.8294,
     "cuf": 0.09617546739922572,
-    "timestamp": "2026-07-15T14:17:26+05:30",
-    "recordedAt": "2026-07-15T14:17:41+05:30"
+    "timestamp": "2026-07-15T16:57:45+05:30",
+    "recordedAt": "2026-07-15T16:57:59+05:30"
   },
   {
     "date": "2026-06-16",
@@ -2024,8 +2024,8 @@
     "currentPower": 0.0,
     "total": 0.0,
     "cuf": 0.0,
-    "timestamp": "2026-07-15T14:17:26+05:30",
-    "recordedAt": "2026-07-15T14:17:41+05:30"
+    "timestamp": "2026-07-15T16:57:45+05:30",
+    "recordedAt": "2026-07-15T16:57:59+05:30"
   },
   {
     "date": "2026-07-10",
@@ -2094,16 +2094,16 @@
     "brand": "Solis",
     "site": "ELVIS GOMES",
     "plantKey": "Solis::ELVIS GOMES",
-    "status": "Fault",
+    "status": "Online",
     "capacity": 15.37,
-    "daily": 33.1,
-    "weekly": 97.2,
-    "year": 11699.1,
-    "currentPower": 0.0,
-    "total": 20.436,
-    "cuf": 16.181220373640677,
-    "timestamp": "2026-07-15T14:17:26+05:30",
-    "recordedAt": "2026-07-15T14:17:41+05:30"
+    "daily": 53.7,
+    "weekly": 117.8,
+    "year": 11719.7,
+    "currentPower": 5.28,
+    "total": 20.456,
+    "cuf": 16.209712577288563,
+    "timestamp": "2026-07-15T16:57:45+05:30",
+    "recordedAt": "2026-07-15T16:57:59+05:30"
   },
   {
     "date": "2026-07-10",
@@ -2174,13 +2174,13 @@
     "plantKey": "Solis::Manjula Nanavati",
     "status": "Online",
     "capacity": 6.27,
-    "daily": 18.4,
-    "weekly": 35.5,
-    "year": 3652.7,
-    "currentPower": 3.9,
-    "total": 6.978,
-    "cuf": 12.384519198428972,
-    "timestamp": "2026-07-15T14:17:26+05:30",
-    "recordedAt": "2026-07-15T14:17:41+05:30"
+    "daily": 24.6,
+    "weekly": 41.7,
+    "year": 3658.9,
+    "currentPower": 0.74,
+    "total": 6.985,
+    "cuf": 12.405540366066683,
+    "timestamp": "2026-07-15T16:57:45+05:30",
+    "recordedAt": "2026-07-15T16:57:59+05:30"
   }
 ]

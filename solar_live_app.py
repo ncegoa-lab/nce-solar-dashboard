@@ -66,7 +66,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-15-history-last3-production-curve-v56"
+APP_VERSION = "2026-07-15-hourly-gap-fill-v58"
 IST = ZoneInfo("Asia/Kolkata")
 VALID_ROLES = {"admin", "manager", "customer", "viewer"}
 PLANT_COLUMNS = [
@@ -692,6 +692,55 @@ class SolarLiveApp:
         temp.write_text(json.dumps(rows, indent=2), encoding="utf-8")
         temp.replace(HOURLY_HISTORY_FILE)
 
+    def inferred_missing_daily_rows(self, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Recover missing daily records from cumulative yearly generation when possible."""
+        dated_rows = []
+        seen_dates = set()
+        for row in rows:
+            row_date = parse_iso_date(row.get("date"))
+            if not row_date:
+                continue
+            dated_rows.append({**row, "_date": row_date})
+            seen_dates.add(row_date.isoformat())
+
+        synthetic: list[dict[str, Any]] = []
+        previous: dict[str, Any] | None = None
+        previous_year_total: float | None = None
+        for row in sorted(dated_rows, key=lambda item: item["_date"]):
+            row_date = row["_date"]
+            current_year_total = float(row.get("year") or 0)
+            if previous and previous_year_total is not None and current_year_total > previous_year_total:
+                missing_days = (row_date - previous["_date"]).days - 1
+                if missing_days > 0:
+                    span_generation = current_year_total - previous_year_total
+                    current_daily = max(0.0, float(row.get("daily") or 0))
+                    missing_total = max(0.0, span_generation - current_daily)
+                    if missing_total > 0:
+                        per_day = missing_total / missing_days
+                        for offset in range(1, missing_days + 1):
+                            missing_date = previous["_date"] + dt.timedelta(days=offset)
+                            missing_key = missing_date.isoformat()
+                            if missing_key in seen_dates:
+                                continue
+                            synthetic.append(
+                                {
+                                    **{key: value for key, value in row.items() if key != "_date"},
+                                    "date": missing_key,
+                                    "daily": round(per_day, 3),
+                                    "weekly": 0,
+                                    "currentPower": 0,
+                                    "status": "Estimated",
+                                    "timestamp": "",
+                                    "recordedAt": ist_now().replace(microsecond=0).isoformat(),
+                                    "_date": missing_date,
+                                }
+                            )
+                            seen_dates.add(missing_key)
+            previous = row
+            if current_year_total > 0:
+                previous_year_total = current_year_total
+        return synthetic
+
     def record_hourly_snapshot(self, current: list[dict[str, Any]]) -> None:
         now = ist_now().replace(minute=0, second=0, microsecond=0)
         today = now.date()
@@ -771,6 +820,7 @@ class SolarLiveApp:
             row for row in self.load_history()
             if row.get("plantKey") == plant_key_value and parse_iso_date(row.get("date"))
         ]
+        rows.extend(self.inferred_missing_daily_rows(rows))
         rows.sort(key=lambda row: str(row.get("date", "")), reverse=True)
         today = ist_today().isoformat()
         if not any(row.get("date") == today for row in rows):
@@ -1100,6 +1150,7 @@ class SolarLiveApp:
             history_by_key.setdefault(str(key), []).append({**row, "_date": row_date})
 
         for key, rows_for_key in history_by_key.items():
+            rows_for_key = rows_for_key + self.inferred_missing_daily_rows(rows_for_key)
             previous_year_total: float | None = None
             for row in sorted(rows_for_key, key=lambda item: item["_date"]):
                 row_date = row["_date"]
@@ -1197,6 +1248,31 @@ class SolarLiveApp:
                 for hour, weight in zip(daylight_hours, weights):
                     cumulative += latest_total * weight / total_weight
                     totals[f"{hour:02d}:00"] = cumulative
+
+        known_hour_values = {
+            int(str(label)[:2]): float(value or 0)
+            for label, value in totals.items()
+            if str(label)[:2].isdigit()
+        }
+        if known_hour_values:
+            end_hour = 23 if graph_date < today else min(ist_now().hour, 23)
+            for hour in range(24):
+                if hour in known_hour_values or (graph_date == today and hour > end_hour):
+                    continue
+                previous_hours = [item for item in known_hour_values if item < hour]
+                next_hours = [item for item in known_hour_values if item > hour]
+                if previous_hours and next_hours:
+                    previous_hour = max(previous_hours)
+                    next_hour = min(next_hours)
+                    previous_value = known_hour_values[previous_hour]
+                    next_value = known_hour_values[next_hour]
+                    ratio = (hour - previous_hour) / max(1, next_hour - previous_hour)
+                    known_hour_values[hour] = previous_value + ((next_value - previous_value) * ratio)
+                    totals[f"{hour:02d}:00"] = known_hour_values[hour]
+                elif previous_hours:
+                    previous_hour = max(previous_hours)
+                    known_hour_values[hour] = known_hour_values[previous_hour]
+                    totals[f"{hour:02d}:00"] = known_hour_values[hour]
 
         hours = []
         for hour in range(24):
