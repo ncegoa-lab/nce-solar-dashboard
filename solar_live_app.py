@@ -66,9 +66,16 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-15-mac-local-user-management-v59"
+APP_VERSION = "2026-07-15-shortcuts-pwa-icons-v60"
 IST = ZoneInfo("Asia/Kolkata")
 VALID_ROLES = {"admin", "manager", "customer", "viewer"}
+PWA_ICON_FILES = {
+    "/favicon.png": PROJECT_DIR / "assets/nce_solar_icon_192.png",
+    "/apple-touch-icon.png": PROJECT_DIR / "assets/nce_solar_icon_180.png",
+    "/icons/nce-solar-180.png": PROJECT_DIR / "assets/nce_solar_icon_180.png",
+    "/icons/nce-solar-192.png": PROJECT_DIR / "assets/nce_solar_icon_192.png",
+    "/icons/nce-solar-512.png": PROJECT_DIR / "assets/nce_solar_icon_512.png",
+}
 PLANT_COLUMNS = [
     "App ID",
     "Brand",
@@ -1675,6 +1682,37 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def send_pwa_manifest(self) -> None:
+        manifest = {
+            "name": "NCE Solar Dashboard",
+            "short_name": "NCE Solar",
+            "description": "NCE live solar plant dashboard and reports.",
+            "start_url": "/",
+            "scope": "/",
+            "display": "standalone",
+            "orientation": "portrait",
+            "background_color": "#eef3f8",
+            "theme_color": "#174f9c",
+            "icons": [
+                {"src": "/icons/nce-solar-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+                {"src": "/icons/nce-solar-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
+            ],
+        }
+        self.send_json(manifest)
+
+    def send_pwa_icon(self, path: str) -> None:
+        icon_path = PWA_ICON_FILES.get(path)
+        if not icon_path or not icon_path.exists():
+            self.send_json({"error": "Icon not found"}, 404)
+            return
+        body = icon_path.read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", "image/png")
+        self.send_header("Cache-Control", "public, max-age=86400")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     def read_json(self) -> dict[str, Any]:
         length = int(self.headers.get("Content-Length") or 0)
         if not length:
@@ -1701,6 +1739,10 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_json({"ok": True})
             elif parsed.path == "/api/version":
                 self.send_json({"app_version": APP_VERSION})
+            elif parsed.path == "/manifest.json":
+                self.send_pwa_manifest()
+            elif parsed.path in PWA_ICON_FILES:
+                self.send_pwa_icon(parsed.path)
             elif parsed.path == "/login":
                 self.send_login_page()
             elif parsed.path == "/reset-password":
@@ -1997,6 +2039,12 @@ LOGIN_HTML = r"""<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#174f9c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="NCE Solar">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>NCE Solar Login</title>
 <style>
 *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:linear-gradient(145deg,#eaf5fb,#f6fbf7);color:#1e2b3f}
@@ -2174,6 +2222,13 @@ LIVE_HTML = r"""<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#174f9c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="NCE Solar">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>NCE Live Solar App</title>
 <style>
 :root{--blue:#174f9c;--cyan:#18b9d6;--green:#16845f;--red:#c73e3e;--ink:#1e2b3f;--muted:#647084;--line:#d7e0ec;--soft:#f3f7fb}
