@@ -1,35 +1,35 @@
 {
-  "source": "solis_network_capture.json",
-  "generated_at": "2026-07-15T13:06:17",
-  "captured_at": "2026-07-11T12:43:16",
+  "source": "solis_api",
+  "generated_at": "2026-07-15T14:17:26+05:30",
+  "captured_at": "2026-07-15T14:17:26+05:30",
   "systems": [
     {
       "name": "ELVIS GOMES",
-      "status": "Online",
+      "status": "Fault",
       "capacity_kw": 15.37,
-      "current_power_kw": 12.1,
-      "today_generation_kwh": 42.0,
+      "current_power_kw": 0,
+      "today_generation_kwh": 33.1,
       "weekly_generation_kwh": null,
-      "month_generation_kwh": 517.7,
-      "year_generation_kwh": 11363.5,
-      "total_generation_kwh": 20100.0,
+      "month_generation_kwh": 853.3,
+      "year_generation_kwh": 11699.1,
+      "total_generation_kwh": 20436.0,
       "system_id": "1298491919450193072",
       "source_sno": "296faa",
-      "data_timestamp": "11/07/2026 12:42:25 (UTC+05:30)"
+      "data_timestamp": "15/07/2026 14:13:41 (UTC+05:30)"
     },
     {
       "name": "Manjula Nanavati",
       "status": "Online",
       "capacity_kw": 6.27,
-      "current_power_kw": 4.52,
-      "today_generation_kwh": 11.6,
+      "current_power_kw": 3.9,
+      "today_generation_kwh": 18.4,
       "weekly_generation_kwh": null,
-      "month_generation_kwh": 140.6,
-      "year_generation_kwh": 3545.6,
-      "total_generation_kwh": 6871.0,
+      "month_generation_kwh": 247.7,
+      "year_generation_kwh": 3652.7,
+      "total_generation_kwh": 6978.0,
       "system_id": "1298491919450046073",
       "source_sno": "271b25",
-      "data_timestamp": "11/07/2026 12:39:10 (UTC+05:30)"
+      "data_timestamp": "15/07/2026 14:14:13 (UTC+05:30)"
     },
     {
       "name": "BITS CARPORT",
@@ -61,7 +61,12 @@
     }
   ],
   "notes": [
-    "SolisCloud station list provides today, month, year, total, and current power.",
-    "Weekly generation is left blank until a weekly SolisCloud endpoint is captured."
-  ]
+    "Solis data was refreshed through the SolisCloud API.",
+    "Weekly generation is calculated from dashboard history when a weekly API value is not returned."
+  ],
+  "api_status": {
+    "record_count": 4,
+    "code": "0",
+    "msg": "success"
+  }
 }

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-15T13:01:16",
+  "generated_at": "2026-07-15T14:16:11",
   "date": "2026-07-15",
   "systems": [
     {
@@ -8,10 +8,10 @@
       "name": "Afley 6kw",
       "status": "Afley 6kw --.- kW",
       "date": "2026-07-15",
-      "today_generation_kwh": 9.05,
-      "today_source_value": "9.05 kWh",
-      "total_generation_kwh": 20480.0,
-      "total_source_value": "20.48 MWh"
+      "today_generation_kwh": 13.93,
+      "today_source_value": "13.93 kWh",
+      "total_generation_kwh": 20490.0,
+      "total_source_value": "20.49 MWh"
     },
     {
       "brand": "Fronius",
@@ -19,10 +19,10 @@
       "name": "BITS D-Mess 21kw",
       "status": "BITS D-Mess 21kw --.- kW",
       "date": "2026-07-15",
-      "today_generation_kwh": 37.3,
-      "today_source_value": "37.30 kWh",
-      "total_generation_kwh": 55190.0,
-      "total_source_value": "55.19 MWh"
+      "today_generation_kwh": 50.44,
+      "today_source_value": "50.44 kWh",
+      "total_generation_kwh": 55210.0,
+      "total_source_value": "55.21 MWh"
     },
     {
       "brand": "Fronius",
@@ -30,8 +30,8 @@
       "name": "BITS- PCC 1-10Kw",
       "status": "BITS- PCC 1-10Kw --.- kW",
       "date": "2026-07-15",
-      "today_generation_kwh": 18.77,
-      "today_source_value": "18.77 kWh",
+      "today_generation_kwh": 25.09,
+      "today_source_value": "25.09 kWh",
       "total_generation_kwh": 30040.0,
       "total_source_value": "30.04 MWh"
     },
@@ -41,10 +41,10 @@
       "name": "BITS-Amess 50kw",
       "status": "BITS-Amess 50kw --.- kW",
       "date": "2026-07-15",
-      "today_generation_kwh": 76.36,
-      "today_source_value": "76.36 kWh",
-      "total_generation_kwh": 183660.0,
-      "total_source_value": "183.66 MWh"
+      "today_generation_kwh": 117.94,
+      "today_source_value": "117.94 kWh",
+      "total_generation_kwh": 183700.0,
+      "total_source_value": "183.70 MWh"
     },
     {
       "brand": "Fronius",
@@ -74,8 +74,8 @@
       "name": "Xisto 10Kw",
       "status": "Xisto 10Kw --.- kW",
       "date": "2026-07-15",
-      "today_generation_kwh": 16.85,
-      "today_source_value": "16.85 kWh",
+      "today_generation_kwh": 22.97,
+      "today_source_value": "22.97 kWh",
       "total_generation_kwh": 21890.0,
       "total_source_value": "21.89 MWh"
     },

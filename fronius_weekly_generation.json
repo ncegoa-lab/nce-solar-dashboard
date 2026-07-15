@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-15T13:01:57",
+  "generated_at": "2026-07-15T14:16:55",
   "start_date": "2026-07-13",
   "end_date": "2026-07-19",
   "systems": [
@@ -21,8 +21,8 @@
         },
         {
           "date": "2026-07-15",
-          "generation_kwh": 9.05,
-          "source_value": "9.05 kWh"
+          "generation_kwh": 13.93,
+          "source_value": "13.93 kWh"
         },
         {
           "date": "2026-07-16",
@@ -45,9 +45,9 @@
           "source_value": "0 Wh"
         }
       ],
-      "weekly_generation_kwh": 74.75,
-      "year_generation_kwh": 4958.16,
-      "year_source_value": "4,958.16 kWh"
+      "weekly_generation_kwh": 79.63,
+      "year_generation_kwh": 4963.04,
+      "year_source_value": "4,963.04 kWh"
     },
     {
       "brand": "Fronius",
@@ -67,8 +67,8 @@
         },
         {
           "date": "2026-07-15",
-          "generation_kwh": 37.3,
-          "source_value": "37.30 kWh"
+          "generation_kwh": 50.44,
+          "source_value": "50.44 kWh"
         },
         {
           "date": "2026-07-16",
@@ -91,9 +91,9 @@
           "source_value": "0 Wh"
         }
       ],
-      "weekly_generation_kwh": 232.32,
-      "year_generation_kwh": 18060.0,
-      "year_source_value": "18.06 MWh"
+      "weekly_generation_kwh": 245.46,
+      "year_generation_kwh": 18080.0,
+      "year_source_value": "18.08 MWh"
     },
     {
       "brand": "Fronius",
@@ -113,8 +113,8 @@
         },
         {
           "date": "2026-07-15",
-          "generation_kwh": 18.77,
-          "source_value": "18.77 kWh"
+          "generation_kwh": 25.09,
+          "source_value": "25.09 kWh"
         },
         {
           "date": "2026-07-16",
@@ -137,7 +137,7 @@
           "source_value": "0 Wh"
         }
       ],
-      "weekly_generation_kwh": 112.83,
+      "weekly_generation_kwh": 119.15,
       "year_generation_kwh": 7780.0,
       "year_source_value": "7.78 MWh"
     },
@@ -159,8 +159,8 @@
         },
         {
           "date": "2026-07-15",
-          "generation_kwh": 76.36,
-          "source_value": "76.36 kWh"
+          "generation_kwh": 117.94,
+          "source_value": "117.94 kWh"
         },
         {
           "date": "2026-07-16",
@@ -183,9 +183,9 @@
           "source_value": "0 Wh"
         }
       ],
-      "weekly_generation_kwh": 553.11,
-      "year_generation_kwh": 42140.0,
-      "year_source_value": "42.14 MWh"
+      "weekly_generation_kwh": 594.69,
+      "year_generation_kwh": 42190.0,
+      "year_source_value": "42.19 MWh"
     },
     {
       "brand": "Fronius",
@@ -297,8 +297,8 @@
         },
         {
           "date": "2026-07-15",
-          "generation_kwh": 16.85,
-          "source_value": "16.85 kWh"
+          "generation_kwh": 22.97,
+          "source_value": "22.97 kWh"
         },
         {
           "date": "2026-07-16",
@@ -321,9 +321,9 @@
           "source_value": "0 Wh"
         }
       ],
-      "weekly_generation_kwh": 99.99,
-      "year_generation_kwh": 5840.0,
-      "year_source_value": "5.84 MWh"
+      "weekly_generation_kwh": 106.11,
+      "year_generation_kwh": 5850.0,
+      "year_source_value": "5.85 MWh"
     },
     {
       "brand": "Fronius",

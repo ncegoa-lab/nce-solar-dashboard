@@ -1,52 +1,58 @@
 {
-  "source": "solax_network_capture.json",
-  "generated_at": "2026-07-15T13:06:19",
-  "captured_at": "2026-07-03T10:51:56",
+  "source": "solax_web_api",
+  "generated_at": "2026-07-15T14:17:28+05:30",
+  "captured_at": "2026-07-15T14:17:28+05:30",
   "systems": [
     {
       "name": "EUFREGINO 3kw",
-      "status": "Normal",
+      "status": "Online",
       "capacity_kw": 3.7,
-      "current_power_kw": null,
-      "today_generation_kwh": 2.6,
-      "weekly_generation_kwh": 2.6,
-      "total_generation_kwh": null,
+      "current_power_kw": 2.442,
+      "today_generation_kwh": 11.3,
+      "weekly_generation_kwh": 46.8,
+      "month_generation_kwh": null,
+      "year_generation_kwh": 538.65,
+      "total_generation_kwh": 538.85,
       "system_id": "2061402942656770049",
-      "backend_errors": [
-        "siteOverview failed: <urlopen error [Errno 8] nodename nor servname provided, or not known>"
-      ]
+      "source_sno": "HC2061402942656770049",
+      "data_timestamp": "2026-07-15T14:17:28+05:30"
     },
     {
       "name": "Dr Mansi & Samir",
-      "status": "Normal",
+      "status": "Online",
       "capacity_kw": 6.38,
-      "current_power_kw": null,
-      "today_generation_kwh": 5.6,
-      "weekly_generation_kwh": 5.6,
-      "total_generation_kwh": null,
+      "current_power_kw": 4.812,
+      "today_generation_kwh": 20.2,
+      "weekly_generation_kwh": 96.9,
+      "month_generation_kwh": null,
+      "year_generation_kwh": 4861.0,
+      "total_generation_kwh": 7138.8,
       "system_id": "1975875768776945665",
-      "backend_errors": [
-        "siteOverview failed: <urlopen error [Errno 8] nodename nor servname provided, or not known>"
-      ]
+      "source_sno": "HC1975875768776945665",
+      "data_timestamp": "2026-07-15T14:17:28+05:30"
     },
     {
       "name": "Dr OWIN SPV plant 2",
-      "status": "Normal",
+      "status": "Online",
       "capacity_kw": 12.72,
-      "current_power_kw": null,
-      "today_generation_kwh": 8.7,
-      "weekly_generation_kwh": 8.7,
-      "total_generation_kwh": null,
+      "current_power_kw": 3.02,
+      "today_generation_kwh": 34.1,
+      "weekly_generation_kwh": 140.0,
+      "month_generation_kwh": null,
+      "year_generation_kwh": 8417.3,
+      "total_generation_kwh": 19188.7,
       "system_id": "1907684446702694402",
-      "backend_errors": [
-        "siteOverview failed: <urlopen error [Errno 8] nodename nor servname provided, or not known>"
-      ]
+      "source_sno": "HC1907684446702694402",
+      "data_timestamp": "2026-07-15T14:17:28+05:30"
     }
   ],
   "notes": [
-    "SolaX systems were split from the visible Plants page table captured in the browser.",
-    "Any blank values were not visible in the captured SolaX plant table.",
-    "SolaX weekly generation is calculated from locally stored daily captures when the backend does not expose weekly values.",
-    "SolaX total generation is still blank because the captured SolaX pages do not expose lifetime totals."
-  ]
+    "SolaX data was refreshed through the SolaX web API login."
+  ],
+  "api_status": {
+    "record_count": 3,
+    "live_record_count": 3,
+    "success": true,
+    "code": 0
+  }
 }

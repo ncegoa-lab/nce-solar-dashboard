@@ -4687,9 +4687,9 @@
     "site": "Birla Campus Goa C-mess 50kw",
     "plantKey": "FIMER::Birla Campus Goa C-mess 50kw",
     "status": "Online",
-    "daily": 116.800000000003,
-    "timestamp": "2026-07-15T07:31:59.959Z",
-    "recordedAt": "2026-07-15T13:06:19+05:30"
+    "daily": 133.756000000008,
+    "timestamp": "2026-07-15T08:10:50.626Z",
+    "recordedAt": "2026-07-15T13:41:43+05:30"
   },
   {
     "date": "2026-07-15",
@@ -4699,9 +4699,9 @@
     "site": "Birla campus goa",
     "plantKey": "FIMER::Birla campus goa",
     "status": "Online",
-    "daily": 158.976000000024,
-    "timestamp": "2026-07-15T07:31:59.959Z",
-    "recordedAt": "2026-07-15T13:06:19+05:30"
+    "daily": 187.008000000031,
+    "timestamp": "2026-07-15T08:10:50.626Z",
+    "recordedAt": "2026-07-15T13:41:43+05:30"
   },
   {
     "date": "2026-07-15",
@@ -4711,9 +4711,9 @@
     "site": "Afley 6kw",
     "plantKey": "Fronius::Afley 6kw",
     "status": "Online",
-    "daily": 9.05,
+    "daily": 13.93,
     "timestamp": "2026-07-15",
-    "recordedAt": "2026-07-15T13:06:19+05:30"
+    "recordedAt": "2026-07-15T13:41:43+05:30"
   },
   {
     "date": "2026-07-15",
@@ -4723,9 +4723,9 @@
     "site": "BITS D-Mess 21kw",
     "plantKey": "Fronius::BITS D-Mess 21kw",
     "status": "Online",
-    "daily": 37.3,
+    "daily": 50.44,
     "timestamp": "2026-07-15",
-    "recordedAt": "2026-07-15T13:06:19+05:30"
+    "recordedAt": "2026-07-15T13:41:43+05:30"
   },
   {
     "date": "2026-07-15",
@@ -4735,9 +4735,9 @@
     "site": "BITS- PCC 1-10Kw",
     "plantKey": "Fronius::BITS- PCC 1-10Kw",
     "status": "Online",
-    "daily": 18.77,
+    "daily": 25.09,
     "timestamp": "2026-07-15",
-    "recordedAt": "2026-07-15T13:06:19+05:30"
+    "recordedAt": "2026-07-15T13:41:43+05:30"
   },
   {
     "date": "2026-07-15",
@@ -4747,9 +4747,9 @@
     "site": "BITS-Amess 50kw",
     "plantKey": "Fronius::BITS-Amess 50kw",
     "status": "Online",
-    "daily": 76.36,
+    "daily": 117.94,
     "timestamp": "2026-07-15",
-    "recordedAt": "2026-07-15T13:06:19+05:30"
+    "recordedAt": "2026-07-15T13:41:43+05:30"
   },
   {
     "date": "2026-07-15",
@@ -4761,7 +4761,7 @@
     "status": "Offline",
     "daily": 0.0,
     "timestamp": "2026-07-15",
-    "recordedAt": "2026-07-15T13:06:19+05:30"
+    "recordedAt": "2026-07-15T13:41:43+05:30"
   },
   {
     "date": "2026-07-15",
@@ -4773,7 +4773,7 @@
     "status": "Offline",
     "daily": 0.0,
     "timestamp": "2026-07-15",
-    "recordedAt": "2026-07-15T13:06:19+05:30"
+    "recordedAt": "2026-07-15T13:41:43+05:30"
   },
   {
     "date": "2026-07-15",
@@ -4785,7 +4785,7 @@
     "status": "Offline",
     "daily": 0.0,
     "timestamp": "2026-07-15",
-    "recordedAt": "2026-07-15T13:06:19+05:30"
+    "recordedAt": "2026-07-15T13:41:43+05:30"
   },
   {
     "date": "2026-07-15",
@@ -4795,9 +4795,9 @@
     "site": "Xisto 10Kw",
     "plantKey": "Fronius::Xisto 10Kw",
     "status": "Online",
-    "daily": 16.85,
+    "daily": 22.97,
     "timestamp": "2026-07-15",
-    "recordedAt": "2026-07-15T13:06:19+05:30"
+    "recordedAt": "2026-07-15T13:41:43+05:30"
   },
   {
     "date": "2026-07-15",
@@ -4807,9 +4807,9 @@
     "site": "Balkusht Lotlicar 10kw",
     "plantKey": "GoodWe::Balkusht Lotlicar 10kw",
     "status": "Online",
-    "daily": 18.6,
-    "timestamp": "2026-07-15T13:00:51",
-    "recordedAt": "2026-07-15T13:06:19+05:30"
+    "daily": 21.5,
+    "timestamp": "2026-07-15T13:39:25",
+    "recordedAt": "2026-07-15T13:41:43+05:30"
   },
   {
     "date": "2026-07-15",
@@ -4819,9 +4819,9 @@
     "site": "MIRANDA 6kw",
     "plantKey": "GoodWe::MIRANDA 6kw",
     "status": "Online",
-    "daily": 13.1,
-    "timestamp": "2026-07-15T13:00:51",
-    "recordedAt": "2026-07-15T13:06:19+05:30"
+    "daily": 14.7,
+    "timestamp": "2026-07-15T13:39:25",
+    "recordedAt": "2026-07-15T13:41:43+05:30"
   },
   {
     "date": "2026-07-15",
@@ -4831,9 +4831,9 @@
     "site": "Mark Revlon 10kw Chandor",
     "plantKey": "GoodWe::Mark Revlon 10kw Chandor",
     "status": "Online",
-    "daily": 16.0,
-    "timestamp": "2026-07-15T13:00:51",
-    "recordedAt": "2026-07-15T13:06:19+05:30"
+    "daily": 18.4,
+    "timestamp": "2026-07-15T13:39:25",
+    "recordedAt": "2026-07-15T13:41:43+05:30"
   },
   {
     "date": "2026-07-15",
@@ -4843,9 +4843,9 @@
     "site": "NIKHIL 10kw",
     "plantKey": "GoodWe::NIKHIL 10kw",
     "status": "Online",
-    "daily": 24.1,
-    "timestamp": "2026-07-15T13:00:51",
-    "recordedAt": "2026-07-15T13:06:19+05:30"
+    "daily": 27.9,
+    "timestamp": "2026-07-15T13:39:25",
+    "recordedAt": "2026-07-15T13:41:43+05:30"
   },
   {
     "date": "2026-07-15",
@@ -4856,8 +4856,8 @@
     "plantKey": "GoodWe::Rajesh Shirodkar 10kw",
     "status": "Offline",
     "daily": 0.0,
-    "timestamp": "2026-07-15T13:00:51",
-    "recordedAt": "2026-07-15T13:06:19+05:30"
+    "timestamp": "2026-07-15T13:39:25",
+    "recordedAt": "2026-07-15T13:41:43+05:30"
   },
   {
     "date": "2026-07-15",
@@ -4867,9 +4867,9 @@
     "site": "Ravish 10kw",
     "plantKey": "GoodWe::Ravish 10kw",
     "status": "Online",
-    "daily": 23.5,
-    "timestamp": "2026-07-15T13:00:51",
-    "recordedAt": "2026-07-15T13:06:19+05:30"
+    "daily": 27.9,
+    "timestamp": "2026-07-15T13:39:25",
+    "recordedAt": "2026-07-15T13:41:43+05:30"
   },
   {
     "date": "2026-07-15",
@@ -4879,9 +4879,9 @@
     "site": "Raymond Franco 10kw Pomburpa",
     "plantKey": "GoodWe::Raymond Franco 10kw Pomburpa",
     "status": "Online",
-    "daily": 16.6,
-    "timestamp": "2026-07-15T13:00:51",
-    "recordedAt": "2026-07-15T13:06:19+05:30"
+    "daily": 19.8,
+    "timestamp": "2026-07-15T13:39:25",
+    "recordedAt": "2026-07-15T13:41:43+05:30"
   },
   {
     "date": "2026-07-15",
@@ -4891,9 +4891,9 @@
     "site": "SANJIV LOTLICAR 10kw",
     "plantKey": "GoodWe::SANJIV LOTLICAR 10kw",
     "status": "Online",
-    "daily": 22.2,
-    "timestamp": "2026-07-15T13:00:51",
-    "recordedAt": "2026-07-15T13:06:19+05:30"
+    "daily": 26.8,
+    "timestamp": "2026-07-15T13:39:25",
+    "recordedAt": "2026-07-15T13:41:43+05:30"
   },
   {
     "date": "2026-07-15",
@@ -4904,8 +4904,8 @@
     "plantKey": "GoodWe::Salkar 10kw Bicholim",
     "status": "Offline",
     "daily": 0.0,
-    "timestamp": "2026-07-15T13:00:51",
-    "recordedAt": "2026-07-15T13:06:19+05:30"
+    "timestamp": "2026-07-15T13:39:25",
+    "recordedAt": "2026-07-15T13:41:43+05:30"
   },
   {
     "date": "2026-07-15",
@@ -4915,9 +4915,9 @@
     "site": "Vikas 10Kw",
     "plantKey": "GoodWe::Vikas 10Kw",
     "status": "Online",
-    "daily": 28.4,
-    "timestamp": "2026-07-15T13:00:51",
-    "recordedAt": "2026-07-15T13:06:19+05:30"
+    "daily": 32.4,
+    "timestamp": "2026-07-15T13:39:25",
+    "recordedAt": "2026-07-15T13:41:43+05:30"
   },
   {
     "date": "2026-07-15",
@@ -4927,9 +4927,9 @@
     "site": "kunal 10kw",
     "plantKey": "GoodWe::kunal 10kw",
     "status": "Online",
-    "daily": 22.7,
-    "timestamp": "2026-07-15T13:00:51",
-    "recordedAt": "2026-07-15T13:06:19+05:30"
+    "daily": 27.6,
+    "timestamp": "2026-07-15T13:39:25",
+    "recordedAt": "2026-07-15T13:41:43+05:30"
   },
   {
     "date": "2026-07-15",
@@ -4939,9 +4939,9 @@
     "site": "Dr Mansi & Samir",
     "plantKey": "SolaX::Dr Mansi & Samir",
     "status": "Online",
-    "daily": 5.6,
-    "timestamp": "2026-07-15T13:06:19",
-    "recordedAt": "2026-07-15T13:06:19+05:30"
+    "daily": 17.9,
+    "timestamp": "2026-07-15T13:41:17+05:30",
+    "recordedAt": "2026-07-15T13:41:43+05:30"
   },
   {
     "date": "2026-07-15",
@@ -4951,9 +4951,9 @@
     "site": "Dr OWIN SPV plant 2",
     "plantKey": "SolaX::Dr OWIN SPV plant 2",
     "status": "Online",
-    "daily": 8.7,
-    "timestamp": "2026-07-15T13:06:19",
-    "recordedAt": "2026-07-15T13:06:19+05:30"
+    "daily": 30.3,
+    "timestamp": "2026-07-15T13:41:17+05:30",
+    "recordedAt": "2026-07-15T13:41:43+05:30"
   },
   {
     "date": "2026-07-15",
@@ -4963,9 +4963,9 @@
     "site": "EUFREGINO 3kw",
     "plantKey": "SolaX::EUFREGINO 3kw",
     "status": "Online",
-    "daily": 2.6,
-    "timestamp": "2026-07-15T13:06:19",
-    "recordedAt": "2026-07-15T13:06:19+05:30"
+    "daily": 9.7,
+    "timestamp": "2026-07-15T13:41:17+05:30",
+    "recordedAt": "2026-07-15T13:41:43+05:30"
   },
   {
     "date": "2026-07-15",
@@ -4976,8 +4976,8 @@
     "plantKey": "Solis::BITS CARPORT",
     "status": "Offline",
     "daily": 0.0,
-    "timestamp": "2026-07-15T13:06:17",
-    "recordedAt": "2026-07-15T13:06:19+05:30"
+    "timestamp": "2026-07-15T13:41:16+05:30",
+    "recordedAt": "2026-07-15T13:41:43+05:30"
   },
   {
     "date": "2026-07-15",
@@ -4988,8 +4988,8 @@
     "plantKey": "Solis::Bits Pilani C-Wing 100Kw",
     "status": "Offline",
     "daily": 0.0,
-    "timestamp": "2026-07-15T13:06:17",
-    "recordedAt": "2026-07-15T13:06:19+05:30"
+    "timestamp": "2026-07-15T13:41:16+05:30",
+    "recordedAt": "2026-07-15T13:41:43+05:30"
   },
   {
     "date": "2026-07-15",
@@ -4998,10 +4998,10 @@
     "brand": "Solis",
     "site": "ELVIS GOMES",
     "plantKey": "Solis::ELVIS GOMES",
-    "status": "Online",
-    "daily": 42.0,
-    "timestamp": "2026-07-15T13:06:17",
-    "recordedAt": "2026-07-15T13:06:19+05:30"
+    "status": "Fault",
+    "daily": 29.7,
+    "timestamp": "2026-07-15T13:41:16+05:30",
+    "recordedAt": "2026-07-15T13:41:43+05:30"
   },
   {
     "date": "2026-07-15",
@@ -5011,8 +5011,344 @@
     "site": "Manjula Nanavati",
     "plantKey": "Solis::Manjula Nanavati",
     "status": "Online",
-    "daily": 11.6,
-    "timestamp": "2026-07-15T13:06:17",
-    "recordedAt": "2026-07-15T13:06:19+05:30"
+    "daily": 16.2,
+    "timestamp": "2026-07-15T13:41:16+05:30",
+    "recordedAt": "2026-07-15T13:41:43+05:30"
+  },
+  {
+    "date": "2026-07-15",
+    "hour": "2026-07-15T14:00:00+05:30",
+    "hourLabel": "14:00",
+    "brand": "FIMER",
+    "site": "Birla Campus Goa C-mess 50kw",
+    "plantKey": "FIMER::Birla Campus Goa C-mess 50kw",
+    "status": "Online",
+    "daily": 145.779999999999,
+    "timestamp": "2026-07-15T08:46:57.830Z",
+    "recordedAt": "2026-07-15T14:17:41+05:30"
+  },
+  {
+    "date": "2026-07-15",
+    "hour": "2026-07-15T14:00:00+05:30",
+    "hourLabel": "14:00",
+    "brand": "FIMER",
+    "site": "Birla campus goa",
+    "plantKey": "FIMER::Birla campus goa",
+    "status": "Online",
+    "daily": 211.967999999993,
+    "timestamp": "2026-07-15T08:46:57.830Z",
+    "recordedAt": "2026-07-15T14:17:41+05:30"
+  },
+  {
+    "date": "2026-07-15",
+    "hour": "2026-07-15T14:00:00+05:30",
+    "hourLabel": "14:00",
+    "brand": "Fronius",
+    "site": "Afley 6kw",
+    "plantKey": "Fronius::Afley 6kw",
+    "status": "Online",
+    "daily": 13.93,
+    "timestamp": "2026-07-15",
+    "recordedAt": "2026-07-15T14:17:41+05:30"
+  },
+  {
+    "date": "2026-07-15",
+    "hour": "2026-07-15T14:00:00+05:30",
+    "hourLabel": "14:00",
+    "brand": "Fronius",
+    "site": "BITS D-Mess 21kw",
+    "plantKey": "Fronius::BITS D-Mess 21kw",
+    "status": "Online",
+    "daily": 50.44,
+    "timestamp": "2026-07-15",
+    "recordedAt": "2026-07-15T14:17:41+05:30"
+  },
+  {
+    "date": "2026-07-15",
+    "hour": "2026-07-15T14:00:00+05:30",
+    "hourLabel": "14:00",
+    "brand": "Fronius",
+    "site": "BITS- PCC 1-10Kw",
+    "plantKey": "Fronius::BITS- PCC 1-10Kw",
+    "status": "Online",
+    "daily": 25.09,
+    "timestamp": "2026-07-15",
+    "recordedAt": "2026-07-15T14:17:41+05:30"
+  },
+  {
+    "date": "2026-07-15",
+    "hour": "2026-07-15T14:00:00+05:30",
+    "hourLabel": "14:00",
+    "brand": "Fronius",
+    "site": "BITS-Amess 50kw",
+    "plantKey": "Fronius::BITS-Amess 50kw",
+    "status": "Online",
+    "daily": 117.94,
+    "timestamp": "2026-07-15",
+    "recordedAt": "2026-07-15T14:17:41+05:30"
+  },
+  {
+    "date": "2026-07-15",
+    "hour": "2026-07-15T14:00:00+05:30",
+    "hourLabel": "14:00",
+    "brand": "Fronius",
+    "site": "BITS-PCC1-10kw",
+    "plantKey": "Fronius::BITS-PCC1-10kw",
+    "status": "Offline",
+    "daily": 0.0,
+    "timestamp": "2026-07-15",
+    "recordedAt": "2026-07-15T14:17:41+05:30"
+  },
+  {
+    "date": "2026-07-15",
+    "hour": "2026-07-15T14:00:00+05:30",
+    "hourLabel": "14:00",
+    "brand": "Fronius",
+    "site": "Dr Buvaji res6kw",
+    "plantKey": "Fronius::Dr Buvaji res6kw",
+    "status": "Offline",
+    "daily": 0.0,
+    "timestamp": "2026-07-15",
+    "recordedAt": "2026-07-15T14:17:41+05:30"
+  },
+  {
+    "date": "2026-07-15",
+    "hour": "2026-07-15T14:00:00+05:30",
+    "hourLabel": "14:00",
+    "brand": "Fronius",
+    "site": "Dr Oween 10.0",
+    "plantKey": "Fronius::Dr Oween 10.0",
+    "status": "Offline",
+    "daily": 0.0,
+    "timestamp": "2026-07-15",
+    "recordedAt": "2026-07-15T14:17:41+05:30"
+  },
+  {
+    "date": "2026-07-15",
+    "hour": "2026-07-15T14:00:00+05:30",
+    "hourLabel": "14:00",
+    "brand": "Fronius",
+    "site": "Xisto 10Kw",
+    "plantKey": "Fronius::Xisto 10Kw",
+    "status": "Online",
+    "daily": 22.97,
+    "timestamp": "2026-07-15",
+    "recordedAt": "2026-07-15T14:17:41+05:30"
+  },
+  {
+    "date": "2026-07-15",
+    "hour": "2026-07-15T14:00:00+05:30",
+    "hourLabel": "14:00",
+    "brand": "GoodWe",
+    "site": "Balkusht Lotlicar 10kw",
+    "plantKey": "GoodWe::Balkusht Lotlicar 10kw",
+    "status": "Online",
+    "daily": 25.0,
+    "timestamp": "2026-07-15T14:15:44",
+    "recordedAt": "2026-07-15T14:17:41+05:30"
+  },
+  {
+    "date": "2026-07-15",
+    "hour": "2026-07-15T14:00:00+05:30",
+    "hourLabel": "14:00",
+    "brand": "GoodWe",
+    "site": "MIRANDA 6kw",
+    "plantKey": "GoodWe::MIRANDA 6kw",
+    "status": "Online",
+    "daily": 17.1,
+    "timestamp": "2026-07-15T14:15:44",
+    "recordedAt": "2026-07-15T14:17:41+05:30"
+  },
+  {
+    "date": "2026-07-15",
+    "hour": "2026-07-15T14:00:00+05:30",
+    "hourLabel": "14:00",
+    "brand": "GoodWe",
+    "site": "Mark Revlon 10kw Chandor",
+    "plantKey": "GoodWe::Mark Revlon 10kw Chandor",
+    "status": "Online",
+    "daily": 21.4,
+    "timestamp": "2026-07-15T14:15:44",
+    "recordedAt": "2026-07-15T14:17:41+05:30"
+  },
+  {
+    "date": "2026-07-15",
+    "hour": "2026-07-15T14:00:00+05:30",
+    "hourLabel": "14:00",
+    "brand": "GoodWe",
+    "site": "NIKHIL 10kw",
+    "plantKey": "GoodWe::NIKHIL 10kw",
+    "status": "Online",
+    "daily": 30.9,
+    "timestamp": "2026-07-15T14:15:44",
+    "recordedAt": "2026-07-15T14:17:41+05:30"
+  },
+  {
+    "date": "2026-07-15",
+    "hour": "2026-07-15T14:00:00+05:30",
+    "hourLabel": "14:00",
+    "brand": "GoodWe",
+    "site": "Rajesh Shirodkar 10kw",
+    "plantKey": "GoodWe::Rajesh Shirodkar 10kw",
+    "status": "Offline",
+    "daily": 0.0,
+    "timestamp": "2026-07-15T14:15:44",
+    "recordedAt": "2026-07-15T14:17:41+05:30"
+  },
+  {
+    "date": "2026-07-15",
+    "hour": "2026-07-15T14:00:00+05:30",
+    "hourLabel": "14:00",
+    "brand": "GoodWe",
+    "site": "Ravish 10kw",
+    "plantKey": "GoodWe::Ravish 10kw",
+    "status": "Online",
+    "daily": 31.7,
+    "timestamp": "2026-07-15T14:15:44",
+    "recordedAt": "2026-07-15T14:17:41+05:30"
+  },
+  {
+    "date": "2026-07-15",
+    "hour": "2026-07-15T14:00:00+05:30",
+    "hourLabel": "14:00",
+    "brand": "GoodWe",
+    "site": "Raymond Franco 10kw Pomburpa",
+    "plantKey": "GoodWe::Raymond Franco 10kw Pomburpa",
+    "status": "Online",
+    "daily": 22.4,
+    "timestamp": "2026-07-15T14:15:44",
+    "recordedAt": "2026-07-15T14:17:41+05:30"
+  },
+  {
+    "date": "2026-07-15",
+    "hour": "2026-07-15T14:00:00+05:30",
+    "hourLabel": "14:00",
+    "brand": "GoodWe",
+    "site": "SANJIV LOTLICAR 10kw",
+    "plantKey": "GoodWe::SANJIV LOTLICAR 10kw",
+    "status": "Online",
+    "daily": 30.5,
+    "timestamp": "2026-07-15T14:15:44",
+    "recordedAt": "2026-07-15T14:17:41+05:30"
+  },
+  {
+    "date": "2026-07-15",
+    "hour": "2026-07-15T14:00:00+05:30",
+    "hourLabel": "14:00",
+    "brand": "GoodWe",
+    "site": "Salkar 10kw Bicholim",
+    "plantKey": "GoodWe::Salkar 10kw Bicholim",
+    "status": "Offline",
+    "daily": 0.0,
+    "timestamp": "2026-07-15T14:15:44",
+    "recordedAt": "2026-07-15T14:17:41+05:30"
+  },
+  {
+    "date": "2026-07-15",
+    "hour": "2026-07-15T14:00:00+05:30",
+    "hourLabel": "14:00",
+    "brand": "GoodWe",
+    "site": "Vikas 10Kw",
+    "plantKey": "GoodWe::Vikas 10Kw",
+    "status": "Online",
+    "daily": 36.6,
+    "timestamp": "2026-07-15T14:15:44",
+    "recordedAt": "2026-07-15T14:17:41+05:30"
+  },
+  {
+    "date": "2026-07-15",
+    "hour": "2026-07-15T14:00:00+05:30",
+    "hourLabel": "14:00",
+    "brand": "GoodWe",
+    "site": "kunal 10kw",
+    "plantKey": "GoodWe::kunal 10kw",
+    "status": "Online",
+    "daily": 31.8,
+    "timestamp": "2026-07-15T14:15:44",
+    "recordedAt": "2026-07-15T14:17:41+05:30"
+  },
+  {
+    "date": "2026-07-15",
+    "hour": "2026-07-15T14:00:00+05:30",
+    "hourLabel": "14:00",
+    "brand": "SolaX",
+    "site": "Dr Mansi & Samir",
+    "plantKey": "SolaX::Dr Mansi & Samir",
+    "status": "Online",
+    "daily": 20.2,
+    "timestamp": "2026-07-15T14:17:28+05:30",
+    "recordedAt": "2026-07-15T14:17:41+05:30"
+  },
+  {
+    "date": "2026-07-15",
+    "hour": "2026-07-15T14:00:00+05:30",
+    "hourLabel": "14:00",
+    "brand": "SolaX",
+    "site": "Dr OWIN SPV plant 2",
+    "plantKey": "SolaX::Dr OWIN SPV plant 2",
+    "status": "Online",
+    "daily": 34.1,
+    "timestamp": "2026-07-15T14:17:28+05:30",
+    "recordedAt": "2026-07-15T14:17:41+05:30"
+  },
+  {
+    "date": "2026-07-15",
+    "hour": "2026-07-15T14:00:00+05:30",
+    "hourLabel": "14:00",
+    "brand": "SolaX",
+    "site": "EUFREGINO 3kw",
+    "plantKey": "SolaX::EUFREGINO 3kw",
+    "status": "Online",
+    "daily": 11.3,
+    "timestamp": "2026-07-15T14:17:28+05:30",
+    "recordedAt": "2026-07-15T14:17:41+05:30"
+  },
+  {
+    "date": "2026-07-15",
+    "hour": "2026-07-15T14:00:00+05:30",
+    "hourLabel": "14:00",
+    "brand": "Solis",
+    "site": "BITS CARPORT",
+    "plantKey": "Solis::BITS CARPORT",
+    "status": "Offline",
+    "daily": 0.0,
+    "timestamp": "2026-07-15T14:17:26+05:30",
+    "recordedAt": "2026-07-15T14:17:41+05:30"
+  },
+  {
+    "date": "2026-07-15",
+    "hour": "2026-07-15T14:00:00+05:30",
+    "hourLabel": "14:00",
+    "brand": "Solis",
+    "site": "Bits Pilani C-Wing 100Kw",
+    "plantKey": "Solis::Bits Pilani C-Wing 100Kw",
+    "status": "Offline",
+    "daily": 0.0,
+    "timestamp": "2026-07-15T14:17:26+05:30",
+    "recordedAt": "2026-07-15T14:17:41+05:30"
+  },
+  {
+    "date": "2026-07-15",
+    "hour": "2026-07-15T14:00:00+05:30",
+    "hourLabel": "14:00",
+    "brand": "Solis",
+    "site": "ELVIS GOMES",
+    "plantKey": "Solis::ELVIS GOMES",
+    "status": "Fault",
+    "daily": 33.1,
+    "timestamp": "2026-07-15T14:17:26+05:30",
+    "recordedAt": "2026-07-15T14:17:41+05:30"
+  },
+  {
+    "date": "2026-07-15",
+    "hour": "2026-07-15T14:00:00+05:30",
+    "hourLabel": "14:00",
+    "brand": "Solis",
+    "site": "Manjula Nanavati",
+    "plantKey": "Solis::Manjula Nanavati",
+    "status": "Online",
+    "daily": 18.4,
+    "timestamp": "2026-07-15T14:17:26+05:30",
+    "recordedAt": "2026-07-15T14:17:41+05:30"
   }
 ]
