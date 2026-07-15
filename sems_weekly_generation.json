@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-15T16:56:26",
+  "generated_at": "2026-07-15T17:08:49",
   "start_date": "2026-07-13",
   "end_date": "2026-07-19",
   "stations": [
@@ -133,7 +133,7 @@
         },
         {
           "date": "2026-07-15",
-          "generation_kwh": 22.7
+          "generation_kwh": 22.8
         },
         {
           "date": "2026-07-16",
@@ -152,8 +152,8 @@
           "generation_kwh": 0.0
         }
       ],
-      "weekly_generation_kwh": 77.2,
-      "year_generation_kwh": 607.7
+      "weekly_generation_kwh": 77.3,
+      "year_generation_kwh": 607.8
     },
     {
       "brand": "GoodWe",
@@ -171,7 +171,7 @@
         },
         {
           "date": "2026-07-15",
-          "generation_kwh": 32.3
+          "generation_kwh": 32.6
         },
         {
           "date": "2026-07-16",
@@ -190,8 +190,8 @@
           "generation_kwh": 0.0
         }
       ],
-      "weekly_generation_kwh": 102.5,
-      "year_generation_kwh": 750.7
+      "weekly_generation_kwh": 102.8,
+      "year_generation_kwh": 751.0
     },
     {
       "brand": "GoodWe",
@@ -209,7 +209,7 @@
         },
         {
           "date": "2026-07-15",
-          "generation_kwh": 40.7
+          "generation_kwh": 41.0
         },
         {
           "date": "2026-07-16",
@@ -228,8 +228,8 @@
           "generation_kwh": 0.0
         }
       ],
-      "weekly_generation_kwh": 151.4,
-      "year_generation_kwh": 1044.5
+      "weekly_generation_kwh": 151.7,
+      "year_generation_kwh": 1044.8
     },
     {
       "brand": "GoodWe",
@@ -247,7 +247,7 @@
         },
         {
           "date": "2026-07-15",
-          "generation_kwh": 42.1
+          "generation_kwh": 42.6
         },
         {
           "date": "2026-07-16",
@@ -266,8 +266,8 @@
           "generation_kwh": 0.0
         }
       ],
-      "weekly_generation_kwh": 121.9,
-      "year_generation_kwh": 920.3
+      "weekly_generation_kwh": 122.4,
+      "year_generation_kwh": 920.8
     },
     {
       "brand": "GoodWe",
@@ -285,7 +285,7 @@
         },
         {
           "date": "2026-07-15",
-          "generation_kwh": 28.8
+          "generation_kwh": 29.0
         },
         {
           "date": "2026-07-16",
@@ -304,8 +304,8 @@
           "generation_kwh": 0.0
         }
       ],
-      "weekly_generation_kwh": 103.9,
-      "year_generation_kwh": 837.6
+      "weekly_generation_kwh": 104.1,
+      "year_generation_kwh": 837.8
     },
     {
       "brand": "GoodWe",
@@ -323,7 +323,7 @@
         },
         {
           "date": "2026-07-15",
-          "generation_kwh": 43.8
+          "generation_kwh": 44.5
         },
         {
           "date": "2026-07-16",
@@ -342,8 +342,8 @@
           "generation_kwh": 0.0
         }
       ],
-      "weekly_generation_kwh": 151.6,
-      "year_generation_kwh": 1155.7
+      "weekly_generation_kwh": 152.3,
+      "year_generation_kwh": 1156.4
     },
     {
       "brand": "GoodWe",
@@ -361,7 +361,7 @@
         },
         {
           "date": "2026-07-15",
-          "generation_kwh": 50.4
+          "generation_kwh": 50.9
         },
         {
           "date": "2026-07-16",
@@ -380,8 +380,8 @@
           "generation_kwh": 0.0
         }
       ],
-      "weekly_generation_kwh": 163.7,
-      "year_generation_kwh": 1173.7
+      "weekly_generation_kwh": 164.2,
+      "year_generation_kwh": 1174.2
     },
     {
       "brand": "GoodWe",
@@ -399,7 +399,7 @@
         },
         {
           "date": "2026-07-15",
-          "generation_kwh": 46.1
+          "generation_kwh": 46.8
         },
         {
           "date": "2026-07-16",
@@ -418,8 +418,8 @@
           "generation_kwh": 0.0
         }
       ],
-      "weekly_generation_kwh": 148.7,
-      "year_generation_kwh": 1127.2
+      "weekly_generation_kwh": 149.4,
+      "year_generation_kwh": 1127.9
     }
   ]
 }

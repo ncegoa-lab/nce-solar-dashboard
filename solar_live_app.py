@@ -66,7 +66,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-15-hourly-gap-fill-v58"
+APP_VERSION = "2026-07-15-mac-local-user-management-v59"
 IST = ZoneInfo("Asia/Kolkata")
 VALID_ROLES = {"admin", "manager", "customer", "viewer"}
 PLANT_COLUMNS = [
@@ -382,6 +382,53 @@ def public_user(user: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def save_file_users(users: dict[str, dict[str, Any]]) -> None:
+    payload_users = []
+    for username in sorted(users, key=str.lower):
+        user = users[username]
+        password_hash = str(user.get("password_hash") or "")
+        if password_hash and not password_hash.startswith("pbkdf2_sha256$"):
+            password_hash = hash_password(password_hash)
+        payload_users.append(
+            {
+                "username": username,
+                "password_hash": password_hash,
+                "role": normalize_role(user.get("role")),
+                "plants": list(user.get("plants") or []),
+                "disabled": bool(user.get("disabled", False)),
+            }
+        )
+    USERS_FILE.write_text(json.dumps({"users": payload_users}, indent=2), encoding="utf-8")
+    USERS_FILE.chmod(0o600)
+
+
+def local_user_management_enabled() -> bool:
+    return not postgres_enabled() and not bool(os.environ.get("RENDER"))
+
+
+def file_upsert_user(username: str, role: str, plants: list[str], password: str | None = None, disabled: bool = False) -> dict[str, Any]:
+    if not local_user_management_enabled():
+        raise RuntimeError("PostgreSQL is not configured.")
+    username = str(username or "").strip()
+    if not username:
+        raise ValueError("Username is required.")
+    role = normalize_role(role)
+    users = load_file_users(include_env_admin=True)
+    existing = users.get(username)
+    if not existing and not password:
+        raise ValueError("Password is required for a new user.")
+    password_hash = hash_password(password) if password else str(existing.get("password_hash") or "")
+    users[username] = {
+        "username": username,
+        "password_hash": password_hash,
+        "role": role,
+        "plants": ["*"] if role == "admin" else sorted({str(plant) for plant in plants if str(plant).strip()}),
+        "disabled": bool(disabled),
+    }
+    save_file_users(users)
+    return {"ok": True, "user": public_user(users[username])}
+
+
 def db_upsert_user(username: str, role: str, plants: list[str], password: str | None = None, disabled: bool = False) -> dict[str, Any]:
     if not postgres_enabled():
         raise RuntimeError("PostgreSQL is not configured.")
@@ -472,21 +519,24 @@ def db_set_user_disabled(username: str, disabled: bool) -> dict[str, Any]:
 
 
 def file_change_user_password(username: str, new_password: str) -> dict[str, Any]:
-    payload = {"users": []}
-    if USERS_FILE.exists():
-        payload = json.loads(USERS_FILE.read_text(encoding="utf-8"))
-    changed = False
-    for item in payload.get("users", []):
-        if item.get("username") == username:
-            item["password_hash"] = hash_password(new_password)
-            item.pop("password", None)
-            changed = True
-            break
-    if not changed:
+    users = load_file_users(include_env_admin=True)
+    if username not in users:
         raise ValueError("Local file user not found.")
-    USERS_FILE.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    USERS_FILE.chmod(0o600)
+    users[username]["password_hash"] = hash_password(new_password)
+    save_file_users(users)
     return {"ok": True, "username": username}
+
+
+def file_set_user_disabled(username: str, disabled: bool) -> dict[str, Any]:
+    if not local_user_management_enabled():
+        raise RuntimeError("PostgreSQL is not configured.")
+    users = load_file_users(include_env_admin=True)
+    username = str(username or "").strip()
+    if username not in users:
+        raise ValueError("User not found.")
+    users[username]["disabled"] = bool(disabled)
+    save_file_users(users)
+    return {"ok": True, "username": username, "disabled": bool(disabled)}
 
 
 def change_own_password(user: dict[str, Any], current_password: str, new_password: str) -> dict[str, Any]:
@@ -1724,7 +1774,15 @@ class Handler(BaseHTTPRequestHandler):
             if not is_admin(user):
                 self.send_json({"error": "Admin access required"}, 403)
                 return
-            self.send_json({"users": [public_user(row) for row in load_users().values()], "plants": APP.all_plant_options(), "roles": sorted(VALID_ROLES), "postgres": postgres_enabled()})
+            self.send_json({
+                "users": [public_user(row) for row in load_users().values()],
+                "plants": APP.all_plant_options(),
+                "roles": sorted(VALID_ROLES),
+                "postgres": postgres_enabled(),
+                "local_file_users": local_user_management_enabled(),
+                "render": bool(os.environ.get("RENDER")),
+                "user_file": str(USERS_FILE),
+            })
         elif parsed.path == "/api/monthly-generation":
             query = urllib.parse.parse_qs(parsed.query)
             keys = [value for value in (query.get("plant_key") or []) if value]
@@ -1890,11 +1948,9 @@ class Handler(BaseHTTPRequestHandler):
                 if not is_admin(user):
                     self.send_json({"error": "Admin access required"}, 403)
                     return
-                if not postgres_enabled():
-                    self.send_json({"error": "PostgreSQL is not configured. Set DATABASE_URL on Render before using User Management."}, 503)
-                    return
                 payload = self.read_json()
-                result = db_upsert_user(
+                upsert = db_upsert_user if postgres_enabled() else file_upsert_user
+                result = upsert(
                     payload.get("username"),
                     payload.get("role"),
                     payload.get("plants") or [],
@@ -1906,23 +1962,19 @@ class Handler(BaseHTTPRequestHandler):
                 if not is_admin(user):
                     self.send_json({"error": "Admin access required"}, 403)
                     return
-                if not postgres_enabled():
-                    self.send_json({"error": "PostgreSQL is not configured. Set DATABASE_URL on Render before using User Management."}, 503)
-                    return
                 payload = self.read_json()
-                self.send_json(db_reset_user_password(payload.get("username"), payload.get("password")))
+                reset = db_reset_user_password if postgres_enabled() else file_change_user_password
+                self.send_json(reset(payload.get("username"), payload.get("password")))
             elif parsed.path == "/api/admin/users/disable":
                 if not is_admin(user):
                     self.send_json({"error": "Admin access required"}, 403)
-                    return
-                if not postgres_enabled():
-                    self.send_json({"error": "PostgreSQL is not configured. Set DATABASE_URL on Render before using User Management."}, 503)
                     return
                 payload = self.read_json()
                 if str(payload.get("username") or "") == str(user.get("username") or "") and bool(payload.get("disabled", False)):
                     self.send_json({"error": "You cannot disable your own active admin account."}, 400)
                     return
-                self.send_json(db_set_user_disabled(payload.get("username"), bool(payload.get("disabled", False))))
+                set_disabled = db_set_user_disabled if postgres_enabled() else file_set_user_disabled
+                self.send_json(set_disabled(payload.get("username"), bool(payload.get("disabled", False))))
             elif parsed.path == "/api/config":
                 if not is_admin(user):
                     self.send_json({"error": "Admin access required"}, 403)
@@ -2047,7 +2099,7 @@ function setMessage(text,bad=false){$('#message').className=bad?'err':'msg';$('#
 function editUser(username){const u=state.users.find(x=>x.username===username);if(!u)return;$('#username').value=u.username;$('#role').value=u.role;$('#password').value='';const allowed=new Set(u.plants||[]);document.querySelectorAll('.plant input').forEach(cb=>{cb.checked=allowed.has('*')||allowed.has(cb.value)});window.scrollTo({top:0,behavior:'smooth'})}
 async function disableUser(username,disabled){await api('/api/admin/users/disable',{method:'POST',body:JSON.stringify({username,disabled})});await load();setMessage(disabled?'User disabled.':'User enabled.')}
 async function resetUser(username){const password=prompt('Enter new password for '+username);if(!password)return;await api('/api/admin/users/reset',{method:'POST',body:JSON.stringify({username,password})});setMessage('Password reset for '+username+'.')}
-function render(){const role=$('#role');role.innerHTML=state.roles.map(r=>`<option value="${h(r)}">${h(r)}</option>`).join('');$('#plants').innerHTML=state.plants.map(p=>`<label class="plant"><input type="checkbox" value="${h(p.plantKey)}"><span><b>${h(p.site)}</b><br><span class="muted">${h(p.brand)} · ${h(p.plantKey)}</span></span></label>`).join('');$('#users').innerHTML=state.users.map(u=>`<tr><td data-label="Username"><b>${h(u.username)}</b></td><td data-label="Role">${h(u.role)}</td><td data-label="Status"><span class="pill ${u.disabled?'disabled':''}">${u.disabled?'Disabled':'Active'}</span></td><td data-label="Plants">${h((u.plants||[]).includes('*')?'All plants':(u.plants||[]).length+' plants')}</td><td data-label="Actions"><button class="alt" onclick="editUser('${h(u.username)}')">Edit</button> <button onclick="resetUser('${h(u.username)}')">Reset</button> <button class="warn" onclick="disableUser('${h(u.username)}',${!u.disabled})">${u.disabled?'Enable':'Disable'}</button></td></tr>`).join('');if(!state.postgres)setMessage('PostgreSQL is not configured. Add DATABASE_URL on Render to enable user management.',true)}
+function render(){const role=$('#role');role.innerHTML=state.roles.map(r=>`<option value="${h(r)}">${h(r)}</option>`).join('');$('#plants').innerHTML=state.plants.map(p=>`<label class="plant"><input type="checkbox" value="${h(p.plantKey)}"><span><b>${h(p.site)}</b><br><span class="muted">${h(p.brand)} · ${h(p.plantKey)}</span></span></label>`).join('');$('#users').innerHTML=state.users.map(u=>`<tr><td data-label="Username"><b>${h(u.username)}</b></td><td data-label="Role">${h(u.role)}</td><td data-label="Status"><span class="pill ${u.disabled?'disabled':''}">${u.disabled?'Disabled':'Active'}</span></td><td data-label="Plants">${h((u.plants||[]).includes('*')?'All plants':(u.plants||[]).length+' plants')}</td><td data-label="Actions"><button class="alt" onclick="editUser('${h(u.username)}')">Edit</button> <button onclick="resetUser('${h(u.username)}')">Reset</button> <button class="warn" onclick="disableUser('${h(u.username)}',${!u.disabled})">${u.disabled?'Enable':'Disable'}</button></td></tr>`).join('');if(state.local_file_users)setMessage('Mac local mode: users are saved in '+state.user_file+'. Render web app still needs DATABASE_URL for production user management.',false);else if(!state.postgres)setMessage('PostgreSQL is not configured. Add DATABASE_URL on Render to enable user management.',true)}
 async function load(){state=await api('/api/admin/users');render()}
 $('#save').onclick=async()=>{try{const body={username:$('#username').value.trim(),role:$('#role').value,password:$('#password').value,plants:selectedPlants(),disabled:false};await api('/api/admin/users',{method:'POST',body:JSON.stringify(body)});$('#password').value='';await load();setMessage('User saved.')}catch(e){setMessage(e.message,true)}}
 load().catch(e=>setMessage(e.message,true));

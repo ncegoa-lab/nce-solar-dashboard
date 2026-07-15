@@ -1,7 +1,7 @@
 {
   "source": "solis_api",
-  "generated_at": "2026-07-15T16:57:45+05:30",
-  "captured_at": "2026-07-15T16:57:45+05:30",
+  "generated_at": "2026-07-15T17:10:06+05:30",
+  "captured_at": "2026-07-15T17:10:06+05:30",
   "systems": [
     {
       "name": "ELVIS GOMES",
@@ -15,21 +15,21 @@
       "total_generation_kwh": 20456.0,
       "system_id": "1298491919450193072",
       "source_sno": "296faa",
-      "data_timestamp": "15/07/2026 16:57:23 (UTC+05:30)"
+      "data_timestamp": "15/07/2026 17:09:57 (UTC+05:30)"
     },
     {
       "name": "Manjula Nanavati",
       "status": "Online",
       "capacity_kw": 6.27,
-      "current_power_kw": 0.74,
-      "today_generation_kwh": 24.6,
+      "current_power_kw": 0.42,
+      "today_generation_kwh": 24.7,
       "weekly_generation_kwh": null,
-      "month_generation_kwh": 253.9,
-      "year_generation_kwh": 3658.9,
+      "month_generation_kwh": 254.0,
+      "year_generation_kwh": 3659.0,
       "total_generation_kwh": 6985.0,
       "system_id": "1298491919450046073",
       "source_sno": "271b25",
-      "data_timestamp": "15/07/2026 16:56:08 (UTC+05:30)"
+      "data_timestamp": "15/07/2026 17:09:57 (UTC+05:30)"
     },
     {
       "name": "BITS CARPORT",
