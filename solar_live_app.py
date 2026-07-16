@@ -66,7 +66,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-15-shortcuts-pwa-icons-v60"
+APP_VERSION = "2026-07-16-chart-export-plant-name-v62"
 IST = ZoneInfo("Asia/Kolkata")
 VALID_ROLES = {"admin", "manager", "customer", "viewer"}
 PWA_ICON_FILES = {
@@ -110,6 +110,22 @@ UPLOAD_GENERATION_FILES = {
 
 def plant_key(brand: Any, site: Any) -> str:
     return f"{str(brand).strip()}::{str(site).strip()}"
+
+
+def normalize_current_power_kw(value: Any, capacity_kw: Any = 0) -> float:
+    try:
+        power = float(value or 0)
+    except (TypeError, ValueError):
+        return 0.0
+    try:
+        capacity = float(capacity_kw or 0)
+    except (TypeError, ValueError):
+        capacity = 0.0
+    if capacity > 0 and power > max(capacity * 2, 100):
+        power = power / 1000.0
+    if capacity > 0 and power > capacity * 1.2:
+        power = capacity * 1.2
+    return max(0.0, power)
 
 
 def ist_now() -> dt.datetime:
@@ -690,6 +706,7 @@ class SolarLiveApp:
                 continue
             timestamp = str(row.get("Timestamp") or "")
             data_date = timestamp_to_ist_date(timestamp)
+            capacity = float(row["Plant Capacity (kW)"] or 0)
             rows.append(
                 {
                     "id": row["App ID"],
@@ -697,11 +714,11 @@ class SolarLiveApp:
                     "brand": row["Brand"],
                     "site": row["Site Name"],
                     "status": row["Current Status"],
-                    "capacity": float(row["Plant Capacity (kW)"] or 0),
+                    "capacity": capacity,
                     "daily": float(row["Daily Generation (kWh)"] or 0),
                     "weekly": float(row["Weekly Generation (kWh)"] or 0),
                     "year": float(row["Year Generation (kWh)"] or 0),
-                    "currentPower": float(row.get("Current Power (kW)") or 0),
+                    "currentPower": normalize_current_power_kw(row.get("Current Power (kW)"), capacity),
                     "total": float(row["Total Generation (MWh)"] or 0),
                     "cuf": float(row.get("CUF (%)") or 0),
                     "avgDay": float(row["Average Daily Yield (kWh/kW/day)"] or 0),
@@ -1338,12 +1355,9 @@ class SolarLiveApp:
                 hours.append({"hour": label, "generation": round(totals.get(label, 0.0), 3)})
         previous = 0.0
         total_capacity = sum(float(plant.get("capacity") or 0) for plant in current_rows)
-        live_power = sum(float(plant.get("currentPower") or 0) for plant in current_rows)
         for index, row in enumerate(hours):
             generation = float(row.get("generation") or 0)
             estimated_power = max(0.0, generation - previous)
-            if index == len(hours) - 1 and live_power > 0:
-                estimated_power = live_power
             if total_capacity > 0:
                 estimated_power = min(estimated_power, total_capacity * 1.2)
             row["power"] = round(estimated_power, 3)
@@ -1364,11 +1378,16 @@ class SolarLiveApp:
         year: int | None = None,
         target_date: dt.date | None = None,
     ) -> tuple[str, list[dict[str, Any]]]:
+        allowed_keys = set(plant_keys or [])
+        visible_plants = self.plant_payload(user or {"role": "admin", "plants": ["*"]})
+        if allowed_keys:
+            visible_plants = [plant for plant in visible_plants if plant.get("plantKey") in allowed_keys]
+        plant_label = (
+            visible_plants[0].get("site", "")
+            if len(visible_plants) == 1
+            else f"{len(visible_plants)} selected plants"
+        )
         if chart_type == "perkw":
-            allowed_keys = set(plant_keys or [])
-            rows = self.plant_payload(user or {"role": "admin", "plants": ["*"]})
-            if allowed_keys:
-                rows = [plant for plant in rows if plant.get("plantKey") in allowed_keys]
             return "Today's Per-kW Generation", [
                 {
                     "Plant": plant.get("site", ""),
@@ -1381,14 +1400,25 @@ class SolarLiveApp:
                         3,
                     ),
                 }
-                for plant in rows
+                for plant in visible_plants
             ]
         if chart_type == "monthly":
             payload = self.monthly_generation_payload(plant_keys, user, month=month, year=year)
-            return f"Monthly Generation - {payload['month']}", [
-                {"Date": item["date"], "Generation (kWh)": item["generation"]}
-                for item in payload.get("days", [])
-            ]
+            rows = []
+            for item in payload.get("days", []):
+                values = item.get("values") or []
+                if values:
+                    for value in values:
+                        rows.append(
+                            {
+                                "Date": item["date"],
+                                "Plant": value.get("site", ""),
+                                "Generation (kWh)": round(float(value.get("generation") or 0), 3),
+                            }
+                        )
+                else:
+                    rows.append({"Date": item["date"], "Plant": plant_label, "Generation (kWh)": item["generation"]})
+            return f"Monthly Generation - {payload['month']}", rows
         payload = self.today_hourly_payload(plant_keys, user, target_date=target_date)
         previous = 0.0
         rows = []
@@ -1397,6 +1427,7 @@ class SolarLiveApp:
             increment = max(0.0, generation - previous)
             rows.append(
                 {
+                    "Plant": plant_label,
                     "Hour": item.get("hour"),
                     "Power (kW)": round(float(item.get("power") or 0), 3),
                     "Cumulative Generation (kWh)": round(generation, 3),
