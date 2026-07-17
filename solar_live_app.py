@@ -66,7 +66,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-16-chart-export-plant-name-v62"
+APP_VERSION = "2026-07-17-monthly-export-total-v63"
 IST = ZoneInfo("Asia/Kolkata")
 VALID_ROLES = {"admin", "manager", "customer", "viewer"}
 PWA_ICON_FILES = {
@@ -1404,21 +1404,13 @@ class SolarLiveApp:
             ]
         if chart_type == "monthly":
             payload = self.monthly_generation_payload(plant_keys, user, month=month, year=year)
-            rows = []
-            for item in payload.get("days", []):
-                values = item.get("values") or []
-                if values:
-                    for value in values:
-                        rows.append(
-                            {
-                                "Date": item["date"],
-                                "Plant": value.get("site", ""),
-                                "Generation (kWh)": round(float(value.get("generation") or 0), 3),
-                            }
-                        )
-                else:
-                    rows.append({"Date": item["date"], "Plant": plant_label, "Generation (kWh)": item["generation"]})
-            return f"Monthly Generation - {payload['month']}", rows
+            return f"Monthly Generation - {payload['month']}", [
+                {
+                    "Date": item["date"],
+                    "Total Generation (kWh)": round(float(item.get("generation") or 0), 3),
+                }
+                for item in payload.get("days", [])
+            ]
         payload = self.today_hourly_payload(plant_keys, user, target_date=target_date)
         previous = 0.0
         rows = []
