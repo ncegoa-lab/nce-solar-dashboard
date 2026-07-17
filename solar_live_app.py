@@ -66,7 +66,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-17-custom-selected-brand-filter-v64"
+APP_VERSION = "2026-07-17-latest-saved-data-on-open-v65"
 IST = ZoneInfo("Asia/Kolkata")
 VALID_ROLES = {"admin", "manager", "customer", "viewer"}
 PWA_ICON_FILES = {
@@ -696,9 +696,40 @@ class SolarLiveApp:
         df.insert(0, "App ID", [f"plant_{index}" for index in range(len(df))])
         return df
 
+    def latest_history_by_key(self, user: dict[str, Any] | None = None) -> dict[str, dict[str, Any]]:
+        latest: dict[str, dict[str, Any]] = {}
+        for row in self.load_history():
+            key = str(row.get("plantKey") or "")
+            row_date = parse_iso_date(row.get("date"))
+            if not key or not row_date or not user_can_access(user, key):
+                continue
+            existing = latest.get(key)
+            existing_date = parse_iso_date(existing.get("date")) if existing else None
+            if not existing or not existing_date or row_date > existing_date:
+                latest[key] = row
+                continue
+            if row_date == existing_date and str(row.get("recordedAt") or "") > str(existing.get("recordedAt") or ""):
+                latest[key] = row
+        return latest
+
+    def data_last_updated(self, user: dict[str, Any] | None = None) -> str:
+        candidates: list[str] = []
+        for row in self.latest_history_by_key(user).values():
+            for field in ("recordedAt", "timestamp", "date"):
+                value = str(row.get(field) or "")
+                if value:
+                    candidates.append(value)
+                    break
+        for plant in self.plant_payload(user):
+            value = str(plant.get("timestamp") or plant.get("dataDate") or "")
+            if value:
+                candidates.append(value)
+        return max(candidates) if candidates else ""
+
     def plant_payload(self, user: dict[str, Any] | None = None) -> list[dict[str, Any]]:
         df = self.plant_dataframe()
         today = ist_today().isoformat()
+        latest_history = self.latest_history_by_key(user)
         rows = []
         for row in df.to_dict(orient="records"):
             key = plant_key(row["Brand"], row["Site Name"])
@@ -707,27 +738,50 @@ class SolarLiveApp:
             timestamp = str(row.get("Timestamp") or "")
             data_date = timestamp_to_ist_date(timestamp)
             capacity = float(row["Plant Capacity (kW)"] or 0)
-            rows.append(
-                {
-                    "id": row["App ID"],
-                    "plantKey": key,
-                    "brand": row["Brand"],
-                    "site": row["Site Name"],
-                    "status": row["Current Status"],
-                    "capacity": capacity,
-                    "daily": float(row["Daily Generation (kWh)"] or 0),
-                    "weekly": float(row["Weekly Generation (kWh)"] or 0),
-                    "year": float(row["Year Generation (kWh)"] or 0),
-                    "currentPower": normalize_current_power_kw(row.get("Current Power (kW)"), capacity),
-                    "total": float(row["Total Generation (MWh)"] or 0),
-                    "cuf": float(row.get("CUF (%)") or 0),
-                    "avgDay": float(row["Average Daily Yield (kWh/kW/day)"] or 0),
-                    "source": row.get("Year Generation Source", ""),
-                    "timestamp": timestamp,
-                    "dataDate": data_date,
-                    "fresh": data_date == today,
-                }
-            )
+            plant = {
+                "id": row["App ID"],
+                "plantKey": key,
+                "brand": row["Brand"],
+                "site": row["Site Name"],
+                "status": row["Current Status"],
+                "capacity": capacity,
+                "daily": float(row["Daily Generation (kWh)"] or 0),
+                "weekly": float(row["Weekly Generation (kWh)"] or 0),
+                "year": float(row["Year Generation (kWh)"] or 0),
+                "currentPower": normalize_current_power_kw(row.get("Current Power (kW)"), capacity),
+                "total": float(row["Total Generation (MWh)"] or 0),
+                "cuf": float(row.get("CUF (%)") or 0),
+                "avgDay": float(row["Average Daily Yield (kWh/kW/day)"] or 0),
+                "source": row.get("Year Generation Source", ""),
+                "timestamp": timestamp,
+                "dataDate": data_date,
+                "fresh": data_date == today,
+            }
+            history_row = latest_history.get(key)
+            history_date = parse_iso_date(history_row.get("date")) if history_row else None
+            plant_date = parse_iso_date(data_date)
+            if history_row and history_date and (not plant_date or history_date > plant_date):
+                history_capacity = float(history_row.get("capacity") or 0)
+                capacity = history_capacity or capacity
+                plant.update(
+                    {
+                        "brand": history_row.get("brand") or plant["brand"],
+                        "site": history_row.get("site") or plant["site"],
+                        "status": history_row.get("status") or plant["status"],
+                        "capacity": capacity,
+                        "daily": float(history_row.get("daily") or 0),
+                        "weekly": float(history_row.get("weekly") or 0),
+                        "year": float(history_row.get("year") or plant["year"] or 0),
+                        "currentPower": normalize_current_power_kw(history_row.get("currentPower"), capacity),
+                        "total": float(history_row.get("total") or plant["total"] or 0),
+                        "cuf": float(history_row.get("cuf") or plant["cuf"] or 0),
+                        "timestamp": history_row.get("timestamp") or history_row.get("recordedAt") or history_row.get("date") or "",
+                        "dataDate": history_date.isoformat(),
+                        "fresh": history_date.isoformat() == today,
+                        "source": "Latest saved history",
+                    }
+                )
+            rows.append(plant)
         return rows
 
     def all_plant_options(self) -> list[dict[str, Any]]:
@@ -1792,6 +1846,7 @@ class Handler(BaseHTTPRequestHandler):
                         "config": APP.config,
                         "app_version": APP_VERSION,
                         "last_refresh": APP.last_refresh,
+                        "data_last_updated": APP.data_last_updated(user),
                         "local_url": f"http://127.0.0.1:{APP.port}",
                         "mobile_url": f"http://{local_ip()}:{APP.port}",
                     },
@@ -1871,6 +1926,7 @@ class Handler(BaseHTTPRequestHandler):
                     "config": APP.config,
                     "app_version": APP_VERSION,
                     "last_refresh": APP.last_refresh,
+                    "data_last_updated": APP.data_last_updated(user),
                     "solax_debug": APP.brand_debug("SolaX", user),
                     "local_url": f"http://127.0.0.1:{APP.port}",
                     "mobile_url": f"http://{local_ip()}:{APP.port}",
@@ -2454,7 +2510,7 @@ function setLoading(on){loadingIndicatorEl.classList.toggle('hidden',!on);refres
 function applyRoleUi(){const role=String(statusData.user?.role||'admin').toLowerCase();const isAdmin=!!statusData.user?.is_admin||role==='admin';const canRefresh=isAdmin||role==='manager';const canReport=isAdmin||role==='manager'||role==='customer';adminLinkEl.classList.toggle('hidden',!isAdmin);refreshBtn.classList.toggle('hidden',!canRefresh);saveScheduleBtn.classList.toggle('hidden',!isAdmin);autoDayEl.disabled=!isAdmin;autoTimeEl.disabled=!isAdmin;[reportAllBtn,reportPlantBtn,reportBtn].forEach(btn=>btn.classList.toggle('hidden',!canReport));selectAllBtn.classList.toggle('hidden',!canReport)}
 function setWarning(message){warningLineEl.textContent=message||'';warningLineEl.classList.toggle('hidden',!message)}
 function refreshWarning(r){const bad=(r.steps||[]).filter(s=>!s.ok && !String(s.label||'').toLowerCase().includes('skipped'));return bad.length?'Some inverter/API refreshes failed. Showing last successful data: '+bad.slice(0,2).map(s=>s.label).join(', '):''}
-function backendUpdatedText(s){const finished=s?.last_refresh?.finished, started=s?.last_refresh?.started;if(finished)return finished.replace('T',' ')+' IST';if(started)return 'Refresh running since '+started.replace('T',' ')+' IST';return istNowText()}
+function backendUpdatedText(s){const finished=s?.last_refresh?.finished, started=s?.last_refresh?.started, dataUpdated=s?.data_last_updated;if(finished)return finished.replace('T',' ')+' IST';if(started)return 'Refresh running since '+started.replace('T',' ')+' IST';if(dataUpdated)return String(dataUpdated).replace('T',' ')+' IST';return istNowText()}
 function staleOnlineRows(){return plants.filter(p=>!fresh(p)&&!offline(p))}
 function setupDateSelectors(){const monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];const p=istParts();const currentMonth=Number(p.month), currentYear=Number(p.year);monthSelectEl.innerHTML=monthNames.map((m,i)=>`<option value="${i+1}" ${i+1===currentMonth?'selected':''}>${m}</option>`).join('');let years=[];for(let y=currentYear;y>=2026;y--)years.push(y);yearSelectEl.innerHTML=years.map(y=>`<option value="${y}" ${y===currentYear?'selected':''}>${y}</option>`).join('')}
 function renderFilters(){const oldBrand=brandFilter.value||'all', oldStatus=statusFilter.value||'all';const brands=uniq(plants.map(p=>p.brand)), statuses=uniq(plants.map(p=>p.status));brandFilter.innerHTML='<option value="all">All Brands</option><option value="custom">Custom</option>'+brands.map(x=>`<option>${x}</option>`).join('');statusFilter.innerHTML='<option value="all">All Status</option>'+statuses.map(x=>`<option>${x}</option>`).join('');brandFilter.value=(oldBrand==='custom'||brands.includes(oldBrand))?oldBrand:'all';statusFilter.value=statuses.includes(oldStatus)?oldStatus:'all'}
