@@ -66,7 +66,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-17-latest-saved-data-on-open-v65"
+APP_VERSION = "2026-07-17-wait-for-open-refresh-v66"
 IST = ZoneInfo("Asia/Kolkata")
 VALID_ROLES = {"admin", "manager", "customer", "viewer"}
 PWA_ICON_FILES = {
@@ -1531,12 +1531,20 @@ class SolarLiveApp:
         doc.build([table])
         return buffer.getvalue()
 
-    def refresh_on_open(self) -> None:
+    def refresh_on_open(self, wait_seconds: float = 0) -> None:
         if not self.config.get("auto_refresh_on_open"):
             return
         if self.refresh_lock.locked():
+            if wait_seconds > 0:
+                deadline = time.time() + wait_seconds
+                while self.last_refresh.get("running") and time.time() < deadline:
+                    time.sleep(0.5)
             return
         self.refresh_async()
+        if wait_seconds > 0:
+            deadline = time.time() + wait_seconds
+            while self.last_refresh.get("running") and time.time() < deadline:
+                time.sleep(0.5)
 
     def refresh_on_open_result(self) -> dict[str, Any]:
         if not self.config.get("auto_refresh_on_open"):
@@ -1833,7 +1841,8 @@ class Handler(BaseHTTPRequestHandler):
                 user = self.require_auth(html=True)
                 if load_users() and not user:
                     return
-                APP.refresh_on_open()
+                wait_seconds = 25 if APP.config.get("auto_refresh_on_open") and APP.stale_online_count() else 0
+                APP.refresh_on_open(wait_seconds=wait_seconds)
                 bootstrap = {
                     "plants": APP.plant_payload(user),
                     "status": {
@@ -2550,7 +2559,7 @@ renderDetail(active);
 }
 function refreshText(r){const lines=(r.steps||[]).map(s=>`${s.ok?'OK':'SKIP'} - ${s.label}: ${s.message||''}`);if(r.running)lines.push('RUNNING - Refresh still in progress...');if(r.finished)lines.push('DONE - Finished '+r.finished);return lines.join('\\n')||'Ready.'}
 async function loadReports(){try{const r=await api('/api/reports');reportListEl.innerHTML=(r.reports||[]).length?(r.reports||[]).map(x=>`<a class="report-item" href="${x.url}">${h(x.name)}<span>${h(x.modified)} · ${h(x.size_kb)} KB</span></a>`).join(''):'No reports generated yet.';}catch(error){reportListEl.textContent='Could not load reports: '+error.message;}}
-async function triggerOpenRefresh(){if(openRefreshStarted)return;openRefreshStarted=true;return startRefresh('open')}
+async function triggerOpenRefresh(){if(openRefreshStarted)return;openRefreshStarted=true;if(statusData.last_refresh?.running){refreshInFlight=true;setLoading(true);try{const finalStatus=await pollRefresh();const warn=refreshWarning(finalStatus);if(warn)setWarning(warn);await load({preserveSelection:true,reports:true,openCheck:false});}finally{setLoading(false);refreshInFlight=false;}return}return startRefresh('open')}
 function applyStatus(s){statusData=s||{};dateLineEl.textContent=istNowText();versionLineEl.textContent='Build: '+(statusData.app_version||'old');mobileLineEl.textContent='iPhone: '+(statusData.mobile_url||'');lastUpdatedEl.textContent=backendUpdatedText(statusData);if(statusData.config){autoDayEl.value=statusData.config.auto_report_day||autoDayEl.value;autoTimeEl.value=statusData.config.auto_report_time||autoTimeEl.value}applyRoleUi();logEl.textContent=refreshText(statusData.last_refresh||{})}
 function applyPlants(nextPlants,opts={}){const keep=new Set(selected);plants=nextPlants||[];if(opts.preserveSelection!==false){const ids=new Set(plants.map(p=>p.id));selected=new Set([...keep].filter(id=>ids.has(id)))}else{selected=new Set()}renderFilters();render()}
 async function load(opts={}){const p=await api('/api/plants');applyPlants(p.plants||[],opts);const s=await api('/api/status');applyStatus(s);if(opts.reports!==false)loadReports();const staleRows=staleOnlineRows();if(opts.openCheck!==false && s.config?.auto_refresh_on_open && !openRefreshStarted){if(staleRows.length)setWarning(`${staleRows.length} plants show previous-day data. Refreshing latest data now...`);setTimeout(triggerOpenRefresh,50);}}
