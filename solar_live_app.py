@@ -66,7 +66,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-18-history-json-date-fix-v68"
+APP_VERSION = "2026-07-18-perkw-ranked-full-export-v69"
 IST = ZoneInfo("Asia/Kolkata")
 VALID_ROLES = {"admin", "manager", "customer", "viewer"}
 PWA_ICON_FILES = {
@@ -1461,7 +1461,7 @@ class SolarLiveApp:
                     }
                 )
             rows.sort(key=lambda row: float(row["Per-kW Generation (kWh/kW)"] or 0), reverse=True)
-            return "Today's Per-kW Generation - Top 5", [
+            return "Today's Per-kW Generation - Ranked Best to Lowest", [
                 {
                     "Rank": index,
                     "Plant": plant["Plant"],
@@ -1469,7 +1469,7 @@ class SolarLiveApp:
                     "Today's Generation (kWh)": plant["Today's Generation (kWh)"],
                     "Per-kW Generation (kWh/kW)": plant["Per-kW Generation (kWh/kW)"],
                 }
-                for index, plant in enumerate(rows[:5], start=1)
+                for index, plant in enumerate(rows, start=1)
             ]
         if chart_type == "monthly":
             payload = self.monthly_generation_payload(plant_keys, user, month=month, year=year)
