@@ -66,7 +66,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-18-perkw-ranked-full-export-v69"
+APP_VERSION = "2026-07-18-open-latest-history-priority-v70"
 IST = ZoneInfo("Asia/Kolkata")
 VALID_ROLES = {"admin", "manager", "customer", "viewer"}
 PWA_ICON_FILES = {
@@ -162,6 +162,19 @@ def parse_iso_date(value: Any) -> dt.date | None:
         except ValueError:
             return None
     return None
+
+
+def timestamp_rank(value: Any) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    try:
+        parsed = dt.datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return text
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=IST)
+    return parsed.astimezone(IST).isoformat()
 
 
 def html_escape(value: Any) -> str:
@@ -760,7 +773,20 @@ class SolarLiveApp:
             history_row = latest_history.get(key)
             history_date = parse_iso_date(history_row.get("date")) if history_row else None
             plant_date = parse_iso_date(data_date)
-            if history_row and history_date and (not plant_date or history_date > plant_date):
+            history_time = timestamp_rank(
+                history_row.get("recordedAt") or history_row.get("timestamp") or history_row.get("date")
+            ) if history_row else ""
+            plant_time = timestamp_rank(timestamp or data_date)
+            use_history = bool(
+                history_row
+                and history_date
+                and (
+                    not plant_date
+                    or history_date > plant_date
+                    or (history_date == plant_date and history_time >= plant_time)
+                )
+            )
+            if use_history:
                 history_capacity = float(history_row.get("capacity") or 0)
                 capacity = history_capacity or capacity
                 plant.update(
