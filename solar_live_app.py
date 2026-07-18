@@ -66,7 +66,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-17-wait-for-open-refresh-v66"
+APP_VERSION = "2026-07-18-history-json-date-fix-v68"
 IST = ZoneInfo("Asia/Kolkata")
 VALID_ROLES = {"admin", "manager", "customer", "viewer"}
 PWA_ICON_FILES = {
@@ -1006,8 +1006,13 @@ class SolarLiveApp:
                 year_row["totalMwh"] = float(row.get("total") or 0)
                 year_row["lastDate"] = row_date.isoformat()
 
+        clean_daily = [
+            {key: value for key, value in row.items() if key != "_date"}
+            for row in rows[:120]
+        ]
+
         return {
-            "daily": rows[:120],
+            "daily": clean_daily,
             "weekly": sorted(weekly.values(), key=lambda row: row["lastDate"], reverse=True)[:80],
             "yearly": sorted(yearly.values(), key=lambda row: row["year"], reverse=True),
         }
@@ -1442,19 +1447,29 @@ class SolarLiveApp:
             else f"{len(visible_plants)} selected plants"
         )
         if chart_type == "perkw":
-            return "Today's Per-kW Generation", [
+            rows = []
+            for plant in visible_plants:
+                capacity = float(plant.get("capacity") or 0)
+                daily = float(plant.get("daily") or 0)
+                per_kw = daily / capacity if capacity > 0 else 0.0
+                rows.append(
+                    {
+                        "Plant": plant.get("site", ""),
+                        "Capacity (kW)": round(capacity, 3),
+                        "Today's Generation (kWh)": round(daily, 3),
+                        "Per-kW Generation (kWh/kW)": round(per_kw, 3),
+                    }
+                )
+            rows.sort(key=lambda row: float(row["Per-kW Generation (kWh/kW)"] or 0), reverse=True)
+            return "Today's Per-kW Generation - Top 5", [
                 {
-                    "Plant": plant.get("site", ""),
-                    "Capacity (kW)": round(float(plant.get("capacity") or 0), 3),
-                    "Today's Generation (kWh)": round(float(plant.get("daily") or 0), 3),
-                    "Per-kW Generation (kWh/kW)": round(
-                        float(plant.get("daily") or 0) / float(plant.get("capacity") or 0)
-                        if float(plant.get("capacity") or 0) > 0
-                        else 0.0,
-                        3,
-                    ),
+                    "Rank": index,
+                    "Plant": plant["Plant"],
+                    "Capacity (kW)": plant["Capacity (kW)"],
+                    "Today's Generation (kWh)": plant["Today's Generation (kWh)"],
+                    "Per-kW Generation (kWh/kW)": plant["Per-kW Generation (kWh/kW)"],
                 }
-                for plant in visible_plants
+                for index, plant in enumerate(rows[:5], start=1)
             ]
         if chart_type == "monthly":
             payload = self.monthly_generation_payload(plant_keys, user, month=month, year=year)
