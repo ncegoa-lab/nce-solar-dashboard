@@ -64,9 +64,12 @@ DEFAULT_CONFIG = {
     "output_dir": str(DEFAULT_OUTPUT_DIR),
     "auto_report_day": "Sunday",
     "auto_report_time": "20:00",
+    "auto_report_dates": "",
+    "auto_report_scope": "auto",
+    "auto_report_plant_ids": [],
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-19-production-uses-daily-records-v76"
+APP_VERSION = "2026-07-19-flexible-ist-auto-report-v77"
 IST = ZoneInfo("Asia/Kolkata")
 VALID_ROLES = {"admin", "manager", "customer", "viewer"}
 PWA_ICON_FILES = {
@@ -1717,16 +1720,38 @@ class SolarLiveApp:
         reports.sort(key=lambda row: row["modified"], reverse=True)
         return reports[:limit]
 
+    def auto_report_due(self, now: dt.datetime) -> bool:
+        time_text = str(self.config.get("auto_report_time") or "20:00")
+        if now.strftime("%H:%M") != time_text:
+            return False
+        today_text = now.date().isoformat()
+        date_text = str(self.config.get("auto_report_dates") or "")
+        configured_dates = {
+            item.strip()
+            for item in date_text.replace("\n", ",").split(",")
+            if parse_iso_date(item.strip())
+        }
+        weekly_day = str(self.config.get("auto_report_day") or "Sunday")
+        return today_text in configured_dates or now.strftime("%A") == weekly_day
+
+    def generate_auto_report(self) -> dict[str, Any]:
+        scope = str(self.config.get("auto_report_scope") or "auto")
+        plant_ids = [str(item) for item in self.config.get("auto_report_plant_ids") or [] if str(item)]
+        admin_user = {"username": "admin", "role": "admin", "plants": ["*"]}
+        if scope in {"plant", "selected"} and plant_ids:
+            return self.generate_selected_report(plant_ids, admin_user, all_plants=False)
+        return self.generate_selected_report([], admin_user, all_plants=True)
+
     def maybe_auto_run(self) -> None:
         while True:
             try:
                 now = ist_now()
-                day = self.config.get("auto_report_day", "Sunday")
                 time_text = self.config.get("auto_report_time", "20:00")
                 key = f"{now.date()}-{time_text}"
-                if now.strftime("%A") == day and now.strftime("%H:%M") == time_text and self.last_auto_key != key:
+                if self.auto_report_due(now) and self.last_auto_key != key:
                     self.last_auto_key = key
                     self.refresh()
+                    self.generate_auto_report()
             except Exception:
                 pass
             time.sleep(30)
@@ -2198,7 +2223,23 @@ class Handler(BaseHTTPRequestHandler):
                     self.send_json({"error": "Admin access required"}, 403)
                     return
                 payload = self.read_json()
-                APP.config.update({key: value for key, value in payload.items() if key in DEFAULT_CONFIG})
+                next_config = {key: value for key, value in payload.items() if key in DEFAULT_CONFIG}
+                if "auto_report_dates" in next_config:
+                    dates = []
+                    for item in str(next_config.get("auto_report_dates") or "").replace("\n", ",").split(","):
+                        parsed_date = parse_iso_date(item.strip())
+                        if parsed_date:
+                            dates.append(parsed_date.isoformat())
+                    next_config["auto_report_dates"] = ", ".join(dict.fromkeys(dates))
+                if "auto_report_scope" in next_config:
+                    if str(next_config["auto_report_scope"]) not in {"auto", "all", "plant", "selected"}:
+                        next_config["auto_report_scope"] = "all"
+                if "auto_report_plant_ids" in next_config:
+                    valid_ids = {row.get("id") for row in APP.plant_payload({"role": "admin", "plants": ["*"]})}
+                    next_config["auto_report_plant_ids"] = [
+                        str(item) for item in (next_config.get("auto_report_plant_ids") or []) if str(item) in valid_ids
+                    ]
+                APP.config.update(next_config)
                 save_config(APP.config)
                 self.send_json({"ok": True, "config": APP.config})
             else:
@@ -2524,9 +2565,18 @@ section.panel tr.open td:nth-child(3)::after{content:'-'}
       <details class="fold mobile-fold">
         <summary>Auto Report Time</summary>
         <div class="details">
-          <div><label>Day</label><select id="autoDay"><option>Sunday</option><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option></select></div>
-          <div><label>Time</label><input id="autoTime" type="time"></div>
+          <div><label>Weekly Day</label><select id="autoDay"><option>Sunday</option><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option></select></div>
+          <div><label>Time (IST)</label><input id="autoTime" type="time"></div>
         </div>
+        <label style="margin-top:8px">Extra Dates (IST)</label>
+        <input id="autoDates" placeholder="2026-07-25, 2026-08-01">
+        <label style="margin-top:8px">Report Scope</label>
+        <select id="autoScope">
+          <option value="auto">Auto: checked plants, opened plant, else all plants</option>
+          <option value="all">All plants</option>
+          <option value="plant">Opened plant only</option>
+          <option value="selected">Checked plants only</option>
+        </select>
         <button id="saveSchedule" style="margin-top:10px">Save Schedule</button>
       </details>
       <div class="report-link" id="reportResult"></div>
@@ -2575,6 +2625,8 @@ const versionLineEl=document.querySelector('#versionLine');
 const mobileLineEl=document.querySelector('#mobileLine');
 const autoDayEl=document.querySelector('#autoDay');
 const autoTimeEl=document.querySelector('#autoTime');
+const autoDatesEl=document.querySelector('#autoDates');
+const autoScopeEl=document.querySelector('#autoScope');
 const reportResultEl=document.querySelector('#reportResult');
 const reportListEl=document.querySelector('#reportList');
 const logEl=document.querySelector('#log');
@@ -2608,7 +2660,7 @@ function productionDateValue(){return productionDatePickEl.value||productionDate
 function productionYear(){return Number(productionDateValue().slice(0,4))||Number(todayText().slice(0,4))}
 function productionMonth(){return Number(productionDateValue().slice(5,7))||Number(todayText().slice(5,7))}
 function setLoading(on){loadingIndicatorEl.classList.toggle('hidden',!on);refreshBtn.disabled=on;refreshBtn.textContent=on?'Refreshing...':'Refresh now'}
-function applyRoleUi(){const role=String(statusData.user?.role||'admin').toLowerCase();const isAdmin=!!statusData.user?.is_admin||role==='admin';const canRefresh=isAdmin||role==='manager';const canReport=isAdmin||role==='manager'||role==='customer';adminLinkEl.classList.toggle('hidden',!isAdmin);refreshBtn.classList.toggle('hidden',!canRefresh);saveScheduleBtn.classList.toggle('hidden',!isAdmin);autoDayEl.disabled=!isAdmin;autoTimeEl.disabled=!isAdmin;[reportAllBtn,reportPlantBtn,reportBtn].forEach(btn=>btn.classList.toggle('hidden',!canReport));selectAllBtn.classList.toggle('hidden',!canReport)}
+function applyRoleUi(){const role=String(statusData.user?.role||'admin').toLowerCase();const isAdmin=!!statusData.user?.is_admin||role==='admin';const canRefresh=isAdmin||role==='manager';const canReport=isAdmin||role==='manager'||role==='customer';adminLinkEl.classList.toggle('hidden',!isAdmin);refreshBtn.classList.toggle('hidden',!canRefresh);saveScheduleBtn.classList.toggle('hidden',!isAdmin);[autoDayEl,autoTimeEl,autoDatesEl,autoScopeEl].forEach(el=>{if(el)el.disabled=!isAdmin});[reportAllBtn,reportPlantBtn,reportBtn].forEach(btn=>btn.classList.toggle('hidden',!canReport));selectAllBtn.classList.toggle('hidden',!canReport)}
 function setWarning(message){warningLineEl.textContent=message||'';warningLineEl.classList.toggle('hidden',!message)}
 function refreshWarning(r){const bad=(r.steps||[]).filter(s=>!s.ok && !String(s.label||'').toLowerCase().includes('skipped'));return bad.length?'Some inverter/API refreshes failed. Showing last successful data: '+bad.slice(0,2).map(s=>s.label).join(', '):''}
 function backendUpdatedText(s){const finished=s?.last_refresh?.finished, started=s?.last_refresh?.started, dataUpdated=s?.data_last_updated;if(finished)return finished.replace('T',' ')+' IST';if(started)return 'Refresh running since '+started.replace('T',' ')+' IST';if(dataUpdated)return String(dataUpdated).replace('T',' ')+' IST';return istNowText()}
@@ -2654,7 +2706,7 @@ renderDetail(active);
 function refreshText(r){const lines=(r.steps||[]).map(s=>`${s.ok?'OK':'SKIP'} - ${s.label}: ${s.message||''}`);if(r.running)lines.push('RUNNING - Refresh still in progress...');if(r.finished)lines.push('DONE - Finished '+r.finished);return lines.join('\\n')||'Ready.'}
 async function loadReports(){try{const r=await api('/api/reports');reportListEl.innerHTML=(r.reports||[]).length?(r.reports||[]).map(x=>`<a class="report-item" href="${x.url}">${h(x.name)}<span>${h(x.modified)} · ${h(x.size_kb)} KB</span></a>`).join(''):'No reports generated yet.';}catch(error){reportListEl.textContent='Could not load reports: '+error.message;}}
 async function triggerOpenRefresh(){if(openRefreshStarted)return;openRefreshStarted=true;if(statusData.last_refresh?.running){refreshInFlight=true;setLoading(true);try{const finalStatus=await pollRefresh();const warn=refreshWarning(finalStatus);if(warn)setWarning(warn);await load({preserveSelection:true,reports:true,openCheck:false});}finally{setLoading(false);refreshInFlight=false;}return}return startRefresh('open')}
-function applyStatus(s){statusData=s||{};dateLineEl.textContent=istNowText();versionLineEl.textContent='Build: '+(statusData.app_version||'old');mobileLineEl.textContent='iPhone: '+(statusData.mobile_url||'');lastUpdatedEl.textContent=backendUpdatedText(statusData);if(statusData.config){autoDayEl.value=statusData.config.auto_report_day||autoDayEl.value;autoTimeEl.value=statusData.config.auto_report_time||autoTimeEl.value}applyRoleUi();logEl.textContent=refreshText(statusData.last_refresh||{})}
+function applyStatus(s){statusData=s||{};dateLineEl.textContent=istNowText();versionLineEl.textContent='Build: '+(statusData.app_version||'old');mobileLineEl.textContent='iPhone: '+(statusData.mobile_url||'');lastUpdatedEl.textContent=backendUpdatedText(statusData);if(statusData.config){autoDayEl.value=statusData.config.auto_report_day||autoDayEl.value;autoTimeEl.value=statusData.config.auto_report_time||autoTimeEl.value;if(autoDatesEl)autoDatesEl.value=statusData.config.auto_report_dates||'';if(autoScopeEl)autoScopeEl.value=statusData.config.auto_report_scope||'auto'}applyRoleUi();logEl.textContent=refreshText(statusData.last_refresh||{})}
 function applyPlants(nextPlants,opts={}){const keep=new Set(selected);plants=nextPlants||[];if(opts.preserveSelection!==false){const ids=new Set(plants.map(p=>p.id));selected=new Set([...keep].filter(id=>ids.has(id)))}else{selected=new Set()}renderFilters();render()}
 async function load(opts={}){const p=await api('/api/plants');const nextPlants=p.plants||[];const s=await api('/api/status');applyStatus(s);applyPlants(nextPlants,opts);if(opts.reports!==false)loadReports();const staleRows=staleOnlineList(nextPlants);if(opts.openCheck!==false && s.config?.auto_refresh_on_open && staleRows.length && !openRefreshStarted){setWarning(`${staleRows.length} plants are from the last saved inverter data. Refreshing in background...`);setTimeout(triggerOpenRefresh,50);}}
 async function pollRefresh(){let finalStatus={};for(let i=0;i<90;i++){const s=await api('/api/status');finalStatus=s.last_refresh||{};logEl.textContent=refreshText(finalStatus);await load({preserveSelection:true,reports:false});if(!finalStatus.running)return finalStatus;await new Promise(r=>setTimeout(r,3000));}return finalStatus}
@@ -2666,7 +2718,8 @@ reportAllBtn.onclick=()=>generateReport([],'all plants report',true);
 reportPlantBtn.onclick=()=>{if(!activePlantId){reportResultEl.textContent='Tap a plant name first.';return}generateReport([activePlantId],'plant report')}
 reportBtn.onclick=()=>{if(!selected.size){reportResultEl.textContent='Tick one or more plants first.';return}generateReport([...selected],'selected report')};
 selectAllBtn.onclick=()=>{const visible=filtered();const all=visible.every(p=>selected.has(p.id));visible.forEach(p=>all?selected.delete(p.id):selected.add(p.id));render()}
-saveScheduleBtn.onclick=async()=>{const r=await api('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({auto_report_day:autoDayEl.value,auto_report_time:autoTimeEl.value})});logEl.textContent='Saved schedule: '+r.config.auto_report_day+' '+r.config.auto_report_time}
+function scheduleScopePayload(){let scope=autoScopeEl?.value||'auto';let ids=[];if(scope==='auto'){if(selected.size){scope='selected';ids=[...selected]}else if(activePlantId){scope='plant';ids=[activePlantId]}else{scope='all'}}else if(scope==='selected'){ids=[...selected]}else if(scope==='plant'&&activePlantId){ids=[activePlantId]}else if(scope==='plant'){scope='all'}return {scope,ids}}
+saveScheduleBtn.onclick=async()=>{const picked=scheduleScopePayload();const r=await api('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({auto_report_day:autoDayEl.value,auto_report_time:autoTimeEl.value,auto_report_dates:autoDatesEl?.value||'',auto_report_scope:picked.scope,auto_report_plant_ids:picked.ids})});const scopeText=r.config.auto_report_scope==='all'?'all plants':`${r.config.auto_report_plant_ids?.length||0} plant(s)`;logEl.textContent='Saved auto report schedule in IST: '+r.config.auto_report_day+' '+r.config.auto_report_time+'; extra dates: '+(r.config.auto_report_dates||'none')+'; scope: '+scopeText}
 changePasswordBtn.onclick=async()=>{const current=prompt('Enter current password');if(!current)return;const next=prompt('Enter new password, minimum 8 characters');if(!next)return;const confirm=prompt('Confirm new password');if(next!==confirm){setWarning('Passwords did not match.');return}try{await api('/api/change-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({current_password:current,new_password:next})});setWarning('');alert('Password changed successfully. Use the new password next time.')}catch(error){setWarning(error.message)}};
 perKwChartCardEl.onclick=()=>window.open('/chart-detail?'+chartQuery('perkw',filtered()),'_blank');
 monthlyChartCardEl.onclick=()=>window.open('/chart-detail?'+chartQuery('monthly',filtered()),'_blank');
