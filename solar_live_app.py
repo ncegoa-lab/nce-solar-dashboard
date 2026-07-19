@@ -54,6 +54,7 @@ DEFAULT_OUTPUT_DIR = Path(
     )
 )
 CONFIG_FILE = PROJECT_DIR / "solar_live_app_config.json"
+SCHEDULES_FILE = PROJECT_DIR / "solar_report_schedules.json"
 ENV_FILE = PROJECT_DIR / ".solar_report_env"
 USERS_FILE = PROJECT_DIR / "solar_users.json"
 HISTORY_FILE = PROJECT_DIR / "solar_generation_history.json"
@@ -69,7 +70,7 @@ DEFAULT_CONFIG = {
     "auto_report_plant_ids": [],
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-19-flexible-ist-auto-report-v77"
+APP_VERSION = "2026-07-19-scheduled-reports-manager-v78"
 IST = ZoneInfo("Asia/Kolkata")
 VALID_ROLES = {"admin", "manager", "customer", "viewer"}
 PWA_ICON_FILES = {
@@ -305,6 +306,29 @@ def migrate_database() -> None:
                 """
             )
             cur.execute("CREATE INDEX IF NOT EXISTS idx_solar_app_user_plants_key ON solar_app_user_plants (plant_key)")
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS solar_app_report_schedules (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    report_type TEXT NOT NULL,
+                    scope TEXT NOT NULL,
+                    plant_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+                    inverter_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+                    frequency TEXT NOT NULL,
+                    day TEXT NOT NULL,
+                    dates JSONB NOT NULL DEFAULT '[]'::jsonb,
+                    time TEXT NOT NULL,
+                    timezone TEXT NOT NULL DEFAULT 'Asia/Kolkata',
+                    status TEXT NOT NULL DEFAULT 'active',
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    last_successful_run TIMESTAMPTZ,
+                    last_run_key TEXT NOT NULL DEFAULT '',
+                    last_error TEXT NOT NULL DEFAULT ''
+                )
+                """
+            )
             cur.execute("SELECT COUNT(*) AS count FROM solar_app_users")
             if int(cur.fetchone()["count"] or 0) == 0:
                 seed_users = load_file_users(include_env_admin=True)
@@ -410,6 +434,126 @@ def load_users() -> dict[str, dict[str, Any]]:
             if os.environ.get("RENDER"):
                 raise
     return load_file_users()
+
+
+def load_file_schedules() -> list[dict[str, Any]]:
+    if SCHEDULES_FILE.exists():
+        try:
+            payload = json.loads(SCHEDULES_FILE.read_text(encoding="utf-8"))
+            schedules = payload.get("schedules", []) if isinstance(payload, dict) else payload
+            return [normalize_schedule(item) for item in schedules if isinstance(item, dict)]
+        except Exception:
+            return []
+    return [seed_default_schedule_from_config(load_config())]
+
+
+def save_file_schedules(schedules: list[dict[str, Any]]) -> None:
+    SCHEDULES_FILE.write_text(json.dumps({"schedules": schedules}, indent=2), encoding="utf-8")
+
+
+def load_db_schedules() -> list[dict[str, Any]]:
+    migrate_database()
+    with db_connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) AS count FROM solar_app_report_schedules")
+            if int(cur.fetchone()["count"] or 0) == 0:
+                seed = seed_default_schedule_from_config(load_config())
+                cur.execute(
+                    """
+                    INSERT INTO solar_app_report_schedules
+                    (id, name, report_type, scope, plant_ids, inverter_ids, frequency, day, dates, time, timezone, status, created_at, updated_at)
+                    VALUES (%s, %s, %s, %s, %s::jsonb, %s::jsonb, %s, %s, %s::jsonb, %s, %s, %s, %s, %s)
+                    ON CONFLICT (id) DO NOTHING
+                    """,
+                    (
+                        seed["id"], seed["name"], seed["report_type"], seed["scope"],
+                        json.dumps(seed["plant_ids"]), json.dumps(seed["inverter_ids"]),
+                        seed["frequency"], seed["day"], json.dumps(seed["dates"]),
+                        seed["time"], seed["timezone"], seed["status"], seed["created_at"], seed["updated_at"],
+                    ),
+                )
+                conn.commit()
+            cur.execute("SELECT * FROM solar_app_report_schedules ORDER BY created_at")
+            schedules = []
+            for row in cur.fetchall():
+                item = dict(row)
+                item["plant_ids"] = list(item.get("plant_ids") or [])
+                item["inverter_ids"] = list(item.get("inverter_ids") or [])
+                item["dates"] = list(item.get("dates") or [])
+                for field in ("created_at", "updated_at", "last_successful_run"):
+                    if item.get(field):
+                        item[field] = item[field].astimezone(IST).isoformat(timespec="seconds")
+                schedules.append(normalize_schedule(item))
+            return schedules
+
+
+def load_schedules() -> list[dict[str, Any]]:
+    if postgres_enabled():
+        try:
+            return load_db_schedules()
+        except Exception:
+            if os.environ.get("RENDER"):
+                raise
+    return load_file_schedules()
+
+
+def save_schedule(schedule: dict[str, Any]) -> dict[str, Any]:
+    schedule = normalize_schedule({**schedule, "updated_at": ist_now().isoformat(timespec="seconds")})
+    if postgres_enabled():
+        migrate_database()
+        with db_connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO solar_app_report_schedules
+                    (id, name, report_type, scope, plant_ids, inverter_ids, frequency, day, dates, time, timezone, status,
+                     created_at, updated_at, last_successful_run, last_run_key, last_error)
+                    VALUES (%s, %s, %s, %s, %s::jsonb, %s::jsonb, %s, %s, %s::jsonb, %s, %s, %s, %s, %s, NULLIF(%s, '')::timestamptz, %s, %s)
+                    ON CONFLICT (id) DO UPDATE SET
+                      name=EXCLUDED.name, report_type=EXCLUDED.report_type, scope=EXCLUDED.scope,
+                      plant_ids=EXCLUDED.plant_ids, inverter_ids=EXCLUDED.inverter_ids,
+                      frequency=EXCLUDED.frequency, day=EXCLUDED.day, dates=EXCLUDED.dates,
+                      time=EXCLUDED.time, timezone=EXCLUDED.timezone, status=EXCLUDED.status,
+                      updated_at=NOW(), last_successful_run=EXCLUDED.last_successful_run,
+                      last_run_key=EXCLUDED.last_run_key, last_error=EXCLUDED.last_error
+                    """,
+                    (
+                        schedule["id"], schedule["name"], schedule["report_type"], schedule["scope"],
+                        json.dumps(schedule["plant_ids"]), json.dumps(schedule["inverter_ids"]),
+                        schedule["frequency"], schedule["day"], json.dumps(schedule["dates"]),
+                        schedule["time"], schedule["timezone"], schedule["status"],
+                        schedule["created_at"], schedule["updated_at"], schedule["last_successful_run"],
+                        schedule["last_run_key"], schedule["last_error"],
+                    ),
+                )
+            conn.commit()
+        return schedule
+    schedules = [item for item in load_file_schedules() if item["id"] != schedule["id"]]
+    schedules.append(schedule)
+    save_file_schedules(schedules)
+    return schedule
+
+
+def delete_schedule(schedule_id: str) -> bool:
+    if postgres_enabled():
+        migrate_database()
+        with db_connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM solar_app_report_schedules WHERE id = %s", (schedule_id,))
+                deleted = cur.rowcount > 0
+            conn.commit()
+        return deleted
+    schedules = load_file_schedules()
+    remaining = [item for item in schedules if item["id"] != schedule_id]
+    save_file_schedules(remaining)
+    return len(remaining) != len(schedules)
+
+
+def update_schedule_run(schedule: dict[str, Any], ok: bool, run_key: str, error: str = "") -> None:
+    schedule = {**schedule, "last_run_key": run_key, "last_error": error}
+    if ok:
+        schedule["last_successful_run"] = ist_now().isoformat(timespec="seconds")
+    save_schedule(schedule)
 
 
 def public_user(user: dict[str, Any]) -> dict[str, Any]:
@@ -660,6 +804,88 @@ def save_config(config: dict[str, Any]) -> None:
     CONFIG_FILE.write_text(json.dumps(config, indent=2), encoding="utf-8")
 
 
+def normalize_schedule(raw: dict[str, Any]) -> dict[str, Any]:
+    now_text = ist_now().isoformat(timespec="seconds")
+    schedule_id = str(raw.get("id") or secrets.token_hex(8))
+    frequency = str(raw.get("frequency") or "weekly").lower()
+    if frequency not in {"weekly", "dates"}:
+        frequency = "weekly"
+    status = str(raw.get("status") or "active").lower()
+    if status not in {"active", "paused"}:
+        status = "active"
+    scope = str(raw.get("scope") or raw.get("auto_report_scope") or "all").lower()
+    if scope not in {"all", "plant", "selected"}:
+        scope = "all"
+    dates = []
+    for item in raw.get("dates") or str(raw.get("auto_report_dates") or "").replace("\n", ",").split(","):
+        parsed = parse_iso_date(str(item).strip())
+        if parsed:
+            dates.append(parsed.isoformat())
+    time_text = str(raw.get("time") or raw.get("auto_report_time") or "20:00")[:5]
+    if len(time_text) != 5 or time_text[2] != ":":
+        time_text = "20:00"
+    return {
+        "id": schedule_id,
+        "name": str(raw.get("name") or "Weekly Solar Plant Report"),
+        "report_type": str(raw.get("report_type") or "Plant performance PDF"),
+        "plant_ids": [str(item) for item in raw.get("plant_ids") or raw.get("auto_report_plant_ids") or [] if str(item)],
+        "inverter_ids": [str(item) for item in raw.get("inverter_ids") or [] if str(item)],
+        "scope": scope,
+        "frequency": frequency,
+        "day": str(raw.get("day") or raw.get("auto_report_day") or "Sunday"),
+        "dates": list(dict.fromkeys(dates)),
+        "time": time_text,
+        "timezone": "Asia/Kolkata",
+        "status": status,
+        "created_at": str(raw.get("created_at") or now_text),
+        "updated_at": str(raw.get("updated_at") or now_text),
+        "last_successful_run": str(raw.get("last_successful_run") or ""),
+        "last_run_key": str(raw.get("last_run_key") or ""),
+        "last_error": str(raw.get("last_error") or ""),
+    }
+
+
+def next_schedule_run(schedule: dict[str, Any], now: dt.datetime | None = None) -> str:
+    now = now or ist_now()
+    time_text = str(schedule.get("time") or "20:00")
+    hour, minute = [int(part) for part in time_text.split(":", 1)]
+    candidates: list[dt.datetime] = []
+    for date_text in schedule.get("dates") or []:
+        run_date = parse_iso_date(date_text)
+        if run_date:
+            candidates.append(dt.datetime.combine(run_date, dt.time(hour, minute), IST))
+    if schedule.get("frequency") == "weekly":
+        day_name = str(schedule.get("day") or "Sunday")
+        for offset in range(0, 14):
+            run_date = now.date() + dt.timedelta(days=offset)
+            candidate = dt.datetime.combine(run_date, dt.time(hour, minute), IST)
+            if candidate.strftime("%A") == day_name:
+                candidates.append(candidate)
+    future = sorted(item for item in candidates if item >= now.replace(second=0, microsecond=0))
+    return future[0].isoformat(timespec="minutes") if future else ""
+
+
+def seed_default_schedule_from_config(config: dict[str, Any]) -> dict[str, Any]:
+    return normalize_schedule(
+        {
+            "id": "default-weekly-report",
+            "name": "Default Weekly Solar Report",
+            "report_type": "Plant performance PDF",
+            "scope": config.get("auto_report_scope") or "all",
+            "plant_ids": config.get("auto_report_plant_ids") or [],
+            "frequency": "weekly",
+            "day": config.get("auto_report_day") or "Sunday",
+            "dates": [
+                item.strip()
+                for item in str(config.get("auto_report_dates") or "").replace("\n", ",").split(",")
+                if item.strip()
+            ],
+            "time": config.get("auto_report_time") or "20:00",
+            "timezone": "Asia/Kolkata",
+        }
+    )
+
+
 def load_env_file() -> dict[str, str]:
     env: dict[str, str] = {}
     if not ENV_FILE.exists():
@@ -746,6 +972,13 @@ class SolarLiveApp:
         df = self.plant_dataframe()
         today = ist_today().isoformat()
         latest_history = self.latest_history_by_key(user)
+        brand_files = {
+            "GoodWe": PROJECT_DIR / "sems_station_data.json",
+            "Fronius": PROJECT_DIR / "fronius_current_generation.json",
+            "FIMER": PROJECT_DIR / "fimer_generation.json",
+            "Solis": PROJECT_DIR / "solis_generation.json",
+            "SolaX": PROJECT_DIR / "solax_generation.json",
+        }
         rows = []
         for row in df.to_dict(orient="records"):
             key = plant_key(row["Brand"], row["Site Name"])
@@ -773,6 +1006,14 @@ class SolarLiveApp:
                 "dataDate": data_date,
                 "fresh": data_date == today,
             }
+            source_file = brand_files.get(str(row["Brand"]))
+            if source_file and source_file.exists():
+                plant["lastSuccessfulSync"] = dt.datetime.fromtimestamp(source_file.stat().st_mtime, IST).isoformat(timespec="seconds")
+            else:
+                plant["lastSuccessfulSync"] = ""
+            plant["latestGenerationDate"] = data_date
+            plant["syncWarning"] = "" if data_date == today or str(plant["status"]).lower() == "offline" else f"Data not updated - Last successful sync: {plant['lastSuccessfulSync'] or 'unknown'}"
+            plant["lastSyncError"] = ""
             history_row = latest_history.get(key)
             history_date = parse_iso_date(history_row.get("date")) if history_row else None
             plant_date = parse_iso_date(data_date)
@@ -810,6 +1051,8 @@ class SolarLiveApp:
                         "source": "Latest saved history",
                     }
                 )
+                plant["latestGenerationDate"] = plant["dataDate"]
+                plant["syncWarning"] = "" if plant["fresh"] or str(plant["status"]).lower() == "offline" else f"Data not updated - Last successful sync: {plant['lastSuccessfulSync'] or 'unknown'}"
             rows.append(plant)
         return rows
 
@@ -1735,8 +1978,22 @@ class SolarLiveApp:
         return today_text in configured_dates or now.strftime("%A") == weekly_day
 
     def generate_auto_report(self) -> dict[str, Any]:
-        scope = str(self.config.get("auto_report_scope") or "auto")
-        plant_ids = [str(item) for item in self.config.get("auto_report_plant_ids") or [] if str(item)]
+        return self.generate_report_for_schedule(seed_default_schedule_from_config(self.config))
+
+    def schedule_due(self, schedule: dict[str, Any], now: dt.datetime) -> bool:
+        if schedule.get("status") != "active":
+            return False
+        if now.strftime("%H:%M") != str(schedule.get("time") or "20:00"):
+            return False
+        today_text = now.date().isoformat()
+        if today_text in set(schedule.get("dates") or []):
+            return True
+        return schedule.get("frequency") == "weekly" and now.strftime("%A") == str(schedule.get("day") or "Sunday")
+
+    def generate_report_for_schedule(self, schedule: dict[str, Any]) -> dict[str, Any]:
+        schedule = normalize_schedule(schedule)
+        scope = str(schedule.get("scope") or "all")
+        plant_ids = [str(item) for item in schedule.get("plant_ids") or [] if str(item)]
         admin_user = {"username": "admin", "role": "admin", "plants": ["*"]}
         if scope in {"plant", "selected"} and plant_ids:
             return self.generate_selected_report(plant_ids, admin_user, all_plants=False)
@@ -1746,14 +2003,18 @@ class SolarLiveApp:
         while True:
             try:
                 now = ist_now()
-                time_text = self.config.get("auto_report_time", "20:00")
-                key = f"{now.date()}-{time_text}"
-                if self.auto_report_due(now) and self.last_auto_key != key:
-                    self.last_auto_key = key
-                    self.refresh()
-                    self.generate_auto_report()
-            except Exception:
-                pass
+                for schedule in load_schedules():
+                    run_key = f"{schedule['id']}::{now.date()}::{schedule.get('time')}"
+                    if not self.schedule_due(schedule, now) or schedule.get("last_run_key") == run_key:
+                        continue
+                    try:
+                        self.refresh()
+                        result = self.generate_report_for_schedule(schedule)
+                        update_schedule_run(schedule, bool(result.get("ok")), run_key, "" if result.get("ok") else str(result.get("message") or "Report failed"))
+                    except Exception as exc:
+                        update_schedule_run(schedule, False, run_key, str(exc))
+            except Exception as exc:
+                self.last_refresh.setdefault("steps", []).append({"label": "Scheduled report monitor", "ok": False, "message": str(exc)})
             time.sleep(30)
 
 
@@ -2025,6 +2286,16 @@ class Handler(BaseHTTPRequestHandler):
                 "render": bool(os.environ.get("RENDER")),
                 "user_file": str(USERS_FILE),
             })
+        elif parsed.path == "/api/schedules":
+            if not is_admin(user):
+                self.send_json({"error": "Admin access required"}, 403)
+                return
+            plant_lookup = {row["id"]: row for row in APP.plant_payload({"role": "admin", "plants": ["*"]})}
+            schedules = []
+            for schedule in load_schedules():
+                plants = [plant_lookup.get(pid, {"site": pid}).get("site", pid) for pid in schedule.get("plant_ids") or []]
+                schedules.append({**schedule, "plants": plants, "next_run": next_schedule_run(schedule)})
+            self.send_json({"schedules": schedules})
         elif parsed.path == "/api/monthly-generation":
             query = urllib.parse.parse_qs(parsed.query)
             keys = [value for value in (query.get("plant_key") or []) if value]
@@ -2242,6 +2513,39 @@ class Handler(BaseHTTPRequestHandler):
                 APP.config.update(next_config)
                 save_config(APP.config)
                 self.send_json({"ok": True, "config": APP.config})
+            elif parsed.path == "/api/schedules":
+                if not is_admin(user):
+                    self.send_json({"error": "Admin access required"}, 403)
+                    return
+                payload = self.read_json()
+                valid_ids = {row.get("id") for row in APP.plant_payload({"role": "admin", "plants": ["*"]})}
+                payload["plant_ids"] = [str(item) for item in payload.get("plant_ids") or [] if str(item) in valid_ids]
+                if payload.get("id"):
+                    existing = next((item for item in load_schedules() if item["id"] == str(payload.get("id"))), None)
+                    if existing:
+                        payload = {**existing, **payload}
+                schedule = save_schedule(payload)
+                self.send_json({"ok": True, "schedule": schedule})
+            elif parsed.path == "/api/schedules/status":
+                if not is_admin(user):
+                    self.send_json({"error": "Admin access required"}, 403)
+                    return
+                payload = self.read_json()
+                schedule_id = str(payload.get("id") or "")
+                status = "paused" if str(payload.get("status") or "").lower() == "paused" else "active"
+                schedules = load_schedules()
+                schedule = next((item for item in schedules if item["id"] == schedule_id), None)
+                if not schedule:
+                    self.send_json({"error": "Schedule not found"}, 404)
+                    return
+                schedule["status"] = status
+                self.send_json({"ok": True, "schedule": save_schedule(schedule)})
+            elif parsed.path == "/api/schedules/delete":
+                if not is_admin(user):
+                    self.send_json({"error": "Admin access required"}, 403)
+                    return
+                payload = self.read_json()
+                self.send_json({"ok": delete_schedule(str(payload.get("id") or ""))})
             else:
                 self.send_json({"error": "Not found"}, 404)
         except Exception as exc:
@@ -2577,7 +2881,8 @@ section.panel tr.open td:nth-child(3)::after{content:'-'}
           <option value="plant">Opened plant only</option>
           <option value="selected">Checked plants only</option>
         </select>
-        <button id="saveSchedule" style="margin-top:10px">Save Schedule</button>
+        <button id="saveSchedule" style="margin-top:10px">Save / Update Schedule</button>
+        <div class="report-list" id="scheduleList" style="margin-top:10px">No schedules loaded.</div>
       </details>
       <div class="report-link" id="reportResult"></div>
       <details class="fold mobile-fold">
@@ -2629,6 +2934,7 @@ const autoDatesEl=document.querySelector('#autoDates');
 const autoScopeEl=document.querySelector('#autoScope');
 const reportResultEl=document.querySelector('#reportResult');
 const reportListEl=document.querySelector('#reportList');
+const scheduleListEl=document.querySelector('#scheduleList');
 const logEl=document.querySelector('#log');
 const lastUpdatedEl=document.querySelector('#lastUpdated');
 const loadingIndicatorEl=document.querySelector('#loadingIndicator');
@@ -2695,20 +3001,24 @@ historyTable('All Yearly',yearly,[['Year','year'],['Year kWh','yearKwh',1],['Lat
 ].join('')}
 async function loadHistory(active){const key=active?.plantKey||'';activeHistoryKey=key;const box=document.querySelector('#historyBox');if(!box||!key)return;box.innerHTML='<div class="empty-history">Loading previous data...</div>';try{const data=await api('/api/history?plant_key='+encodeURIComponent(key));if(activeHistoryKey===key){box.innerHTML=renderHistory(data);wireHistoryPickers(data)}}catch(error){if(activeHistoryKey===key)box.innerHTML='<div class="empty-history">History failed: '+h(error.message)+'</div>';}}
 function renderDetail(active){if(!active){detailEl.innerHTML='<div class="empty-history">Tap a plant name to view details.</div>';return}detailEl.innerHTML=`<div class="plant-title">${h(active.site)}</div><p>${h(active.brand)} · <span class="status ${cls(active.status)}">${h(active.status)}</span></p>${staleNote(active)?`<p class="stale">${h(staleNote(active))}</p>`:''}<div class="details"><div class="detail"><span>Data Date</span><b>${h(active.dataDate||'Unknown')}</b></div><div class="detail"><span>Capacity</span><b>${f(active.capacity)} kW</b></div><div class="detail"><span>Daily</span><b>${f(active.daily)} kWh</b></div><div class="detail"><span>Weekly</span><b>${f(active.weekly)} kWh</b></div><div class="detail"><span>Yearly</span><b>${f(active.year)} kWh</b></div><div class="detail"><span>CUF</span><b>${f(active.cuf)}%</b></div><div class="detail"><span>Total</span><b>${f(active.total)} MWh</b></div></div><div id="historyBox" class="history-block"></div>`;loadHistory(active)}
-function renderSelectedPlantDetails(rows){selectedPlantDetailsEl.innerHTML=rows.length?rows.map(p=>`<div class="selected-card ${cls(p.status)}"><b>${h(p.site)}</b><span>Capacity: ${f(p.capacity)} kW</span><span>Current Power: ${f(p.currentPower)} kW</span><span>Today's Generation: ${f(p.daily)} kWh</span><span>Status: ${h(p.status)}</span><span>Last Updated: ${h(rowLastUpdatedText(p)||'Unavailable')}</span></div>`).join(''):'<div class="empty-history">Click a plant name to see details and graphs.</div>'}
+function renderSelectedPlantDetails(rows){selectedPlantDetailsEl.innerHTML=rows.length?rows.map(p=>`<div class="selected-card ${cls(p.status)}"><b>${h(p.site)}</b><span>Capacity: ${f(p.capacity)} kW</span><span>Current Power: ${f(p.currentPower)} kW</span><span>Today's Generation: ${f(p.daily)} kWh</span><span>Status: ${h(p.status)}</span><span>Last Updated: ${h(rowLastUpdatedText(p)||'Unavailable')}</span>${p.syncWarning?`<span class="stale">${h(p.syncWarning)}</span>`:''}</div>`).join(''):'<div class="empty-history">Click a plant name to see details and graphs.</div>'}
 function render(){const rows=filtered(), chosen=selectedRows(), displayRows=currentDayRows(rows);let active=plants.find(p=>p.id===activePlantId);if(active && !rows.some(p=>p.id===active.id)){activePlantId=null;active=null}const activeDisplay=active?currentDayPlant(active):null;cardsEl.innerHTML=[['Visible',rows.length],['Selected',chosen.length],['Daily',f(displayRows.reduce((a,p)=>a+p.daily,0))+' kWh'],['Weekly',f(displayRows.reduce((a,p)=>a+p.weekly,0))+' kWh'],['Yearly',f(displayRows.reduce((a,p)=>a+p.year,0))+' kWh'],['CUF',f(weightedCuf(displayRows))+' %']].map(x=>`<div class="card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join('');
 renderPerKw(displayRows);renderSelectedPlantDetails(activeDisplay?[activeDisplay]:[]);loadActivePlantCharts(activeDisplay);loadMonthlyChart(rows);
-rowsEl.innerHTML=displayRows.map(p=>`<tr data-id="${p.id}" style="cursor:pointer"><td data-label=""><input type="checkbox" data-id="${p.id}" ${selected.has(p.id)?'checked':''}></td><td data-label="Brand">${h(p.brand)}</td><td data-label="Plant"><span class="plant-line ${cls(p.status)}"><b>${h(p.site)}</b><span class="plant-daily">${f(p.daily)} kWh</span></span></td><td data-label="Status" class="status ${cls(p.status)}">${h(p.status)}</td><td data-label="Last Updated">${h(rowLastUpdatedText(p))}</td><td data-label="Daily">${f(p.daily)}</td><td data-label="Weekly">${f(p.weekly)}</td><td data-label="Yearly">${f(p.year)}</td><td data-label="CUF">${f(p.cuf)}%</td></tr>`).join('');
+rowsEl.innerHTML=displayRows.map(p=>`<tr data-id="${p.id}" style="cursor:pointer" title="${h(p.syncWarning||'')}"><td data-label=""><input type="checkbox" data-id="${p.id}" ${selected.has(p.id)?'checked':''}></td><td data-label="Brand">${h(p.brand)}</td><td data-label="Plant"><span class="plant-line ${cls(p.status)}"><b>${h(p.site)}</b><span class="plant-daily">${f(p.daily)} kWh</span></span></td><td data-label="Status" class="status ${cls(p.status)}">${h(p.status)}</td><td data-label="Last Updated">${h(rowLastUpdatedText(p))}</td><td data-label="Daily">${f(p.daily)}</td><td data-label="Weekly">${f(p.weekly)}</td><td data-label="Yearly">${f(p.year)}</td><td data-label="CUF">${f(p.cuf)}%</td></tr>`).join('');
 rowsEl.querySelectorAll('tr[data-id]').forEach(tr=>{if(tr.dataset.id===activePlantId)tr.classList.add('open');tr.onclick=()=>{activePlantId=tr.dataset.id===activePlantId?null:tr.dataset.id;render()}});
 rowsEl.querySelectorAll('input[type=checkbox][data-id]').forEach(cb=>{cb.onclick=e=>e.stopPropagation();cb.onchange=()=>{cb.checked?selected.add(cb.dataset.id):selected.delete(cb.dataset.id);render()}});
 renderDetail(active);
 }
 function refreshText(r){const lines=(r.steps||[]).map(s=>`${s.ok?'OK':'SKIP'} - ${s.label}: ${s.message||''}`);if(r.running)lines.push('RUNNING - Refresh still in progress...');if(r.finished)lines.push('DONE - Finished '+r.finished);return lines.join('\\n')||'Ready.'}
 async function loadReports(){try{const r=await api('/api/reports');reportListEl.innerHTML=(r.reports||[]).length?(r.reports||[]).map(x=>`<a class="report-item" href="${x.url}">${h(x.name)}<span>${h(x.modified)} · ${h(x.size_kb)} KB</span></a>`).join(''):'No reports generated yet.';}catch(error){reportListEl.textContent='Could not load reports: '+error.message;}}
+async function loadSchedules(){if(!scheduleListEl||!statusData.user?.is_admin)return;try{const r=await api('/api/schedules');scheduleListEl.innerHTML=(r.schedules||[]).length?(r.schedules||[]).map(s=>`<div class="report-item"><b>${h(s.name)}</b><span>${h(s.report_type)} · ${h(s.frequency)} · ${h(s.time)} ${h(s.timezone)}</span><span>Plants: ${h((s.scope==='all'||!(s.plants||[]).length)?'All plants':(s.plants||[]).join(', '))}</span><span>Day/date: ${h(s.day||'')} ${h((s.dates||[]).join(', '))}</span><span>Next: ${h(s.next_run||'Not scheduled')} · Last success: ${h(s.last_successful_run||'Never')} · ${h(s.status)}</span>${s.last_error?`<span>Error: ${h(s.last_error)}</span>`:''}<button class="alt" onclick="editSchedule('${h(s.id)}')">Edit</button> <button onclick="toggleSchedule('${h(s.id)}','${s.status==='active'?'paused':'active'}')">${s.status==='active'?'Pause':'Resume'}</button> <button class="gray" onclick="deleteSchedule('${h(s.id)}')">Delete</button></div>`).join(''):'No saved schedules.';window.scheduleCache=r.schedules||[]}catch(error){scheduleListEl.textContent='Could not load schedules: '+error.message}}
+window.editSchedule=id=>{const s=(window.scheduleCache||[]).find(x=>x.id===id);if(!s)return;autoDayEl.value=s.day||autoDayEl.value;autoTimeEl.value=s.time||autoTimeEl.value;if(autoDatesEl)autoDatesEl.value=(s.dates||[]).join(', ');if(autoScopeEl)autoScopeEl.value=s.scope||'all';selected=new Set(s.plant_ids||[]);render();scheduleListEl.dataset.editing=id;};
+window.toggleSchedule=async(id,status)=>{await api('/api/schedules/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,status})});await loadSchedules()};
+window.deleteSchedule=async(id)=>{if(!confirm('Delete this scheduled report?'))return;await api('/api/schedules/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});await loadSchedules()};
 async function triggerOpenRefresh(){if(openRefreshStarted)return;openRefreshStarted=true;if(statusData.last_refresh?.running){refreshInFlight=true;setLoading(true);try{const finalStatus=await pollRefresh();const warn=refreshWarning(finalStatus);if(warn)setWarning(warn);await load({preserveSelection:true,reports:true,openCheck:false});}finally{setLoading(false);refreshInFlight=false;}return}return startRefresh('open')}
 function applyStatus(s){statusData=s||{};dateLineEl.textContent=istNowText();versionLineEl.textContent='Build: '+(statusData.app_version||'old');mobileLineEl.textContent='iPhone: '+(statusData.mobile_url||'');lastUpdatedEl.textContent=backendUpdatedText(statusData);if(statusData.config){autoDayEl.value=statusData.config.auto_report_day||autoDayEl.value;autoTimeEl.value=statusData.config.auto_report_time||autoTimeEl.value;if(autoDatesEl)autoDatesEl.value=statusData.config.auto_report_dates||'';if(autoScopeEl)autoScopeEl.value=statusData.config.auto_report_scope||'auto'}applyRoleUi();logEl.textContent=refreshText(statusData.last_refresh||{})}
 function applyPlants(nextPlants,opts={}){const keep=new Set(selected);plants=nextPlants||[];if(opts.preserveSelection!==false){const ids=new Set(plants.map(p=>p.id));selected=new Set([...keep].filter(id=>ids.has(id)))}else{selected=new Set()}renderFilters();render()}
-async function load(opts={}){const p=await api('/api/plants');const nextPlants=p.plants||[];const s=await api('/api/status');applyStatus(s);applyPlants(nextPlants,opts);if(opts.reports!==false)loadReports();const staleRows=staleOnlineList(nextPlants);if(opts.openCheck!==false && s.config?.auto_refresh_on_open && staleRows.length && !openRefreshStarted){setWarning(`${staleRows.length} plants are from the last saved inverter data. Refreshing in background...`);setTimeout(triggerOpenRefresh,50);}}
+async function load(opts={}){const p=await api('/api/plants');const nextPlants=p.plants||[];const s=await api('/api/status');applyStatus(s);applyPlants(nextPlants,opts);if(opts.reports!==false){loadReports();loadSchedules()}const staleRows=staleOnlineList(nextPlants);if(opts.openCheck!==false && s.config?.auto_refresh_on_open && staleRows.length && !openRefreshStarted){setWarning(`${staleRows.length} plants are from the last saved inverter data. Refreshing in background...`);setTimeout(triggerOpenRefresh,50);}}
 async function pollRefresh(){let finalStatus={};for(let i=0;i<90;i++){const s=await api('/api/status');finalStatus=s.last_refresh||{};logEl.textContent=refreshText(finalStatus);await load({preserveSelection:true,reports:false});if(!finalStatus.running)return finalStatus;await new Promise(r=>setTimeout(r,3000));}return finalStatus}
 async function startRefresh(reason='manual'){const role=String(statusData.user?.role||'admin').toLowerCase();const canRefresh=role==='admin'||role==='manager';if(!canRefresh){if(reason==='manual')setWarning('Your user role can view data but cannot refresh inverter clouds.');return}if(refreshInFlight)return;if(reason==='auto' && document.hidden)return;refreshInFlight=true;setLoading(true);setWarning('');try{logEl.textContent='Starting background refresh...';const r=await api('/api/refresh',{method:'POST'});logEl.textContent=refreshText(r);const finalStatus=(r.accepted||r.running)?await pollRefresh():r;const warn=refreshWarning(finalStatus);if(warn)setWarning(warn);await load({preserveSelection:true,reports:reason!=='auto'});}catch(error){setWarning('Live refresh failed. Last successful data is still shown. '+error.message);logEl.textContent='Refresh failed: '+error.message;}finally{setLoading(false);refreshInFlight=false;}}
 function startAutoRefresh(){if(autoRefreshTimer)clearInterval(autoRefreshTimer);autoRefreshTimer=setInterval(()=>startRefresh('auto'),60000)}
@@ -2719,7 +3029,7 @@ reportPlantBtn.onclick=()=>{if(!activePlantId){reportResultEl.textContent='Tap a
 reportBtn.onclick=()=>{if(!selected.size){reportResultEl.textContent='Tick one or more plants first.';return}generateReport([...selected],'selected report')};
 selectAllBtn.onclick=()=>{const visible=filtered();const all=visible.every(p=>selected.has(p.id));visible.forEach(p=>all?selected.delete(p.id):selected.add(p.id));render()}
 function scheduleScopePayload(){let scope=autoScopeEl?.value||'auto';let ids=[];if(scope==='auto'){if(selected.size){scope='selected';ids=[...selected]}else if(activePlantId){scope='plant';ids=[activePlantId]}else{scope='all'}}else if(scope==='selected'){ids=[...selected]}else if(scope==='plant'&&activePlantId){ids=[activePlantId]}else if(scope==='plant'){scope='all'}return {scope,ids}}
-saveScheduleBtn.onclick=async()=>{const picked=scheduleScopePayload();const r=await api('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({auto_report_day:autoDayEl.value,auto_report_time:autoTimeEl.value,auto_report_dates:autoDatesEl?.value||'',auto_report_scope:picked.scope,auto_report_plant_ids:picked.ids})});const scopeText=r.config.auto_report_scope==='all'?'all plants':`${r.config.auto_report_plant_ids?.length||0} plant(s)`;logEl.textContent='Saved auto report schedule in IST: '+r.config.auto_report_day+' '+r.config.auto_report_time+'; extra dates: '+(r.config.auto_report_dates||'none')+'; scope: '+scopeText}
+saveScheduleBtn.onclick=async()=>{const picked=scheduleScopePayload();const editing=scheduleListEl?.dataset.editing||'';const payload={id:editing||undefined,name:editing?'Updated Scheduled Solar Report':'Scheduled Solar Report',report_type:'Plant performance PDF',frequency:(autoDatesEl?.value||'').trim()?'dates':'weekly',day:autoDayEl.value,dates:(autoDatesEl?.value||'').split(',').map(x=>x.trim()).filter(Boolean),time:autoTimeEl.value,timezone:'Asia/Kolkata',scope:picked.scope,plant_ids:picked.ids,status:'active'};const r=await api('/api/schedules',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});await api('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({auto_report_day:autoDayEl.value,auto_report_time:autoTimeEl.value,auto_report_dates:autoDatesEl?.value||'',auto_report_scope:picked.scope,auto_report_plant_ids:picked.ids})});if(scheduleListEl)scheduleListEl.dataset.editing='';const scopeText=r.schedule.scope==='all'?'all plants':`${r.schedule.plant_ids?.length||0} plant(s)`;logEl.textContent='Saved scheduled report in IST: '+r.schedule.day+' '+r.schedule.time+'; dates: '+(r.schedule.dates||[]).join(', ')+'; scope: '+scopeText;loadSchedules()}
 changePasswordBtn.onclick=async()=>{const current=prompt('Enter current password');if(!current)return;const next=prompt('Enter new password, minimum 8 characters');if(!next)return;const confirm=prompt('Confirm new password');if(next!==confirm){setWarning('Passwords did not match.');return}try{await api('/api/change-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({current_password:current,new_password:next})});setWarning('');alert('Password changed successfully. Use the new password next time.')}catch(error){setWarning(error.message)}};
 perKwChartCardEl.onclick=()=>window.open('/chart-detail?'+chartQuery('perkw',filtered()),'_blank');
 monthlyChartCardEl.onclick=()=>window.open('/chart-detail?'+chartQuery('monthly',filtered()),'_blank');
