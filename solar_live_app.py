@@ -66,7 +66,7 @@ DEFAULT_CONFIG = {
     "auto_report_time": "20:00",
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-19-simple-last-updated-for-all-v73"
+APP_VERSION = "2026-07-19-production-uses-daily-records-v76"
 IST = ZoneInfo("Asia/Kolkata")
 VALID_ROLES = {"admin", "manager", "customer", "viewer"}
 PWA_ICON_FILES = {
@@ -966,6 +966,35 @@ class SolarLiveApp:
         self.record_hourly_snapshot(current)
         return {"label": "History snapshot", "ok": True, "message": f"Saved history for {count} plants."}
 
+    def actual_daily_generation_records(self, visible_keys: set[str], user: dict[str, Any] | None = None) -> dict[tuple[str, str], float]:
+        records: dict[tuple[str, str], float] = {}
+
+        sources = [
+            (PROJECT_DIR / "sems_weekly_generation.json", "stations", "GoodWe"),
+            (PROJECT_DIR / "fronius_weekly_generation.json", "systems", "Fronius"),
+        ]
+        for path, list_key, brand in sources:
+            if not path.exists():
+                continue
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            for plant in payload.get(list_key, []) or []:
+                key = plant_key(brand, plant.get("name", ""))
+                if key not in visible_keys or not user_can_access(user, key):
+                    continue
+                for item in plant.get("daily", []) or []:
+                    row_date = parse_iso_date(item.get("date"))
+                    if not row_date:
+                        continue
+                    try:
+                        generation = float(item.get("generation_kwh") or 0)
+                    except (TypeError, ValueError):
+                        generation = 0.0
+                    records[(row_date.isoformat(), key)] = round(generation, 3)
+        return records
+
     def history_payload(self, plant_key_value: str, user: dict[str, Any] | None = None) -> dict[str, Any]:
         if not user_can_access(user, plant_key_value):
             return {"daily": [], "weekly": [], "yearly": []}
@@ -1309,7 +1338,6 @@ class SolarLiveApp:
             history_by_key.setdefault(str(key), []).append({**row, "_date": row_date})
 
         for key, rows_for_key in history_by_key.items():
-            rows_for_key = rows_for_key + self.inferred_missing_daily_rows(rows_for_key)
             previous_year_total: float | None = None
             for row in sorted(rows_for_key, key=lambda item: item["_date"]):
                 row_date = row["_date"]
@@ -1321,6 +1349,11 @@ class SolarLiveApp:
                 if not (month_start <= row_date <= month_end):
                     continue
                 by_day_plant[(row_date.isoformat(), key)] = daily
+
+        for (date_key, key), generation in self.actual_daily_generation_records(visible_keys, user).items():
+            row_date = parse_iso_date(date_key)
+            if row_date and month_start <= row_date <= month_end:
+                by_day_plant[(date_key, key)] = generation
 
         if month_start <= today <= month_end:
             for plant in current_rows:
@@ -1385,12 +1418,21 @@ class SolarLiveApp:
         if graph_date == today and live_total:
             totals[now_hour.strftime("%H:00")] = live_total
 
+        daily_records = self.actual_daily_generation_records({str(key) for key in visible_keys if key}, user)
+        actual_day_total = sum(
+            generation
+            for (date_key, _key), generation in daily_records.items()
+            if date_key == graph_date.isoformat()
+        )
+
         positive_points = [
             (label, value) for label, value in totals.items()
             if float(value or 0) > 0 and str(label)[:2].isdigit()
         ]
         if len(positive_points) <= 2:
             latest_total = max((float(value or 0) for _, value in positive_points), default=0.0)
+            if actual_day_total > latest_total:
+                latest_total = actual_day_total
             if graph_date == today:
                 latest_total = max(latest_total, live_total)
                 latest_hour = min(max(ist_now().hour, 6), 23)
@@ -2585,7 +2627,7 @@ function setProductionMode(mode){productionMode=mode;productionTabsEl.querySelec
 function monthName(n){return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][Number(n)-1]||String(n)}
 function renderProductionBars(label, items, total, unit='kWh'){selectedTodayTotalEl.textContent=`${f(total)} ${unit}`;productionDatePickEl.value=productionDateValue();const w=640,hgt=300,left=42,right=10,top=28,bottom=42,plotW=w-left-right,plotH=hgt-top-bottom;const max=Math.max(...items.map(x=>Number(x.value||0)),1);const yMax=Math.ceil(max/5)*5||5;const gap=4,barW=Math.max(8,Math.min(28,(plotW/items.length)-gap));const yTicks=[0,.25,.5,.75,1].map(pct=>{const y=top+plotH-(pct*plotH);const value=yMax*pct;return `<line x1="${left}" y1="${y.toFixed(1)}" x2="${left+plotW}" y2="${y.toFixed(1)}" stroke="#e8eaed"></line><text x="8" y="${(y+4).toFixed(1)}" fill="#647084" font-size="11">${f(value,0)}</text>`}).join('');const bars=items.map((item,i)=>{const x=left+(items.length===1?plotW/2-barW/2:(i/(items.length-1))*plotW-barW/2);const height=Math.max(Number(item.value||0)>0?2:1,(Number(item.value||0)/yMax)*plotH);const y=top+plotH-height;const showLabel=items.length<=14||i%Math.ceil(items.length/12)===0;return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${height.toFixed(1)}" rx="3" fill="#18b9d6"><title>${h(item.label)} | ${f(item.value)} ${unit}</title></rect>${showLabel?`<text x="${(x+barW/2).toFixed(1)}" y="${hgt-12}" text-anchor="middle" fill="#647084" font-size="10">${h(item.short||item.label)}</text>`:''}`}).join('');selectedTodayChartEl.innerHTML=`<svg viewBox="0 0 ${w} ${hgt}" role="img" aria-label="Selected plant generation graph"><rect x="0" y="0" width="${w}" height="${hgt}" fill="#fff"></rect><text x="${left}" y="18" fill="#647084" font-size="12">${h(unit)}</text><rect x="${left+plotW/2-42}" y="10" width="9" height="9" fill="#18b9d6"></rect><text x="${left+plotW/2-28}" y="18" fill="#1e2b3f" font-size="12">Generation</text>${yTicks}<line x1="${left}" y1="${top+plotH}" x2="${left+plotW}" y2="${top+plotH}" stroke="#d7e0ec"></line>${bars}</svg>`}
 function renderAreaChart(data, plant){const hours=data.hours||[];selectedTodayTotalEl.textContent=`${f(data.total)} kWh`;productionDatePickEl.value=data.date||productionDateValue();if(!plant){selectedTodayChartEl.innerHTML='<div class="empty-history">Click a plant name.</div>';return}if(!hours.length){selectedTodayChartEl.innerHTML='<div class="empty-history">Generation has not started today.</div>';return}const byHour=new Map(hours.map(x=>[String(x.hour||''),x]));const series=[];for(let hour=0;hour<24;hour++){const label=`${String(hour).padStart(2,'0')}:00`;const item=byHour.get(label)||{hour:label,generation:0,power:0};series.push({...item,hour:label,power:Number(item.power||0),generation:Number(item.generation||0)})}const w=640,hgt=300,left=42,right=10,top=28,bottom=42,plotW=w-left-right,plotH=hgt-top-bottom;const capacity=Number(data.capacity||plant.capacity||0);const maxPower=Math.max(capacity>0?capacity:0,...series.map(x=>x.power),1);const yMax=Math.ceil(maxPower/5)*5||5;const points=series.map((x,i)=>{const px=left+(i/23)*plotW;const py=top+plotH-(Math.min(x.power,yMax)/yMax)*plotH;return [px,py,x]});function smoothPath(items){let d=`M ${items[0][0].toFixed(1)} ${items[0][1].toFixed(1)}`;for(let i=1;i<items.length;i++){const prev=items[i-1],cur=items[i];const cx=(prev[0]+cur[0])/2;d+=` C ${cx.toFixed(1)} ${prev[1].toFixed(1)} ${cx.toFixed(1)} ${cur[1].toFixed(1)} ${cur[0].toFixed(1)} ${cur[1].toFixed(1)}`}return d}const line=smoothPath(points);const area=`${line} L ${left+plotW} ${top+plotH} L ${left} ${top+plotH} Z`;const yTicks=[0,.2,.4,.6,.8,1].map(pct=>{const y=top+plotH-(pct*plotH);const value=yMax*pct;return `<line x1="${left}" y1="${y.toFixed(1)}" x2="${left+plotW}" y2="${y.toFixed(1)}" stroke="#e8eaed" stroke-width="1"></line><text x="8" y="${(y+4).toFixed(1)}" fill="#647084" font-size="11">${f(value,0)}</text>`}).join('');const xTicks=[1,3,5,7,9,11,13,15,17,19,21,23].map(hour=>{const x=left+(hour/23)*plotW;const label=hour<12?`${String(hour).padStart(2,'0')}:00 AM`:hour===12?'12:00 PM':`${String(hour-12).padStart(2,'0')}:00 PM`;return `<line x1="${x.toFixed(1)}" y1="${top+plotH}" x2="${x.toFixed(1)}" y2="${top+plotH+5}" stroke="#dfe3e8"></line><text x="${x.toFixed(1)}" y="${hgt-12}" text-anchor="middle" fill="#647084" font-size="11">${h(label)}</text>`}).join('');const title=`${h(plant.site)} | Capacity: ${f(capacity)} kW`;selectedTodayChartEl.innerHTML=`<svg viewBox="0 0 ${w} ${hgt}" role="img" aria-label="Selected plant production power graph"><rect x="0" y="0" width="${w}" height="${hgt}" fill="#fff"></rect><text x="${left}" y="18" fill="#647084" font-size="12">kW</text><rect x="${left+plotW/2-42}" y="10" width="9" height="9" fill="#18b9d6"></rect><text x="${left+plotW/2-28}" y="18" fill="#1e2b3f" font-size="12">Production</text>${yTicks}<line x1="${left}" y1="${top+plotH}" x2="${left+plotW}" y2="${top+plotH}" stroke="#d7e0ec"></line><path d="${area}" fill="rgba(24,185,214,.30)"></path><path d="${line}" fill="none" stroke="#174f9c" stroke-width="2" stroke-linejoin="round"></path>${points.map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="6" fill="transparent"><title>${h(p[2].hour)} | Power: ${f(p[2].power)} kW | Today: ${f(p[2].generation)} kWh | ${title}</title></circle>`).join('')}${xTicks}</svg>`}
-async function loadProductionChart(active){if(!active){activeTodayChartKey='';selectedTodayTotalEl.textContent='';productionDatePickEl.value=productionDateValue();selectedTodayChartEl.innerHTML='<div class="empty-history">Click a plant name.</div>';return}productionTabsEl.querySelectorAll('button').forEach(btn=>btn.classList.toggle('active',btn.dataset.mode===productionMode));const pickedDate=productionDateValue();const key=`${productionMode}|${active.plantKey}|${active.dataDate}|${active.daily}|${pickedDate}`;if(key===activeTodayChartKey)return;activeTodayChartKey=key;selectedTodayChartEl.innerHTML='<div class="empty-history">Loading graph...</div>';try{if(productionMode==='day'){renderAreaChart(await api('/api/today-hourly-generation?plant_key='+encodeURIComponent(active.plantKey)+'&date='+encodeURIComponent(pickedDate)),active);return}if(productionMode==='month'){const data=await api('/api/monthly-generation?plant_key='+encodeURIComponent(active.plantKey)+'&month='+encodeURIComponent(productionMonth())+'&year='+encodeURIComponent(productionYear()));renderProductionBars(data.month||'Month',(data.days||[]).map(d=>({label:d.date,short:String(d.day),value:d.generation})),Number(data.total||0),'kWh');return}const data=await api('/api/history?plant_key='+encodeURIComponent(active.plantKey));if(productionMode==='year'){const selectedYear=String(productionYear());const monthly={};(data.daily||[]).forEach(row=>{if(String(row.date||'').slice(0,4)===selectedYear){const m=String(row.date).slice(5,7);monthly[m]=(monthly[m]||0)+Number(row.daily||0)}});const items=Array.from({length:12},(_,i)=>{const m=String(i+1).padStart(2,'0');return {label:`${monthName(i+1)} ${selectedYear}`,short:monthName(i+1),value:monthly[m]||0}});renderProductionBars(selectedYear,items,items.reduce((a,x)=>a+Number(x.value||0),0),'kWh');return}const items=(data.yearly||[]).map(row=>({label:String(row.year),short:String(row.year),value:Number(row.yearKwh||0)}));renderProductionBars('Total',items,items.reduce((a,x)=>a+Number(x.value||0),0),'kWh')}catch(error){selectedTodayChartEl.innerHTML='<div class="empty-history">Graph failed: '+h(error.message)+'</div>'}}
+async function loadProductionChart(active){if(!active){activeTodayChartKey='';selectedTodayTotalEl.textContent='';productionDatePickEl.value=productionDateValue();selectedTodayChartEl.innerHTML='<div class="empty-history">Click a plant name.</div>';return}productionTabsEl.querySelectorAll('button').forEach(btn=>btn.classList.toggle('active',btn.dataset.mode===productionMode));const pickedDate=productionDateValue();const key=`${productionMode}|${active.plantKey}|${active.dataDate}|${active.daily}|${pickedDate}`;if(key===activeTodayChartKey)return;activeTodayChartKey=key;selectedTodayChartEl.innerHTML='<div class="empty-history">Loading graph...</div>';try{if(productionMode==='day'){renderAreaChart(await api('/api/today-hourly-generation?plant_key='+encodeURIComponent(active.plantKey)+'&date='+encodeURIComponent(pickedDate)),active);return}if(productionMode==='month'){const data=await api('/api/monthly-generation?plant_key='+encodeURIComponent(active.plantKey)+'&month='+encodeURIComponent(productionMonth())+'&year='+encodeURIComponent(productionYear()));renderProductionBars(data.month||'Month',(data.days||[]).map(d=>({label:d.date,short:String(d.day),value:d.generation})),Number(data.total||0),'kWh');return}if(productionMode==='year'){const selectedYear=productionYear();const monthPayloads=await Promise.all(Array.from({length:12},(_,i)=>api('/api/monthly-generation?plant_key='+encodeURIComponent(active.plantKey)+'&month='+encodeURIComponent(i+1)+'&year='+encodeURIComponent(selectedYear))));const items=monthPayloads.map((data,i)=>({label:`${monthName(i+1)} ${selectedYear}`,short:monthName(i+1),value:Number(data.total||0)}));renderProductionBars(String(selectedYear),items,items.reduce((a,x)=>a+Number(x.value||0),0),'kWh');return}const data=await api('/api/history?plant_key='+encodeURIComponent(active.plantKey));const items=(data.yearly||[]).map(row=>({label:String(row.year),short:String(row.year),value:Number(row.yearKwh||0)}));renderProductionBars('Total',items,items.reduce((a,x)=>a+Number(x.value||0),0),'kWh')}catch(error){selectedTodayChartEl.innerHTML='<div class="empty-history">Graph failed: '+h(error.message)+'</div>'}}
 async function loadActivePlantCharts(active){selectedTodayChartCardEl.classList.toggle('hidden',!active);if(!active){activeTodayChartKey='';selectedTodayTotalEl.textContent='';productionDatePickEl.value=productionDateValue();selectedTodayChartEl.innerHTML='<div class="empty-history">Click a plant name.</div>';return}loadProductionChart(active)}
 function historyTable(title, rows, cols, open=false){if(!rows?.length)return `<details class="fold history-block"><summary>${title}</summary><div class="empty-history">No previous data yet. It will build after refreshes/uploads.</div></details>`;return `<details class="fold history-block" ${open?'open':''}><summary>${title}</summary><div class="history-scroll"><table><thead><tr>${cols.map(c=>`<th>${c[0]}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td>${c[2]?f(r[c[1]]):h(r[c[1]])}</td>`).join('')}</tr>`).join('')}</tbody></table></div></details>`}
 function opt(rows,key){return (rows||[]).map((r,i)=>`<option value="${i}">${h(r[key]||'')}</option>`).join('')}
