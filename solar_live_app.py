@@ -71,7 +71,7 @@ DEFAULT_CONFIG = {
     "auto_report_plant_ids": [],
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-20-graph-gap-recovery-v82"
+APP_VERSION = "2026-07-20-honest-graph-data-v83"
 IST = ZoneInfo("Asia/Kolkata")
 VALID_ROLES = {"admin", "manager", "customer", "viewer"}
 PWA_ICON_FILES = {
@@ -1591,7 +1591,6 @@ class SolarLiveApp:
             history_by_key.setdefault(str(key), []).append({**row, "_date": row_date})
 
         for key, rows_for_key in history_by_key.items():
-            rows_for_key = rows_for_key + self.inferred_missing_daily_rows(rows_for_key)
             previous_year_total: float | None = None
             for row in sorted(rows_for_key, key=lambda item: item["_date"]):
                 row_date = row["_date"]
@@ -1622,12 +1621,20 @@ class SolarLiveApp:
             date_key = cursor.isoformat()
             values = []
             day_total = 0.0
+            has_saved_data = False
             for key, meta in plant_meta.items():
+                has_saved_data = has_saved_data or (date_key, key) in by_day_plant
                 generation = round(by_day_plant.get((date_key, key), 0.0), 3)
                 day_total += generation
                 values.append({**meta, "generation": generation})
             total += day_total
-            days.append({"date": date_key, "day": cursor.day, "generation": round(day_total, 3), "values": values})
+            days.append({
+                "date": date_key,
+                "day": cursor.day,
+                "generation": round(day_total, 3),
+                "dataStatus": "Actual" if has_saved_data else "No saved data",
+                "values": values,
+            })
             cursor += dt.timedelta(days=1)
         return {
             "month": month_start.strftime("%B %Y"),
@@ -1804,6 +1811,7 @@ class SolarLiveApp:
                 {
                     "Date": item["date"],
                     "Total Generation (kWh)": round(float(item.get("generation") or 0), 3),
+                    "Data Status": item.get("dataStatus", ""),
                 }
                 for item in payload.get("days", [])
             ]
@@ -2988,7 +2996,7 @@ function shortName(name){return String(name||'').replace(/\b(plant|solar|spv|kw)
 function renderBars(el,totalEl,rows,key,unit='kWh',barClass=''){const top=[...rows].sort((a,b)=>Number(b[key]||0)-Number(a[key]||0));const total=rows.reduce((a,p)=>a+Number(p[key]||0),0);const max=Math.max(...top.map(p=>Number(p[key]||0)),1);totalEl.textContent=`${f(total)} ${unit}`;el.innerHTML=top.length?top.map(p=>{const value=Number(p[key]||0);const height=Math.max(value>0?2:1,value/max*100);return `<div class="bar-item" title="${h(p.site)} | Capacity: ${f(p.capacity)} kW | ${f(value)} ${unit}"><div class="bar-value">${f(value,1)}</div><div class="bar ${barClass}" style="height:${height}%"></div><div class="bar-label">${h(shortName(p.site))}</div></div>`}).join(''):'<div class="empty-history">Select one or more plants.</div>'}
 function renderPerKw(rows){const data=rows.map(p=>({...p,perKw:Number(p.capacity||0)>0?Number(p.daily||0)/Number(p.capacity||0):0}));const max=Math.max(...data.map(p=>p.perKw),1);perKwChartTotalEl.textContent=data.length?'All visible · kWh/kW':'No plant data';perKwChartEl.innerHTML=data.length?data.map(p=>{const height=Math.max(p.perKw>0?2:1,p.perKw/max*100);const cap=Number(p.capacity||0);const title=cap>0?`${h(p.site)}: ${f(p.perKw)} kWh/kW (${f(p.daily)} kWh / ${f(cap)} kW)${staleOnline(p)?' | No current data for today':''}`:`${h(p.site)}: Capacity missing, shown as 0.00 kWh/kW`;return `<div class="bar-item" title="${title}"><div class="bar-value">${f(p.perKw)}</div><div class="bar perkw" style="height:${height}%"></div><div class="bar-label">${h(shortName(p.site))}</div></div>`}).join(''):'<div class="empty-history">No visible plant data.</div>'}
 function colorFor(i){return ['#174f9c','#18b9d6','#16845f','#f59e0b','#7c3aed','#ef4444','#0891b2','#4f46e5'][i%8]}
-function renderMonthlyGrouped(data){const days=data.days||[], plantsList=data.plants||[];const max=Math.max(...days.map(d=>Number(d.generation||0)),1);monthlyChartTotalEl.textContent=`${h(data.month||'Month')} · ${f(data.total)} kWh`;if(!plantsList.length){monthlyChartEl.innerHTML='<div class="empty-history">No visible plant data.</div>';return}monthlyChartEl.innerHTML=days.length?days.map(d=>{const value=Number(d.generation||0);const height=Math.max(value>0?2:1,value/max*100);return `<div class="day-group" title="${h(d.date)} total all visible plants: ${f(value)} kWh"><div class="day-bars"><div class="mini-bar" style="height:${height}%;background:linear-gradient(180deg,#34d399,var(--green))" title="${h(d.date)} · ${f(value)} kWh"></div></div><div class="bar-label">${h(d.day)}</div></div>`}).join(''):'<div class="empty-history">No monthly data</div>'}
+function renderMonthlyGrouped(data){const days=data.days||[], plantsList=data.plants||[];const max=Math.max(...days.map(d=>Number(d.generation||0)),1);monthlyChartTotalEl.textContent=`${h(data.month||'Month')} · ${f(data.total)} kWh`;if(!plantsList.length){monthlyChartEl.innerHTML='<div class="empty-history">No visible plant data.</div>';return}monthlyChartEl.innerHTML=days.length?days.map(d=>{const value=Number(d.generation||0);const missing=d.dataStatus&&d.dataStatus!=='Actual';const height=Math.max(value>0?2:1,value/max*100);const fill=missing?'#cbd5e1':'linear-gradient(180deg,#34d399,var(--green))';return `<div class="day-group" title="${h(d.date)} total all visible plants: ${f(value)} kWh · ${h(d.dataStatus||'Actual')}"><div class="day-bars"><div class="mini-bar" style="height:${height}%;background:${fill}" title="${h(d.date)} · ${f(value)} kWh · ${h(d.dataStatus||'Actual')}"></div></div><div class="bar-label">${h(d.day)}</div></div>`}).join(''):'<div class="empty-history">No monthly data</div>'}
 async function loadMonthlyChart(rows){const key=rows.map(p=>`${p.plantKey}:${p.dataDate}:${p.daily}`).sort().join('|')+`|${monthSelectEl.value}|${yearSelectEl.value}`;if(key===monthlyChartKey)return;monthlyChartKey=key;monthlyChartEl.innerHTML='<div class="empty-history">Loading month...</div>';const query=rows.map(p=>'plant_key='+encodeURIComponent(p.plantKey)).join('&')+'&month='+encodeURIComponent(monthSelectEl.value||'')+'&year='+encodeURIComponent(yearSelectEl.value||'');try{renderMonthlyGrouped(await api('/api/monthly-generation?'+query))}catch(error){monthlyChartEl.innerHTML='<div class="empty-history">Monthly graph failed: '+h(error.message)+'</div>'}}
 function productionTitle(mode=productionMode){return ({day:'Today Production - Selected Plant',month:'Monthly Generation - Selected Plant',year:'Yearly Generation - Selected Plant',total:'Total Generation - Selected Plant'}[mode]||'Production - Selected Plant')}
 function setProductionMode(mode){productionMode=mode;selectedTodayTitleEl.textContent=productionTitle(mode);productionTabsEl.querySelectorAll('button').forEach(btn=>btn.classList.toggle('active',btn.dataset.mode===mode))}
