@@ -350,7 +350,7 @@ def _history_weekly_generation(brand: str, site: str | None, today_generation: A
             continue
         if week_start <= row_date <= today:
             by_date[row_date.isoformat()] = safe_float(row.get("daily"))
-    timestamp_text = str(timestamp or "")
+    timestamp_text = parse_vendor_timestamp(timestamp)
     if timestamp_text[:10] == today.isoformat() or not timestamp_text:
         by_date[today.isoformat()] = safe_float(today_generation)
     return round(sum(by_date.values()), 3)
@@ -427,11 +427,15 @@ def _load_current_project_rows() -> list[dict[str, Any]]:
     for brand, path in (("Solis", "solis_generation.json"), ("SolaX", "solax_generation.json")):
         payload = _read_json(path) or {}
         live_count = (payload.get("api_status") or {}).get("live_record_count")
+        payload_timestamp = payload.get("uploaded_at") or payload.get("generated_at") or payload.get("captured_at")
         for system in payload.get("systems", []):
             if brand == "SolaX" and live_count == 0:
-                timestamp = payload.get("captured_at") or payload.get("generated_at") or payload.get("uploaded_at")
+                timestamp = parse_vendor_timestamp(
+                    system.get("data_timestamp"),
+                    payload.get("captured_at") or payload.get("generated_at") or payload.get("uploaded_at"),
+                )
             else:
-                timestamp = payload.get("uploaded_at") or payload.get("generated_at") or payload.get("captured_at")
+                timestamp = parse_vendor_timestamp(system.get("data_timestamp"), payload_timestamp)
             site_name = system.get("name") or system.get("station_name")
             daily_generation = system.get("today_generation_kwh")
             weekly_generation = system.get("weekly_generation_kwh")

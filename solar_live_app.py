@@ -19,6 +19,7 @@ import hmac
 import math
 import mimetypes
 import os
+import re
 import secrets
 import socket
 import subprocess
@@ -70,7 +71,7 @@ DEFAULT_CONFIG = {
     "auto_report_plant_ids": [],
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-19-scheduled-reports-manager-v78"
+APP_VERSION = "2026-07-20-fresh-open-v79"
 IST = ZoneInfo("Asia/Kolkata")
 VALID_ROLES = {"admin", "manager", "customer", "viewer"}
 PWA_ICON_FILES = {
@@ -144,13 +145,19 @@ def timestamp_to_ist_date(value: Any) -> str:
     text = str(value or "").strip()
     if not text:
         return ""
+    cleaned = re.sub(r"\s*\(.*?\)\s*$", "", text).strip()
+    for fmt in ("%d/%m/%Y %H:%M:%S", "%d/%m/%Y %H:%M", "%d/%m/%Y"):
+        try:
+            return dt.datetime.strptime(cleaned, fmt).date().isoformat()
+        except ValueError:
+            continue
     if len(text) == 10:
         try:
             return dt.date.fromisoformat(text).isoformat()
         except ValueError:
             return text
     try:
-        parsed = dt.datetime.fromisoformat(text.replace("Z", "+00:00"))
+        parsed = dt.datetime.fromisoformat(cleaned.replace("Z", "+00:00"))
     except ValueError:
         return text[:10] if len(text) >= 10 else ""
     if parsed.tzinfo is None:
@@ -2215,7 +2222,7 @@ class Handler(BaseHTTPRequestHandler):
                 user = self.require_auth(html=True)
                 if load_users() and not user:
                     return
-                wait_seconds = 25 if APP.config.get("auto_refresh_on_open") and APP.stale_online_count() else 0
+                wait_seconds = 75 if APP.config.get("auto_refresh_on_open") and APP.stale_online_count() else 0
                 APP.refresh_on_open(wait_seconds=wait_seconds)
                 bootstrap = {
                     "plants": APP.plant_payload(user),
@@ -3051,7 +3058,6 @@ def main() -> None:
     args = parser.parse_args()
     global APP
     APP = SolarLiveApp(args.host, args.port)
-    APP.record_history_snapshot()
     if APP.config.get("auto_refresh_on_open"):
         threading.Thread(target=APP.refresh, daemon=True).start()
     threading.Thread(target=APP.maybe_auto_run, daemon=True).start()

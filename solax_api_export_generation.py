@@ -13,6 +13,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from solax_capture_to_generation import (
     energy_total_from_response,
@@ -30,6 +31,7 @@ OUTPUT_FILE = PROJECT_DIR / "solax_generation.json"
 DEBUG_FILE = PROJECT_DIR / "solax_api_last_response.json"
 DEFAULT_BASE = "https://global.solaxcloud.com"
 WEB_BASE = "https://euapi.solaxcloud.com"
+IST = ZoneInfo("Asia/Kolkata")
 
 
 def load_env_file() -> None:
@@ -341,14 +343,14 @@ def system_from_station_record(record: dict, token: str, generated_at: str) -> d
         system.setdefault("backend_errors", []).append(f"siteOverview failed: {error}")
 
     try:
-        weekly = fetch_solax_weekly(token, station_id, dt.datetime.now().astimezone().date())
+        weekly = fetch_solax_weekly(token, station_id, dt.datetime.now(IST).date())
         if weekly is not None:
             system["weekly_generation_kwh"] = weekly
     except Exception as error:
         system.setdefault("backend_errors", []).append(f"weekly energyInfo failed: {error}")
 
     try:
-        year_total = fetch_solax_year(token, station_id, dt.datetime.now().astimezone().year)
+        year_total = fetch_solax_year(token, station_id, dt.datetime.now(IST).year)
         if year_total is not None:
             system["year_generation_kwh"] = year_total
     except Exception as error:
@@ -359,7 +361,7 @@ def system_from_station_record(record: dict, token: str, generated_at: str) -> d
 
 def export_from_web_login() -> dict:
     token = fetch_web_token()
-    generated_at = dt.datetime.now().astimezone().replace(microsecond=0).isoformat()
+    generated_at = dt.datetime.now(IST).replace(microsecond=0).isoformat()
     records = fetch_web_station_records(token)
     systems = [system_from_station_record(record, token, generated_at) for record in records]
     return {
@@ -439,7 +441,7 @@ def main() -> None:
             continue
         seen.add(key)
         systems.append(system)
-    generated_at = dt.datetime.now().astimezone().replace(microsecond=0).isoformat()
+    generated_at = dt.datetime.now(IST).replace(microsecond=0).isoformat()
     captured_at = generated_at if live_count else (baseline_captured_at or generated_at)
     payload = {
         "source": "solax_api",

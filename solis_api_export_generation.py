@@ -13,6 +13,7 @@ import os
 import urllib.error
 import urllib.request
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 
 PROJECT_DIR = Path(__file__).resolve().parent
@@ -20,6 +21,7 @@ OUTPUT_FILE = PROJECT_DIR / "solis_generation.json"
 DEBUG_FILE = PROJECT_DIR / "solis_api_last_response.json"
 DEFAULT_BASE = "https://www.soliscloud.com:13333"
 STATUS_MAP = {1: "Online", 2: "Offline", 3: "Fault"}
+IST = ZoneInfo("Asia/Kolkata")
 
 
 def load_env_file() -> None:
@@ -169,7 +171,7 @@ def main() -> None:
     key_secret = require_env("SOLIS_KEY_SECRET")
     records, raw_payload = fetch_station_list(base_url, key_id, key_secret)
     systems = [system_from_record(record) for record in records]
-    generated_at = dt.datetime.now().astimezone().replace(microsecond=0).isoformat()
+    generated_at = dt.datetime.now(IST).replace(microsecond=0).isoformat()
     payload = {
         "source": "solis_api",
         "generated_at": generated_at,

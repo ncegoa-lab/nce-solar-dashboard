@@ -4,11 +4,13 @@ import os
 from pathlib import Path
 
 import requests
+from zoneinfo import ZoneInfo
 
 
 BASE_URL = "https://www.auroravision.net"
 OUTPUT_FILE = Path("fimer_generation.json")
 PORTFOLIO_ID = os.getenv("FIMER_PORTFOLIO_ID", "31841756")
+IST = ZoneInfo("Asia/Kolkata")
 
 
 def load_env_file():
@@ -39,7 +41,7 @@ def iso_utc(value):
 
 
 def local_ranges():
-    now = dt.datetime.now().astimezone()
+    now = dt.datetime.now(IST)
     today = now.replace(hour=0, minute=0, second=0, microsecond=0)
     return {
         "now": now,
