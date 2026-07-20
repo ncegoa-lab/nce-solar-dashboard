@@ -45,9 +45,10 @@ def chart_energy(session, system_id, day, interval):
 def main():
     systems = json.loads(SYSTEMS_FILE.read_text(encoding="utf-8"))["systems"]
     today = dt.date.today()
-    start_date = today - dt.timedelta(days=today.weekday())
-    end_date = start_date + dt.timedelta(days=6)
-    dates = [start_date + dt.timedelta(days=offset) for offset in range(7)]
+    week_start = today - dt.timedelta(days=today.weekday())
+    week_end = week_start + dt.timedelta(days=6)
+    month_start = today.replace(day=1)
+    dates = [month_start + dt.timedelta(days=offset) for offset in range((today - month_start).days + 1)]
     session = solarweb_session()
 
     rows = []
@@ -78,7 +79,12 @@ def main():
                 "status": system.get("status", ""),
                 "daily": daily,
                 "weekly_generation_kwh": round(
-                    sum(item["generation_kwh"] for item in daily), 3
+                    sum(
+                        item["generation_kwh"]
+                        for item in daily
+                        if week_start <= dt.date.fromisoformat(item["date"]) <= min(week_end, today)
+                    ),
+                    3,
                 ),
                 "year_generation_kwh": round(year_generation_kwh, 3),
                 "year_source_value": year_source_value,

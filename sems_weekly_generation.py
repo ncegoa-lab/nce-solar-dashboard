@@ -34,10 +34,10 @@ def parse_sems_date(value: str) -> dt.date:
 
 def main() -> None:
     stations = json.loads(STATIONS_FILE.read_text(encoding="utf-8"))["stations"]
-    report_days = 7
     today = dt.date.today()
-    start_date = today - dt.timedelta(days=today.weekday())
-    end_date = start_date + dt.timedelta(days=6)
+    week_start = today - dt.timedelta(days=today.weekday())
+    week_end = week_start + dt.timedelta(days=6)
+    month_start = today.replace(day=1)
     year_start = dt.date(2026, 1, 1)
 
     session = requests.Session()
@@ -80,9 +80,11 @@ def main() -> None:
             for item in body.get("data", [])
         }
         daily = []
-        for offset in range(report_days):
-            day = start_date + dt.timedelta(days=offset)
+        cursor = month_start
+        while cursor <= today:
+            day = cursor
             daily.append({"date": day.isoformat(), "generation_kwh": by_date.get(day, 0.0)})
+            cursor += dt.timedelta(days=1)
 
         rows.append(
             {
@@ -92,7 +94,12 @@ def main() -> None:
                 "status": station.get("status"),
                 "daily": daily,
                 "weekly_generation_kwh": round(
-                    sum(item["generation_kwh"] for item in daily), 3
+                    sum(
+                        item["generation_kwh"]
+                        for item in daily
+                        if week_start <= dt.date.fromisoformat(item["date"]) <= min(week_end, today)
+                    ),
+                    3,
                 ),
                 "year_generation_kwh": round(
                     sum(
@@ -107,8 +114,8 @@ def main() -> None:
 
     payload = {
         "generated_at": dt.datetime.now().replace(microsecond=0).isoformat(),
-        "start_date": start_date.isoformat(),
-        "end_date": end_date.isoformat(),
+        "start_date": month_start.isoformat(),
+        "end_date": today.isoformat(),
         "stations": rows,
     }
     OUTPUT_FILE.write_text(json.dumps(payload, indent=2), encoding="utf-8")

@@ -144,6 +144,38 @@ def fetch_web_station_records(token: str) -> list[dict]:
     return [record for record in records if isinstance(record, dict)]
 
 
+def daily_records_list(result: dict, year: int, month: int) -> list[dict]:
+    records = result.get("records") or {}
+    rows = []
+    for key in ("acYield", "pvYield", "yield", "generation"):
+        values = records.get(key)
+        if not isinstance(values, list):
+            continue
+        for row in values:
+            day = numeric(row.get("xais"))
+            value = numeric(row.get("yais"))
+            if day is None or value is None:
+                continue
+            try:
+                row_date = dt.date(year, month, int(day))
+            except ValueError:
+                continue
+            rows.append({"date": row_date.isoformat(), "generation_kwh": value})
+        if rows:
+            return rows
+    return rows
+
+
+def fetch_solax_month_daily(token: str, station_id: str, year: int, month: int) -> list[dict]:
+    response = solax_request(
+        "/zeus/v1/overview/energyInfo",
+        token,
+        body={"siteId": station_id, "dimension": 2, "year": year, "month": month},
+        method="POST",
+    )
+    return daily_records_list(response.get("result") or {}, year, month)
+
+
 def find_dicts(value: object, predicate) -> list[dict]:
     found: list[dict] = []
     if isinstance(value, dict):
@@ -355,6 +387,12 @@ def system_from_station_record(record: dict, token: str, generated_at: str) -> d
             system["year_generation_kwh"] = year_total
     except Exception as error:
         system.setdefault("backend_errors", []).append(f"year energyInfo failed: {error}")
+
+    try:
+        now = dt.datetime.now(IST)
+        system["daily"] = fetch_solax_month_daily(token, station_id, now.year, now.month)
+    except Exception as error:
+        system.setdefault("backend_errors", []).append(f"monthly daily energyInfo failed: {error}")
 
     return system
 

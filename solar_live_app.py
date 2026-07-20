@@ -71,7 +71,7 @@ DEFAULT_CONFIG = {
     "auto_report_plant_ids": [],
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-20-honest-graph-data-v83"
+APP_VERSION = "2026-07-20-solis-real-daily-v85"
 IST = ZoneInfo("Asia/Kolkata")
 VALID_ROLES = {"admin", "manager", "customer", "viewer"}
 PWA_ICON_FILES = {
@@ -1246,6 +1246,48 @@ class SolarLiveApp:
                     except (TypeError, ValueError):
                         generation = 0.0
                     records[(row_date.isoformat(), key)] = round(generation, 3)
+
+        fimer_path = PROJECT_DIR / "fimer_generation.json"
+        if fimer_path.exists():
+            try:
+                payload = json.loads(fimer_path.read_text(encoding="utf-8"))
+            except Exception:
+                payload = {}
+            for item in payload.get("plantEnergy", []) or []:
+                plant = item.get("plant", {})
+                key = plant_key("FIMER", plant.get("name", ""))
+                if key not in visible_keys or not user_can_access(user, key):
+                    continue
+                for entry in item.get("daily", []) or []:
+                    row_date = parse_iso_date(entry.get("date"))
+                    if not row_date:
+                        continue
+                    try:
+                        generation = float(entry.get("generation_kwh") or 0)
+                    except (TypeError, ValueError):
+                        generation = 0.0
+                    records[(row_date.isoformat(), key)] = round(generation, 3)
+
+        for brand, path in (("Solis", PROJECT_DIR / "solis_generation.json"), ("SolaX", PROJECT_DIR / "solax_generation.json")):
+            if not path.exists():
+                continue
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            for system in payload.get("systems", []) or []:
+                key = plant_key(brand, system.get("name") or system.get("station_name") or "")
+                if key not in visible_keys or not user_can_access(user, key):
+                    continue
+                for entry in system.get("daily", []) or []:
+                    row_date = parse_iso_date(entry.get("date"))
+                    if not row_date:
+                        continue
+                    try:
+                        generation = float(entry.get("generation_kwh") or 0)
+                    except (TypeError, ValueError):
+                        generation = 0.0
+                    records[(row_date.isoformat(), key)] = round(generation, 3)
         return records
 
     def history_payload(self, plant_key_value: str, user: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -1554,6 +1596,7 @@ class SolarLiveApp:
         month: int | None = None,
         year: int | None = None,
     ) -> dict[str, Any]:
+        effective_user = user or {"role": "admin", "plants": ["*"]}
         today = ist_today()
         target_year = year if year and 2000 <= year <= 2100 else today.year
         target_month = month if month and 1 <= month <= 12 else today.month
@@ -1565,7 +1608,7 @@ class SolarLiveApp:
         if target_year == today.year and target_month == today.month:
             month_end = min(month_end, today)
         allowed_keys = set(plant_keys or [])
-        current_rows = self.plant_payload(user or {"role": "admin", "plants": ["*"]})
+        current_rows = self.plant_payload(effective_user)
         if allowed_keys:
             current_rows = [plant for plant in current_rows if plant.get("plantKey") in allowed_keys]
         visible_keys = {str(plant.get("plantKey") or "") for plant in current_rows}
@@ -1583,7 +1626,7 @@ class SolarLiveApp:
         history_by_key: dict[str, list[dict[str, Any]]] = {}
         for row in self.load_history():
             key = row.get("plantKey")
-            if key not in visible_keys or not user_can_access(user, key):
+            if key not in visible_keys or not user_can_access(effective_user, key):
                 continue
             row_date = parse_iso_date(row.get("date"))
             if not row_date:
@@ -1603,7 +1646,7 @@ class SolarLiveApp:
                     continue
                 by_day_plant[(row_date.isoformat(), key)] = daily
 
-        for (date_key, key), generation in self.actual_daily_generation_records(visible_keys, user).items():
+        for (date_key, key), generation in self.actual_daily_generation_records(visible_keys, effective_user).items():
             row_date = parse_iso_date(date_key)
             if row_date and month_start <= row_date <= month_end:
                 by_day_plant[(date_key, key)] = generation

@@ -143,7 +143,27 @@ def main():
                 sdt=iso_utc(start),
                 edt=iso_utc(now),
             )
-        plant_energy.append({"plant": plant, "values": values})
+        daily = []
+        cursor = ranges["month"]
+        while cursor.date() <= now.date():
+            day_end = min(cursor + dt.timedelta(days=1), now)
+            day_value = get_json(
+                session,
+                f"/telemetry/v1/plants/{plant['entityID']}/energy/GenerationEnergy",
+                agp="All",
+                afx="Delta",
+                sdt=iso_utc(cursor),
+                edt=iso_utc(day_end),
+            )
+            body = (day_value.get("body") or []) if day_value.get("status") == 200 else []
+            daily.append(
+                {
+                    "date": cursor.date().isoformat(),
+                    "generation_kwh": body[0].get("value", 0) if body else 0,
+                }
+            )
+            cursor = cursor + dt.timedelta(days=1)
+        plant_energy.append({"plant": plant, "values": values, "daily": daily})
 
     payload = {
         "plants": plants,
