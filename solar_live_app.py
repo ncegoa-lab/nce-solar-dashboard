@@ -71,7 +71,7 @@ DEFAULT_CONFIG = {
     "auto_report_plant_ids": [],
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-20-solis-real-daily-v85"
+APP_VERSION = "2026-07-23-username-password-fallback-v87"
 IST = ZoneInfo("Asia/Kolkata")
 VALID_ROLES = {"admin", "manager", "customer", "viewer"}
 PWA_ICON_FILES = {
@@ -914,6 +914,10 @@ def refresh_python() -> str:
     return str(VENV_PYTHON if VENV_PYTHON.exists() else BUNDLED_PYTHON if BUNDLED_PYTHON.exists() else "python3")
 
 
+def cloud_runtime() -> bool:
+    return any(os.environ.get(key) for key in ("PORT", "RENDER", "RAILWAY_ENVIRONMENT", "FLY_APP_NAME"))
+
+
 def local_ip() -> str:
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
@@ -976,6 +980,7 @@ class SolarLiveApp:
         return max(candidates) if candidates else ""
 
     def plant_payload(self, user: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+        effective_user = user or {"role": "admin", "plants": ["*"]}
         df = self.plant_dataframe()
         today = ist_today().isoformat()
         latest_history = self.latest_history_by_key(user)
@@ -989,7 +994,7 @@ class SolarLiveApp:
         rows = []
         for row in df.to_dict(orient="records"):
             key = plant_key(row["Brand"], row["Site Name"])
-            if not user_can_access(user, key):
+            if not user_can_access(effective_user, key):
                 continue
             timestamp = str(row.get("Timestamp") or "")
             data_date = timestamp_to_ist_date(timestamp)
@@ -1061,7 +1066,44 @@ class SolarLiveApp:
                 plant["latestGenerationDate"] = plant["dataDate"]
                 plant["syncWarning"] = "" if plant["fresh"] or str(plant["status"]).lower() == "offline" else f"Data not updated - Last successful sync: {plant['lastSuccessfulSync'] or 'unknown'}"
             rows.append(plant)
+        keys = {str(plant.get("plantKey") or "") for plant in rows}
+        month_start = ist_today().replace(day=1)
+        daily_records = self.actual_daily_generation_records(keys, effective_user)
+        month_by_key: dict[str, float] = {key: 0.0 for key in keys}
+        series_by_key: dict[str, list[tuple[dt.date, float]]] = {key: [] for key in keys}
+        for (date_key, key), generation in daily_records.items():
+            row_date = parse_iso_date(date_key)
+            if not row_date or row_date < month_start or row_date > ist_today():
+                continue
+            month_by_key[key] = month_by_key.get(key, 0.0) + float(generation or 0)
+            series_by_key.setdefault(key, []).append((row_date, float(generation or 0)))
+        for plant in rows:
+            key = str(plant.get("plantKey") or "")
+            if plant.get("dataDate") == today and (today, key) not in daily_records:
+                month_by_key[key] = month_by_key.get(key, 0.0) + float(plant.get("daily") or 0)
+                series_by_key.setdefault(key, []).append((ist_today(), float(plant.get("daily") or 0)))
+            plant["month"] = round(month_by_key.get(key, 0.0), 3)
+            plant["remark"] = self.monthly_drop_remark(series_by_key.get(key, []))
         return rows
+
+    def monthly_drop_remark(self, rows: list[tuple[dt.date, float]]) -> str:
+        previous: tuple[dt.date, float] | None = None
+        worst: tuple[dt.date, float, float, float] | None = None
+        for row_date, value in sorted(rows, key=lambda item: item[0]):
+            if value <= 0:
+                continue
+            if previous and previous[1] > 0:
+                drop_percent = (previous[1] - value) / previous[1] * 100
+                if drop_percent >= 25 and (not worst or drop_percent > worst[1]):
+                    worst = (row_date, drop_percent, previous[1], value)
+            previous = (row_date, value)
+        if not worst:
+            return ""
+        row_date, drop_percent, previous_value, value = worst
+        return (
+            f"Sudden drop {drop_percent:.1f}% on {row_date.strftime('%d/%m/%Y')} "
+            f"({previous_value:.1f} to {value:.1f} kWh). Please recheck."
+        )
 
     def all_plant_options(self) -> list[dict[str, Any]]:
         df = self.plant_dataframe()
@@ -1500,6 +1542,26 @@ class SolarLiveApp:
                     solis_capture = solis_capture_status()
                     if solis_capture["exists"]:
                         self.append_refresh_step(self.run_step("Solis fallback import from latest capture", [refresh_py, "./solis_capture_to_generation.py"], env))
+            elif env.get("SOLIS_USERNAME") and env.get("SOLIS_PASSWORD") and not cloud_runtime():
+                step = self.run_step("Solis username/password capture", [refresh_py, "./solis_manual_login_capture.py"], env)
+                self.append_refresh_step(step)
+                if step.get("ok"):
+                    self.append_refresh_step(self.run_step("Solis import from username/password capture", [refresh_py, "./solis_capture_to_generation.py"], env))
+                else:
+                    solis_capture = solis_capture_status()
+                    if solis_capture["exists"]:
+                        self.append_refresh_step(self.run_step("Solis fallback import from latest capture", [refresh_py, "./solis_capture_to_generation.py"], env))
+            elif env.get("SOLIS_USERNAME") and env.get("SOLIS_PASSWORD") and cloud_runtime():
+                now = ist_now().isoformat(timespec="seconds")
+                self.append_refresh_step(
+                    {
+                        "label": "Solis username/password refresh skipped",
+                        "ok": False,
+                        "started": now,
+                        "finished": now,
+                        "message": "Solis username/password login requires an interactive browser/CAPTCHA, so Render cloud refresh needs SOLIS_KEY_ID and SOLIS_KEY_SECRET.",
+                    }
+                )
             else:
                 solis_capture = solis_capture_status()
                 if solis_capture["exists"]:
@@ -1520,7 +1582,7 @@ class SolarLiveApp:
                         }
                     )
 
-            if env.get("SOLAX_TOKEN_ID"):
+            if env.get("SOLAX_TOKEN_ID") or (env.get("SOLAX_USERNAME") and env.get("SOLAX_PASSWORD")):
                 step = self.run_step("SolaX API refresh", [refresh_py, "./solax_api_export_generation.py"], env)
                 self.append_refresh_step(step)
                 if not step.get("ok"):
@@ -1808,6 +1870,7 @@ class SolarLiveApp:
         month: int | None = None,
         year: int | None = None,
         target_date: dt.date | None = None,
+        mode: str = "daily",
     ) -> tuple[str, list[dict[str, Any]]]:
         allowed_keys = set(plant_keys or [])
         visible_plants = self.plant_payload(user or {"role": "admin", "plants": ["*"]})
@@ -1819,32 +1882,41 @@ class SolarLiveApp:
             else f"{len(visible_plants)} selected plants"
         )
         if chart_type == "perkw":
+            metric_map = {
+                "daily": ("Daily", "daily"),
+                "weekly": ("Weekly", "weekly"),
+                "monthly": ("Monthly", "month"),
+                "yearly": ("Yearly", "year"),
+            }
+            metric_label, metric_key = metric_map.get(str(mode).lower(), metric_map["daily"])
             rows = []
-            today = ist_today().isoformat()
             for plant in visible_plants:
                 capacity = float(plant.get("capacity") or 0)
-                daily = float(plant.get("daily") or 0)
-                per_kw = daily / capacity if capacity > 0 else 0.0
+                generation = float(plant.get(metric_key) or 0)
+                per_kw = generation / capacity if capacity > 0 else 0.0
                 rows.append(
                     {
                         "Plant": plant.get("site", ""),
                         "Date": plant.get("dataDate", ""),
                         "Status": plant.get("status", ""),
                         "Capacity (kW)": round(capacity, 3),
-                        "Today's Generation (kWh)": round(daily, 3),
+                        f"{metric_label} Generation (kWh)": round(generation, 3),
                         "Per-kW Generation (kWh/kW)": round(per_kw, 3),
+                        "Remark": plant.get("remark", ""),
                     }
                 )
             rows.sort(key=lambda row: float(row["Per-kW Generation (kWh/kW)"] or 0), reverse=True)
-            return "Today's Per-kW Generation - Ranked Best to Lowest", [
+            generation_key = f"{metric_label} Generation (kWh)"
+            return f"{metric_label} Per-kW Generation - Ranked Best to Lowest", [
                 {
                     "Rank": index,
                     "Plant": plant["Plant"],
                     "Date": plant["Date"],
                     "Status": plant["Status"],
                     "Capacity (kW)": plant["Capacity (kW)"],
-                    "Today's Generation (kWh)": plant["Today's Generation (kWh)"],
+                    generation_key: plant[generation_key],
                     "Per-kW Generation (kWh/kW)": plant["Per-kW Generation (kWh/kW)"],
+                    "Remark": plant["Remark"],
                 }
                 for index, plant in enumerate(rows, start=1)
             ]
@@ -1884,8 +1956,9 @@ class SolarLiveApp:
         month: int | None = None,
         year: int | None = None,
         target_date: dt.date | None = None,
+        mode: str = "daily",
     ) -> bytes:
-        _title, rows = self.chart_export_rows(chart_type, plant_keys, user, month=month, year=year, target_date=target_date)
+        _title, rows = self.chart_export_rows(chart_type, plant_keys, user, month=month, year=year, target_date=target_date, mode=mode)
         output = io.StringIO()
         fieldnames = list(rows[0].keys()) if rows else ["Period", "Generation (kWh)"]
         writer = csv.DictWriter(output, fieldnames=fieldnames)
@@ -1901,13 +1974,14 @@ class SolarLiveApp:
         month: int | None = None,
         year: int | None = None,
         target_date: dt.date | None = None,
+        mode: str = "daily",
     ) -> bytes:
         from reportlab.lib import colors
         from reportlab.lib.pagesizes import A4
         from reportlab.lib.styles import getSampleStyleSheet
         from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 
-        _title, rows = self.chart_export_rows(chart_type, plant_keys, user, month=month, year=year, target_date=target_date)
+        _title, rows = self.chart_export_rows(chart_type, plant_keys, user, month=month, year=year, target_date=target_date, mode=mode)
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=28, rightMargin=28, topMargin=28, bottomMargin=28)
         fieldnames = list(rows[0].keys()) if rows else ["Period", "Generation (kWh)"]
@@ -2274,7 +2348,7 @@ class Handler(BaseHTTPRequestHandler):
                 user = self.require_auth(html=True)
                 if load_users() and not user:
                     return
-                wait_seconds = 75 if APP.config.get("auto_refresh_on_open") and APP.stale_online_count() else 0
+                wait_seconds = 0
                 APP.refresh_on_open(wait_seconds=wait_seconds)
                 bootstrap = {
                     "plants": APP.plant_payload(user),
@@ -2395,8 +2469,11 @@ class Handler(BaseHTTPRequestHandler):
             month = int((query.get("month") or [0])[0] or 0)
             year = int((query.get("year") or [0])[0] or 0)
             target_date = parse_iso_date((query.get("date") or [""])[0])
-            title, rows = APP.chart_export_rows(chart_type, keys, user, month=month, year=year, target_date=target_date)
+            mode = (query.get("mode") or ["daily"])[0]
+            title, rows = APP.chart_export_rows(chart_type, keys, user, month=month, year=year, target_date=target_date, mode=mode)
             base_items = [("type", chart_type)] + [("plant_key", key) for key in keys]
+            if chart_type == "perkw":
+                base_items.append(("mode", mode))
             if month:
                 base_items.append(("month", str(month)))
             if year:
@@ -2424,7 +2501,8 @@ class Handler(BaseHTTPRequestHandler):
             month = int((query.get("month") or [0])[0] or 0)
             year = int((query.get("year") or [0])[0] or 0)
             target_date = parse_iso_date((query.get("date") or [""])[0])
-            self.send_bytes(APP.chart_csv_bytes(chart_type, keys, user, month=month, year=year, target_date=target_date), "text/csv; charset=utf-8", f"{chart_type}_generation.csv")
+            mode = (query.get("mode") or ["daily"])[0]
+            self.send_bytes(APP.chart_csv_bytes(chart_type, keys, user, month=month, year=year, target_date=target_date, mode=mode), "text/csv; charset=utf-8", f"{chart_type}_generation.csv")
         elif parsed.path == "/chart-pdf":
             query = urllib.parse.parse_qs(parsed.query)
             chart_type = (query.get("type") or ["today"])[0]
@@ -2432,7 +2510,8 @@ class Handler(BaseHTTPRequestHandler):
             month = int((query.get("month") or [0])[0] or 0)
             year = int((query.get("year") or [0])[0] or 0)
             target_date = parse_iso_date((query.get("date") or [""])[0])
-            self.send_bytes(APP.chart_pdf_bytes(chart_type, keys, user, month=month, year=year, target_date=target_date), "application/pdf", f"{chart_type}_generation.pdf")
+            mode = (query.get("mode") or ["daily"])[0]
+            self.send_bytes(APP.chart_pdf_bytes(chart_type, keys, user, month=month, year=year, target_date=target_date, mode=mode), "application/pdf", f"{chart_type}_generation.pdf")
         elif parsed.path.startswith("/reports/"):
             relative = urllib.parse.unquote(parsed.path[len("/reports/") :])
             path = (APP.output_dir / relative).resolve()
@@ -2882,8 +2961,17 @@ section.panel tr.open td:nth-child(3)::after{content:'-'}
   </div>
   <div class="grid" id="cards"></div>
   <div class="main-charts">
-    <section class="chart-card main-chart" id="perKwChartCard" title="Open today's hourly details">
-      <div class="chart-head"><h2>Today's Per-kW Generation</h2><span class="chart-total" id="perKwChartTotal"></span></div>
+    <section class="chart-card main-chart" id="perKwChartCard" title="Open per-kW details">
+      <div class="chart-head">
+        <h2 id="perKwTitle">Today's Per-kW Generation</h2>
+        <span class="production-tabs" id="perKwTabs">
+          <button type="button" data-mode="daily" class="active">DAILY</button>
+          <button type="button" data-mode="weekly">WEEKLY</button>
+          <button type="button" data-mode="monthly">MONTHLY</button>
+          <button type="button" data-mode="yearly">YEARLY</button>
+        </span>
+        <span class="chart-total" id="perKwChartTotal"></span>
+      </div>
       <div class="bar-chart" id="perKwChart"></div>
     </section>
     <section class="chart-card main-chart" id="monthlyChartCard" title="Open daily monthly details">
@@ -2901,7 +2989,7 @@ section.panel tr.open td:nth-child(3)::after{content:'-'}
   <div class="split dashboard-split">
     <section class="panel">
       <h2>Plants</h2>
-      <table><thead><tr><th class="checkcell"></th><th>Brand</th><th>Plant</th><th>Status</th><th>Last Updated</th><th>Daily</th><th>Weekly</th><th>Yearly</th><th>CUF</th></tr></thead><tbody id="rows"></tbody></table>
+      <table><thead><tr><th class="checkcell"></th><th>Brand</th><th>Plant</th><th>Status</th><th>Last Updated</th><th>Daily</th><th>Weekly</th><th>Monthly</th><th>Yearly</th><th>CUF</th><th>Remark</th></tr></thead><tbody id="rows"></tbody></table>
     </section>
     <aside class="panel side-panel">
       <details class="fold mobile-fold" open>
@@ -2957,7 +3045,7 @@ section.panel tr.open td:nth-child(3)::after{content:'-'}
 </main>
 <script>window.__BOOTSTRAP__=__BOOTSTRAP_JSON__;</script>
 <script>
-let plants=[], selected=new Set(), statusData={}, activePlantId=null, activeHistoryKey='', activeTodayChartKey='', openRefreshStarted=false, monthlyChartKey='', refreshInFlight=false, autoRefreshTimer=null, productionMode='day', productionDate='', manualProductionMode=false;
+let plants=[], selected=new Set(), statusData={}, activePlantId=null, activeHistoryKey='', activeTodayChartKey='', openRefreshStarted=false, monthlyChartKey='', refreshInFlight=false, autoRefreshTimer=null, productionMode='day', productionDate='', manualProductionMode=false, perKwMode='daily';
 const searchInput=document.querySelector('#search');
 const brandFilter=document.querySelector('#brand');
 const statusFilter=document.querySelector('#status');
@@ -2965,6 +3053,8 @@ const cardsEl=document.querySelector('#cards');
 const perKwChartEl=document.querySelector('#perKwChart');
 const perKwChartCardEl=document.querySelector('#perKwChartCard');
 const perKwChartTotalEl=document.querySelector('#perKwChartTotal');
+const perKwTitleEl=document.querySelector('#perKwTitle');
+const perKwTabsEl=document.querySelector('#perKwTabs');
 const selectedTodayChartEl=document.querySelector('#selectedTodayChart');
 const selectedTodayChartCardEl=document.querySelector('#selectedTodayChartCard');
 const selectedTodayTitleEl=document.querySelector('#selectedTodayTitle');
@@ -3021,7 +3111,7 @@ function weightedCuf(rows){const cap=rows.reduce((a,p)=>a+Number(p.capacity||0),
 async function api(path,opt={}){const sep=path.includes('?')?'&':'?';const url=path+sep+'_ts='+Date.now();const r=await fetch(url,{cache:'no-store',...opt,headers:{'Cache-Control':'no-cache',...(opt.headers||{})}});const text=await r.text();let data={};try{data=text?JSON.parse(text):{};}catch(e){throw new Error(`${path} returned ${r.status}: ${text.slice(0,240)||'empty response'}`)}if(r.status===401){window.location='/login';throw new Error('Login required')}if(!r.ok){throw new Error(data.error||`${path} returned ${r.status}`)}return data}
 function filtered(){const q=searchInput.value.toLowerCase(), b=brandFilter.value, s=statusFilter.value;return plants.filter(p=>(b==='custom'?selected.has(p.id):(b==='all'||p.brand===b))&&(s==='all'||p.status===s)&&(`${p.site} ${p.brand}`.toLowerCase().includes(q)))}
 function selectedRows(){return plants.filter(p=>selected.has(p.id))}
-function chartQuery(type,rows){rows=rows||filtered();let query='type='+encodeURIComponent(type);if(!rows.length){query+='&plant_key=__none__'}else{rows.forEach(p=>query+='&plant_key='+encodeURIComponent(p.plantKey))}if(type==='monthly'){query+='&month='+encodeURIComponent(monthSelectEl.value||'')+'&year='+encodeURIComponent(yearSelectEl.value||'')}if(type==='today'){query+='&date='+encodeURIComponent(productionDateValue())}return query}
+function chartQuery(type,rows){rows=rows||filtered();let query='type='+encodeURIComponent(type);if(!rows.length){query+='&plant_key=__none__'}else{rows.forEach(p=>query+='&plant_key='+encodeURIComponent(p.plantKey))}if(type==='monthly'){query+='&month='+encodeURIComponent(monthSelectEl.value||'')+'&year='+encodeURIComponent(yearSelectEl.value||'')}if(type==='today'){query+='&date='+encodeURIComponent(productionDateValue())}if(type==='perkw'){query+='&mode='+encodeURIComponent(perKwMode)}return query}
 function productionDateValue(){return productionDatePickEl.value||productionDate||todayText()}
 function productionYear(){return Number(productionDateValue().slice(0,4))||Number(todayText().slice(0,4))}
 function productionMonth(){return Number(productionDateValue().slice(5,7))||Number(todayText().slice(5,7))}
@@ -3037,7 +3127,9 @@ function setupDateSelectors(){const monthNames=['January','February','March','Ap
 function renderFilters(){const oldBrand=brandFilter.value||'all', oldStatus=statusFilter.value||'all';const brands=uniq(plants.map(p=>p.brand)), statuses=uniq(plants.map(p=>p.status));brandFilter.innerHTML='<option value="all">All Brands</option><option value="custom">Custom</option>'+brands.map(x=>`<option>${x}</option>`).join('');statusFilter.innerHTML='<option value="all">All Status</option>'+statuses.map(x=>`<option>${x}</option>`).join('');brandFilter.value=(oldBrand==='custom'||brands.includes(oldBrand))?oldBrand:'all';statusFilter.value=statuses.includes(oldStatus)?oldStatus:'all'}
 function shortName(name){return String(name||'').replace(/\b(plant|solar|spv|kw)\b/gi,'').trim().slice(0,16)||'Plant'}
 function renderBars(el,totalEl,rows,key,unit='kWh',barClass=''){const top=[...rows].sort((a,b)=>Number(b[key]||0)-Number(a[key]||0));const total=rows.reduce((a,p)=>a+Number(p[key]||0),0);const max=Math.max(...top.map(p=>Number(p[key]||0)),1);totalEl.textContent=`${f(total)} ${unit}`;el.innerHTML=top.length?top.map(p=>{const value=Number(p[key]||0);const height=Math.max(value>0?2:1,value/max*100);return `<div class="bar-item" title="${h(p.site)} | Capacity: ${f(p.capacity)} kW | ${f(value)} ${unit}"><div class="bar-value">${f(value,1)}</div><div class="bar ${barClass}" style="height:${height}%"></div><div class="bar-label">${h(shortName(p.site))}</div></div>`}).join(''):'<div class="empty-history">Select one or more plants.</div>'}
-function renderPerKw(rows){const data=rows.map(p=>({...p,perKw:Number(p.capacity||0)>0?Number(p.daily||0)/Number(p.capacity||0):0}));const max=Math.max(...data.map(p=>p.perKw),1);perKwChartTotalEl.textContent=data.length?'All visible · kWh/kW':'No plant data';perKwChartEl.innerHTML=data.length?data.map(p=>{const height=Math.max(p.perKw>0?2:1,p.perKw/max*100);const cap=Number(p.capacity||0);const title=cap>0?`${h(p.site)}: ${f(p.perKw)} kWh/kW (${f(p.daily)} kWh / ${f(cap)} kW)${staleOnline(p)?' | No current data for today':''}`:`${h(p.site)}: Capacity missing, shown as 0.00 kWh/kW`;return `<div class="bar-item" title="${title}"><div class="bar-value">${f(p.perKw)}</div><div class="bar perkw" style="height:${height}%"></div><div class="bar-label">${h(shortName(p.site))}</div></div>`}).join(''):'<div class="empty-history">No visible plant data.</div>'}
+function perKwMetric(p){const metric=({daily:'daily',weekly:'weekly',monthly:'month',yearly:'year'}[perKwMode]||'daily');return Number(p[metric]||0)}
+function perKwTitle(){return ({daily:"Today's Per-kW Generation",weekly:'Weekly Per-kW Generation',monthly:'Monthly Per-kW Generation',yearly:'Yearly Per-kW Generation'}[perKwMode]||"Today's Per-kW Generation")}
+function renderPerKw(rows){const data=rows.map(p=>{const value=perKwMetric(p);const cap=Number(p.capacity||0);return {...p,metricValue:value,perKw:cap>0?value/cap:0}}).sort((a,b)=>Number(b.perKw||0)-Number(a.perKw||0));const max=Math.max(...data.map(p=>p.perKw),1);perKwTitleEl.textContent=perKwTitle();perKwChartTotalEl.textContent=data.length?`${perKwMode.toUpperCase()} · kWh/kW`:'No plant data';perKwTabsEl.querySelectorAll('button').forEach(btn=>btn.classList.toggle('active',btn.dataset.mode===perKwMode));perKwChartEl.innerHTML=data.length?data.map(p=>{const height=Math.max(p.perKw>0?2:1,p.perKw/max*100);const cap=Number(p.capacity||0);const title=cap>0?`${h(p.site)}: ${f(p.perKw)} kWh/kW (${f(p.metricValue)} kWh / ${f(cap)} kW)${p.remark?' | '+h(p.remark):''}${staleOnline(p)?' | No current data for today':''}`:`${h(p.site)}: Capacity missing, shown as 0.00 kWh/kW`;return `<div class="bar-item" title="${title}"><div class="bar-value">${f(p.perKw)}</div><div class="bar perkw" style="height:${height}%"></div><div class="bar-label">${h(shortName(p.site))}</div></div>`}).join(''):'<div class="empty-history">No visible plant data.</div>'}
 function colorFor(i){return ['#174f9c','#18b9d6','#16845f','#f59e0b','#7c3aed','#ef4444','#0891b2','#4f46e5'][i%8]}
 function renderMonthlyGrouped(data){const days=data.days||[], plantsList=data.plants||[];const max=Math.max(...days.map(d=>Number(d.generation||0)),1);monthlyChartTotalEl.textContent=`${h(data.month||'Month')} · ${f(data.total)} kWh`;if(!plantsList.length){monthlyChartEl.innerHTML='<div class="empty-history">No visible plant data.</div>';return}monthlyChartEl.innerHTML=days.length?days.map(d=>{const value=Number(d.generation||0);const missing=d.dataStatus&&d.dataStatus!=='Actual';const height=Math.max(value>0?2:1,value/max*100);const fill=missing?'#cbd5e1':'linear-gradient(180deg,#34d399,var(--green))';return `<div class="day-group" title="${h(d.date)} total all visible plants: ${f(value)} kWh · ${h(d.dataStatus||'Actual')}"><div class="day-bars"><div class="mini-bar" style="height:${height}%;background:${fill}" title="${h(d.date)} · ${f(value)} kWh · ${h(d.dataStatus||'Actual')}"></div></div><div class="bar-label">${h(d.day)}</div></div>`}).join(''):'<div class="empty-history">No monthly data</div>'}
 async function loadMonthlyChart(rows){const key=rows.map(p=>`${p.plantKey}:${p.dataDate}:${p.daily}`).sort().join('|')+`|${monthSelectEl.value}|${yearSelectEl.value}`;if(key===monthlyChartKey)return;monthlyChartKey=key;monthlyChartEl.innerHTML='<div class="empty-history">Loading month...</div>';const query=rows.map(p=>'plant_key='+encodeURIComponent(p.plantKey)).join('&')+'&month='+encodeURIComponent(monthSelectEl.value||'')+'&year='+encodeURIComponent(yearSelectEl.value||'');try{renderMonthlyGrouped(await api('/api/monthly-generation?'+query))}catch(error){monthlyChartEl.innerHTML='<div class="empty-history">Monthly graph failed: '+h(error.message)+'</div>'}}
@@ -3061,11 +3153,11 @@ historyTable('All Weekly',weekly,[['Week','week'],['Daily Sum','dailySum',1],['W
 historyTable('All Yearly',yearly,[['Year','year'],['Year kWh','yearKwh',1],['Latest Date','lastDate']],false)
 ].join('')}
 async function loadHistory(active){const key=active?.plantKey||'';activeHistoryKey=key;const box=document.querySelector('#historyBox');if(!box||!key)return;box.innerHTML='<div class="empty-history">Loading previous data...</div>';try{const data=await api('/api/history?plant_key='+encodeURIComponent(key));if(activeHistoryKey===key){box.innerHTML=renderHistory(data);wireHistoryPickers(data)}}catch(error){if(activeHistoryKey===key)box.innerHTML='<div class="empty-history">History failed: '+h(error.message)+'</div>';}}
-function renderDetail(active){if(!active){detailEl.innerHTML='<div class="empty-history">Tap a plant name to view details.</div>';return}detailEl.innerHTML=`<div class="plant-title">${h(active.site)}</div><p>${h(active.brand)} · <span class="status ${cls(active.status)}">${h(active.status)}</span></p>${staleNote(active)?`<p class="stale">${h(staleNote(active))}</p>`:''}<div class="details"><div class="detail"><span>Data Date</span><b>${h(active.dataDate||'Unknown')}</b></div><div class="detail"><span>Capacity</span><b>${f(active.capacity)} kW</b></div><div class="detail"><span>Daily</span><b>${f(active.daily)} kWh</b></div><div class="detail"><span>Weekly</span><b>${f(active.weekly)} kWh</b></div><div class="detail"><span>Yearly</span><b>${f(active.year)} kWh</b></div><div class="detail"><span>CUF</span><b>${f(active.cuf)}%</b></div><div class="detail"><span>Total</span><b>${f(active.total)} MWh</b></div></div><div id="historyBox" class="history-block"></div>`;loadHistory(active)}
-function renderSelectedPlantDetails(rows){selectedPlantDetailsEl.innerHTML=rows.length?rows.map(p=>`<div class="selected-card ${cls(p.status)}"><b>${h(p.site)}</b><span>Capacity: ${f(p.capacity)} kW</span><span>Current Power: ${f(p.currentPower)} kW</span><span>Today's Generation: ${f(p.daily)} kWh</span><span>Status: ${h(p.status)}</span><span>Last Updated: ${h(rowLastUpdatedText(p)||'Unavailable')}</span>${p.syncWarning?`<span class="stale">${h(p.syncWarning)}</span>`:''}</div>`).join(''):'<div class="empty-history">Click a plant name to see details and graphs.</div>'}
+function renderDetail(active){if(!active){detailEl.innerHTML='<div class="empty-history">Tap a plant name to view details.</div>';return}detailEl.innerHTML=`<div class="plant-title">${h(active.site)}</div><p>${h(active.brand)} · <span class="status ${cls(active.status)}">${h(active.status)}</span></p>${staleNote(active)?`<p class="stale">${h(staleNote(active))}</p>`:''}${active.remark?`<p class="warning">${h(active.remark)}</p>`:''}<div class="details"><div class="detail"><span>Data Date</span><b>${h(active.dataDate||'Unknown')}</b></div><div class="detail"><span>Capacity</span><b>${f(active.capacity)} kW</b></div><div class="detail"><span>Daily</span><b>${f(active.daily)} kWh</b></div><div class="detail"><span>Weekly</span><b>${f(active.weekly)} kWh</b></div><div class="detail"><span>Monthly</span><b>${f(active.month)} kWh</b></div><div class="detail"><span>Yearly</span><b>${f(active.year)} kWh</b></div><div class="detail"><span>CUF</span><b>${f(active.cuf)}%</b></div><div class="detail"><span>Total</span><b>${f(active.total)} MWh</b></div></div><div id="historyBox" class="history-block"></div>`;loadHistory(active)}
+function renderSelectedPlantDetails(rows){selectedPlantDetailsEl.innerHTML=rows.length?rows.map(p=>`<div class="selected-card ${cls(p.status)}"><b>${h(p.site)}</b><span>Capacity: ${f(p.capacity)} kW</span><span>Current Power: ${f(p.currentPower)} kW</span><span>Today's Generation: ${f(p.daily)} kWh</span><span>Monthly Generation: ${f(p.month)} kWh</span><span>Status: ${h(p.status)}</span><span>Last Updated: ${h(rowLastUpdatedText(p)||'Unavailable')}</span>${p.remark?`<span class="stale">${h(p.remark)}</span>`:''}${p.syncWarning?`<span class="stale">${h(p.syncWarning)}</span>`:''}</div>`).join(''):'<div class="empty-history">Click a plant name to see details and graphs.</div>'}
 function render(){const rows=filtered(), chosen=selectedRows(), displayRows=currentDayRows(rows);let active=plants.find(p=>p.id===activePlantId);if(active && !rows.some(p=>p.id===active.id)){activePlantId=null;active=null}const activeDisplay=active?currentDayPlant(active):null;cardsEl.innerHTML=[['Visible',rows.length],['Selected',chosen.length],['Daily',f(displayRows.reduce((a,p)=>a+p.daily,0))+' kWh'],['Weekly',f(displayRows.reduce((a,p)=>a+p.weekly,0))+' kWh'],['Yearly',f(displayRows.reduce((a,p)=>a+p.year,0))+' kWh'],['CUF',f(weightedCuf(displayRows))+' %']].map(x=>`<div class="card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join('');
 renderPerKw(displayRows);renderSelectedPlantDetails(activeDisplay?[activeDisplay]:[]);loadActivePlantCharts(activeDisplay);loadMonthlyChart(rows);
-rowsEl.innerHTML=displayRows.map(p=>`<tr data-id="${p.id}" style="cursor:pointer" title="${h(p.syncWarning||'')}"><td data-label=""><input type="checkbox" data-id="${p.id}" ${selected.has(p.id)?'checked':''}></td><td data-label="Brand">${h(p.brand)}</td><td data-label="Plant"><span class="plant-line ${cls(p.status)}"><b>${h(p.site)}</b><span class="plant-daily">${f(p.daily)} kWh</span></span></td><td data-label="Status" class="status ${cls(p.status)}">${h(p.status)}</td><td data-label="Last Updated">${h(rowLastUpdatedText(p))}</td><td data-label="Daily">${f(p.daily)}</td><td data-label="Weekly">${f(p.weekly)}</td><td data-label="Yearly">${f(p.year)}</td><td data-label="CUF">${f(p.cuf)}%</td></tr>`).join('');
+rowsEl.innerHTML=displayRows.map(p=>`<tr data-id="${p.id}" style="cursor:pointer" title="${h(p.remark||p.syncWarning||'')}"><td data-label=""><input type="checkbox" data-id="${p.id}" ${selected.has(p.id)?'checked':''}></td><td data-label="Brand">${h(p.brand)}</td><td data-label="Plant"><span class="plant-line ${cls(p.status)}"><b>${h(p.site)}</b><span class="plant-daily">${f(p.daily)} kWh</span></span></td><td data-label="Status" class="status ${cls(p.status)}">${h(p.status)}</td><td data-label="Last Updated">${h(rowLastUpdatedText(p))}</td><td data-label="Daily">${f(p.daily)}</td><td data-label="Weekly">${f(p.weekly)}</td><td data-label="Monthly">${f(p.month)}</td><td data-label="Yearly">${f(p.year)}</td><td data-label="CUF">${f(p.cuf)}%</td><td data-label="Remark">${h(p.remark||'')}</td></tr>`).join('');
 rowsEl.querySelectorAll('tr[data-id]').forEach(tr=>{if(tr.dataset.id===activePlantId)tr.classList.add('open');tr.onclick=()=>{const nextId=tr.dataset.id===activePlantId?null:tr.dataset.id;if(nextId&&nextId!==activePlantId){manualProductionMode=false;productionDate=todayText();productionDatePickEl.value=productionDate;setProductionMode('day');activeTodayChartKey=''}activePlantId=nextId;render()}});
 rowsEl.querySelectorAll('input[type=checkbox][data-id]').forEach(cb=>{cb.onclick=e=>e.stopPropagation();cb.onchange=()=>{cb.checked?selected.add(cb.dataset.id):selected.delete(cb.dataset.id);render()}});
 renderDetail(active);
@@ -3081,9 +3173,10 @@ function applyStatus(s){statusData=s||{};dateLineEl.textContent=istNowText();ver
 function applyPlants(nextPlants,opts={}){const keep=new Set(selected);plants=nextPlants||[];if(opts.preserveSelection!==false){const ids=new Set(plants.map(p=>p.id));selected=new Set([...keep].filter(id=>ids.has(id)))}else{selected=new Set()}renderFilters();render()}
 async function load(opts={}){const p=await api('/api/plants');const nextPlants=p.plants||[];const s=await api('/api/status');applyStatus(s);const staleRows=staleOnlineList(nextPlants);if(opts.openCheck!==false && s.config?.auto_refresh_on_open && staleRows.length && !openRefreshStarted){showOpeningRefreshPlaceholder(staleRows.length);await triggerOpenRefresh();return}applyPlants(nextPlants,opts);if(opts.reports!==false){loadReports();loadSchedules()}}
 async function pollRefresh(){let finalStatus={};for(let i=0;i<90;i++){const s=await api('/api/status');finalStatus=s.last_refresh||{};logEl.textContent=refreshText(finalStatus);await load({preserveSelection:true,reports:false});if(!finalStatus.running)return finalStatus;await new Promise(r=>setTimeout(r,3000));}return finalStatus}
-async function startRefresh(reason='manual'){const role=String(statusData.user?.role||'admin').toLowerCase();const canRefresh=role==='admin'||role==='manager';if(!canRefresh){if(reason==='manual')setWarning('Your user role can view data but cannot refresh inverter clouds.');return}if(refreshInFlight)return;if(reason==='auto' && document.hidden)return;refreshInFlight=true;setLoading(true);setWarning('');try{logEl.textContent='Starting background refresh...';const r=await api('/api/refresh',{method:'POST'});logEl.textContent=refreshText(r);const finalStatus=(r.accepted||r.running)?await pollRefresh():r;const warn=refreshWarning(finalStatus);if(warn)setWarning(warn);await load({preserveSelection:true,reports:reason!=='auto'});}catch(error){setWarning('Live refresh failed. Last successful data is still shown. '+error.message);logEl.textContent='Refresh failed: '+error.message;}finally{setLoading(false);refreshInFlight=false;}}
+async function startRefresh(reason='manual'){const role=String(statusData.user?.role||'admin').toLowerCase();const canRefresh=role==='admin'||role==='manager';if(!canRefresh){if(reason==='manual')setWarning('Your user role can view data but cannot refresh inverter clouds.');return}if(refreshInFlight)return;if(reason==='auto' && document.hidden)return;refreshInFlight=true;setLoading(true);setWarning('');try{logEl.textContent='Starting background refresh...';const r=await api('/api/refresh',{method:'POST'});logEl.textContent=refreshText(r);const finalStatus=(r.accepted||r.running)?await pollRefresh():r;const warn=refreshWarning(finalStatus);if(warn)setWarning(warn);await load({preserveSelection:true,reports:reason!=='auto'});}catch(error){setWarning('Live refresh failed. Last successful data is still shown. '+error.message);logEl.textContent='Refresh failed: '+error.message;try{await load({preserveSelection:true,reports:false,openCheck:false})}catch(_){}}finally{setLoading(false);refreshInFlight=false;}}
 function startAutoRefresh(){if(autoRefreshTimer)clearInterval(autoRefreshTimer);autoRefreshTimer=setInterval(()=>startRefresh('auto'),60000)}
 refreshBtn.onclick=()=>startRefresh('manual');
+perKwTabsEl.querySelectorAll('button').forEach(btn=>{btn.onclick=e=>{e.stopPropagation();perKwMode=btn.dataset.mode||'daily';render()}});
 async function generateReport(ids,label,all=false){reportResultEl.textContent='Generating '+label+'...';const r=await api('/api/report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plant_ids:ids,all_plants:all})});reportResultEl.innerHTML=r.ok?`Saved ${r.count} plant report.<br><a class="download-btn" href="${r.viewer_url}">Open Report</a>`:'Failed: '+h(r.message);if(r.ok)loadReports();}
 reportAllBtn.onclick=()=>generateReport([],'all plants report',true);
 reportPlantBtn.onclick=()=>{if(!activePlantId){reportResultEl.textContent='Tap a plant name first.';return}generateReport([activePlantId],'plant report')}
@@ -3099,7 +3192,7 @@ productionTabsEl.querySelectorAll('button').forEach(btn=>{btn.onclick=e=>{e.stop
 productionDatePickEl.onchange=e=>{productionDate=e.target.value||todayText();activeTodayChartKey='';if(productionMode==='month'||productionMode==='year'){monthSelectEl.value=String(productionMonth());yearSelectEl.value=String(productionYear())}render()};
 monthSelectEl.onchange=()=>{monthlyChartKey='';render()};yearSelectEl.onchange=()=>{monthlyChartKey='';render()};
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){load({preserveSelection:true,reports:false}).catch(error=>setWarning('Could not reload dashboard after returning: '+error.message));startRefresh('resume');}});
-searchInput.oninput=render;brandFilter.onchange=render;statusFilter.onchange=render;productionDate=todayText();productionDatePickEl.value=productionDate;setupDateSelectors();const boot=window.__BOOTSTRAP__||{};if(boot.status)applyStatus(boot.status);if(Array.isArray(boot.plants))applyPlants(boot.plants,{preserveSelection:false});startAutoRefresh();load({preserveSelection:true}).catch(error=>{setWarning('App load failed. Showing last loaded data. '+error.message);logEl.textContent='App load failed: '+error;});
+searchInput.oninput=render;brandFilter.onchange=render;statusFilter.onchange=render;productionDate=todayText();productionDatePickEl.value=productionDate;setupDateSelectors();const boot=window.__BOOTSTRAP__||{};if(boot.status)applyStatus(boot.status);const bootPlants=Array.isArray(boot.plants)?boot.plants:[];if(bootPlants.length&&boot.status?.config?.auto_refresh_on_open&&staleOnlineList(bootPlants).length){showOpeningRefreshPlaceholder(staleOnlineList(bootPlants).length)}else if(bootPlants.length){applyPlants(bootPlants,{preserveSelection:false})}startAutoRefresh();load({preserveSelection:true}).catch(error=>{setWarning('App load failed. Showing last loaded data. '+error.message);logEl.textContent='App load failed: '+error;});
 </script>
 </body></html>"""
 
