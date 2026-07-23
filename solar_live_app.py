@@ -60,6 +60,7 @@ ENV_FILE = PROJECT_DIR / ".solar_report_env"
 USERS_FILE = PROJECT_DIR / "solar_users.json"
 HISTORY_FILE = PROJECT_DIR / "solar_generation_history.json"
 HOURLY_HISTORY_FILE = PROJECT_DIR / "solar_generation_hourly_history.json"
+INTEGRATIONS_FILE = PROJECT_DIR / "solar_plant_integrations.json"
 BUNDLED_PYTHON = Path("/Users/sushil/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3")
 VENV_PYTHON = PROJECT_DIR / ".venv/bin/python"
 DEFAULT_CONFIG = {
@@ -71,9 +72,16 @@ DEFAULT_CONFIG = {
     "auto_report_plant_ids": [],
     "auto_refresh_on_open": True,
 }
-APP_VERSION = "2026-07-23-username-password-fallback-v87"
+APP_VERSION = "2026-07-23-universal-plant-registry-v88"
 IST = ZoneInfo("Asia/Kolkata")
 VALID_ROLES = {"admin", "manager", "customer", "viewer"}
+KNOWN_CONNECTORS = {
+    "goodwe": {"label": "GoodWe SEMS", "auth": ["username_password"], "automatic": True},
+    "fronius": {"label": "Fronius Solar.web", "auth": ["username_password"], "automatic": True},
+    "fimer": {"label": "FIMER Aurora Vision", "auth": ["username_password"], "automatic": True},
+    "solis": {"label": "SolisCloud", "auth": ["api_key", "username_password"], "automatic": "api_key"},
+    "solax": {"label": "SolaX Cloud", "auth": ["api_token", "username_password"], "automatic": True},
+}
 PWA_ICON_FILES = {
     "/favicon.png": PROJECT_DIR / "assets/nce_solar_icon_192.png",
     "/apple-touch-icon.png": PROJECT_DIR / "assets/nce_solar_icon_180.png",
@@ -336,6 +344,27 @@ def migrate_database() -> None:
                 )
                 """
             )
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS solar_app_integrations (
+                    id TEXT PRIMARY KEY,
+                    brand TEXT NOT NULL,
+                    plant_name TEXT NOT NULL,
+                    capacity_kw DOUBLE PRECISION NOT NULL DEFAULT 0,
+                    portal_url TEXT NOT NULL DEFAULT '',
+                    auth_type TEXT NOT NULL DEFAULT 'username_password',
+                    username TEXT NOT NULL DEFAULT '',
+                    password TEXT NOT NULL DEFAULT '',
+                    api_key_id TEXT NOT NULL DEFAULT '',
+                    api_key_secret TEXT NOT NULL DEFAULT '',
+                    plant_identifier TEXT NOT NULL DEFAULT '',
+                    status TEXT NOT NULL DEFAULT 'active',
+                    notes TEXT NOT NULL DEFAULT '',
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                )
+                """
+            )
             cur.execute("SELECT COUNT(*) AS count FROM solar_app_users")
             if int(cur.fetchone()["count"] or 0) == 0:
                 seed_users = load_file_users(include_env_admin=True)
@@ -441,6 +470,142 @@ def load_users() -> dict[str, dict[str, Any]]:
             if os.environ.get("RENDER"):
                 raise
     return load_file_users()
+
+
+def integration_key(brand: Any, plant_name: Any) -> str:
+    return plant_key(brand, plant_name)
+
+
+def sanitize_integration(raw: dict[str, Any], keep_secret: bool = False) -> dict[str, Any]:
+    brand = str(raw.get("brand") or "").strip()
+    plant_name = str(raw.get("plant_name") or raw.get("plantName") or raw.get("site") or "").strip()
+    item = {
+        "id": str(raw.get("id") or hashlib.sha1(f"{brand}::{plant_name}".encode("utf-8")).hexdigest()[:16]),
+        "brand": brand,
+        "plant_name": plant_name,
+        "capacity_kw": float(raw.get("capacity_kw") or raw.get("capacity") or 0),
+        "portal_url": str(raw.get("portal_url") or "").strip(),
+        "auth_type": str(raw.get("auth_type") or "username_password").strip(),
+        "username": str(raw.get("username") or "").strip(),
+        "password": str(raw.get("password") or "") if keep_secret else "",
+        "api_key_id": str(raw.get("api_key_id") or "").strip(),
+        "api_key_secret": str(raw.get("api_key_secret") or "") if keep_secret else "",
+        "plant_identifier": str(raw.get("plant_identifier") or raw.get("plant_id") or raw.get("serial") or "").strip(),
+        "status": str(raw.get("status") or "active").strip(),
+        "notes": str(raw.get("notes") or "").strip(),
+    }
+    connector = KNOWN_CONNECTORS.get(brand.lower())
+    if not connector:
+        item["connector_status"] = "Connector needed"
+    elif connector.get("automatic") is True:
+        item["connector_status"] = "Automatic refresh supported"
+    else:
+        item["connector_status"] = f"Automatic refresh needs {connector.get('automatic')}"
+    item["plant_key"] = integration_key(item["brand"], item["plant_name"])
+    item["password_set"] = bool(raw.get("password"))
+    item["api_key_secret_set"] = bool(raw.get("api_key_secret"))
+    return item
+
+
+def load_file_integrations(include_secret: bool = False) -> list[dict[str, Any]]:
+    if not INTEGRATIONS_FILE.exists():
+        return []
+    try:
+        payload = json.loads(INTEGRATIONS_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    rows = payload.get("integrations", []) if isinstance(payload, dict) else payload
+    return [sanitize_integration(row, keep_secret=include_secret) for row in rows if isinstance(row, dict)]
+
+
+def save_file_integrations(rows: list[dict[str, Any]]) -> None:
+    INTEGRATIONS_FILE.write_text(json.dumps({"integrations": rows}, indent=2), encoding="utf-8")
+
+
+def load_integrations(include_secret: bool = False) -> list[dict[str, Any]]:
+    if postgres_enabled():
+        migrate_database()
+        with db_connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT * FROM solar_app_integrations ORDER BY lower(brand), lower(plant_name)")
+                return [sanitize_integration(dict(row), keep_secret=include_secret) for row in cur.fetchall()]
+    return load_file_integrations(include_secret=include_secret)
+
+
+def upsert_integration(payload: dict[str, Any]) -> dict[str, Any]:
+    item = sanitize_integration(payload, keep_secret=True)
+    if not item["brand"] or not item["plant_name"]:
+        raise RuntimeError("Brand and plant name are required.")
+    if postgres_enabled():
+        migrate_database()
+        with db_connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO solar_app_integrations
+                    (id, brand, plant_name, capacity_kw, portal_url, auth_type, username, password, api_key_id, api_key_secret, plant_identifier, status, notes, updated_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                    ON CONFLICT (id) DO UPDATE SET
+                        brand = EXCLUDED.brand,
+                        plant_name = EXCLUDED.plant_name,
+                        capacity_kw = EXCLUDED.capacity_kw,
+                        portal_url = EXCLUDED.portal_url,
+                        auth_type = EXCLUDED.auth_type,
+                        username = EXCLUDED.username,
+                        password = CASE WHEN EXCLUDED.password = '' THEN solar_app_integrations.password ELSE EXCLUDED.password END,
+                        api_key_id = EXCLUDED.api_key_id,
+                        api_key_secret = CASE WHEN EXCLUDED.api_key_secret = '' THEN solar_app_integrations.api_key_secret ELSE EXCLUDED.api_key_secret END,
+                        plant_identifier = EXCLUDED.plant_identifier,
+                        status = EXCLUDED.status,
+                        notes = EXCLUDED.notes,
+                        updated_at = NOW()
+                    """,
+                    (
+                        item["id"],
+                        item["brand"],
+                        item["plant_name"],
+                        item["capacity_kw"],
+                        item["portal_url"],
+                        item["auth_type"],
+                        item["username"],
+                        item["password"],
+                        item["api_key_id"],
+                        item["api_key_secret"],
+                        item["plant_identifier"],
+                        item["status"],
+                        item["notes"],
+                    ),
+                )
+            conn.commit()
+        return sanitize_integration(item)
+    rows = load_file_integrations(include_secret=True)
+    replaced = False
+    for index, row in enumerate(rows):
+        if row["id"] == item["id"]:
+            if not item["password"]:
+                item["password"] = row.get("password", "")
+            if not item["api_key_secret"]:
+                item["api_key_secret"] = row.get("api_key_secret", "")
+            rows[index] = item
+            replaced = True
+            break
+    if not replaced:
+        rows.append(item)
+    save_file_integrations(rows)
+    return sanitize_integration(item)
+
+
+def delete_integration(integration_id: str) -> bool:
+    if postgres_enabled():
+        migrate_database()
+        with db_connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM solar_app_integrations WHERE id = %s", (integration_id,))
+            conn.commit()
+        return True
+    rows = [row for row in load_file_integrations(include_secret=True) if row["id"] != integration_id]
+    save_file_integrations(rows)
+    return True
 
 
 def load_file_schedules() -> list[dict[str, Any]]:
@@ -944,7 +1109,37 @@ class SolarLiveApp:
         try:
             df = load_data(current_project=True)
         except Exception:
-            return pd.DataFrame(columns=PLANT_COLUMNS)
+            df = pd.DataFrame(columns=[column for column in PLANT_COLUMNS if column != "App ID"])
+        registered_rows = []
+        existing_keys = {
+            plant_key(row["Brand"], row["Site Name"])
+            for row in df.to_dict(orient="records")
+            if row.get("Brand") and row.get("Site Name")
+        }
+        for item in load_integrations():
+            key = item.get("plant_key") or integration_key(item.get("brand"), item.get("plant_name"))
+            if item.get("status") == "disabled" or key in existing_keys:
+                continue
+            registered_rows.append(
+                {
+                    "Brand": item.get("brand"),
+                    "Site Name": item.get("plant_name"),
+                    "Plant Capacity (kW)": item.get("capacity_kw") or 0,
+                    "Current Status": "Connector Needed" if item.get("connector_status") == "Connector needed" else "Configured",
+                    "Daily Generation (kWh)": 0,
+                    "Weekly Generation (kWh)": 0,
+                    "Year Generation (kWh)": 0,
+                    "Current Power (kW)": 0,
+                    "Total Generation (MWh)": 0,
+                    "2026 Yield (kWh/kW)": 0,
+                    "Average Daily Yield (kWh/kW/day)": 0,
+                    "CUF (%)": 0,
+                    "Timestamp": ist_now().isoformat(timespec="seconds"),
+                    "Year Generation Source": item.get("connector_status", ""),
+                }
+            )
+        if registered_rows:
+            df = pd.concat([df, pd.DataFrame(registered_rows)], ignore_index=True)
         df = df.sort_values(["Brand", "Site Name"]).reset_index(drop=True)
         df.insert(0, "App ID", [f"plant_{index}" for index in range(len(df))])
         return df
@@ -2381,7 +2576,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_header("Content-Length", str(len(body)))
                 self.end_headers()
                 self.wfile.write(body)
-            elif parsed.path == "/admin/users" or parsed.path.startswith("/api/") or parsed.path.startswith("/reports/") or parsed.path in {"/view-report", "/chart-detail", "/chart-csv", "/chart-pdf"}:
+            elif parsed.path in {"/admin/users", "/admin/integrations"} or parsed.path.startswith("/api/") or parsed.path.startswith("/reports/") or parsed.path in {"/view-report", "/chart-detail", "/chart-csv", "/chart-pdf"}:
                 user = self.require_auth()
                 if load_users() and not user:
                     return
@@ -2406,6 +2601,11 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_json({"error": "Admin access required"}, 403)
                 return
             self.send_admin_users_page()
+        elif parsed.path == "/admin/integrations":
+            if not is_admin(user):
+                self.send_json({"error": "Admin access required"}, 403)
+                return
+            self.send_bytes(INTEGRATIONS_HTML.encode("utf-8"), "text/html; charset=utf-8")
         elif parsed.path == "/api/admin/users":
             if not is_admin(user):
                 self.send_json({"error": "Admin access required"}, 403)
@@ -2419,6 +2619,18 @@ class Handler(BaseHTTPRequestHandler):
                 "render": bool(os.environ.get("RENDER")),
                 "user_file": str(USERS_FILE),
             })
+        elif parsed.path == "/api/admin/integrations":
+            if not is_admin(user):
+                self.send_json({"error": "Admin access required"}, 403)
+                return
+            self.send_json(
+                {
+                    "integrations": load_integrations(),
+                    "connectors": KNOWN_CONNECTORS,
+                    "postgres": postgres_enabled(),
+                    "storage": "PostgreSQL" if postgres_enabled() else str(INTEGRATIONS_FILE),
+                }
+            )
         elif parsed.path == "/api/schedules":
             if not is_admin(user):
                 self.send_json({"error": "Admin access required"}, 403)
@@ -2627,6 +2839,17 @@ class Handler(BaseHTTPRequestHandler):
                     return
                 set_disabled = db_set_user_disabled if postgres_enabled() else file_set_user_disabled
                 self.send_json(set_disabled(payload.get("username"), bool(payload.get("disabled", False))))
+            elif parsed.path == "/api/admin/integrations":
+                if not is_admin(user):
+                    self.send_json({"error": "Admin access required"}, 403)
+                    return
+                self.send_json({"ok": True, "integration": upsert_integration(self.read_json())})
+            elif parsed.path == "/api/admin/integrations/delete":
+                if not is_admin(user):
+                    self.send_json({"error": "Admin access required"}, 403)
+                    return
+                payload = self.read_json()
+                self.send_json({"ok": delete_integration(str(payload.get("id") or ""))})
             elif parsed.path == "/api/config":
                 if not is_admin(user):
                     self.send_json({"error": "Admin access required"}, 403)
@@ -2815,6 +3038,73 @@ load().catch(e=>setMessage(e.message,true));
 </html>"""
 
 
+INTEGRATIONS_HTML = r"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NCE Solar Plant Integrations</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:#eef3f8;color:#1e2b3f}
+header{background:#174f9c;color:white;padding:14px 18px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}h1{font-size:20px;margin:0;flex:1}
+a{color:#174f9c;background:white;text-decoration:none;border-radius:7px;padding:9px 12px;font-weight:900}.wrap{max-width:1180px;margin:auto;padding:16px}
+.panel{background:white;border:1px solid #d7e0ec;border-radius:8px;padding:14px;margin-bottom:14px;box-shadow:0 1px 4px rgba(15,35,60,.05)}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;align-items:end}label{font-size:12px;font-weight:800;color:#647084;display:block;margin-bottom:5px}
+input,select,textarea{width:100%;border:1px solid #d7e0ec;border-radius:7px;padding:0 10px;background:white}input,select{height:38px}textarea{height:74px;padding-top:8px}
+button{height:38px;border:0;border-radius:7px;background:#174f9c;color:white;font-weight:900;padding:0 12px;cursor:pointer}button.alt{background:#18b9d6}button.warn{background:#c73e3e}
+table{width:100%;border-collapse:collapse;font-size:13px}th{background:#174f9c;color:white;text-align:left;padding:9px}td{border-bottom:1px solid #d7e0ec;padding:8px;vertical-align:top}
+.muted{color:#647084;font-size:12px}.msg{font-weight:900;color:#16845f}.err{font-weight:900;color:#c73e3e}.status{font-weight:900;color:#16845f}.need{color:#b45309;font-weight:900}
+.wide{grid-column:span 2}.full{grid-column:1 / -1}
+@media(max-width:760px){.grid{grid-template-columns:1fr}header{display:grid}a{text-align:center}.wide{grid-column:auto}table,thead,tbody,tr,td{display:block}thead{display:none}tr{border:1px solid #d7e0ec;border-radius:8px;background:white;margin:8px 0;padding:8px}td{border:0;padding:5px}td::before{content:attr(data-label);display:block;font-size:11px;color:#647084;font-weight:900}}
+</style>
+</head>
+<body>
+<header><h1>Plant Integrations</h1><a href="/">Back to Dashboard</a><a href="/admin/users">Users</a><a href="/logout">Logout</a></header>
+<main class="wrap">
+  <section class="panel">
+    <h2>Add or Edit Plant</h2>
+    <div class="grid">
+      <div><label>Brand</label><select id="brand"></select></div>
+      <div><label>Custom Brand</label><input id="customBrand" placeholder="Use for other brands"></div>
+      <div class="wide"><label>Plant Name</label><input id="plantName" placeholder="Customer / site name"></div>
+      <div><label>Capacity kW</label><input id="capacity" type="number" step="0.01"></div>
+      <div><label>Auth Type</label><select id="authType"><option value="username_password">Username / Password</option><option value="api_key">API Key / Secret</option><option value="api_token">API Token</option><option value="manual_upload">Manual Upload</option></select></div>
+      <div><label>Username</label><input id="username" autocomplete="off"></div>
+      <div><label>Password / Secret</label><input id="password" type="password" autocomplete="new-password" placeholder="Leave blank to keep saved"></div>
+      <div><label>API Key / Token ID</label><input id="apiKeyId" autocomplete="off"></div>
+      <div><label>Plant ID / Serial No.</label><input id="plantIdentifier"></div>
+      <div class="wide"><label>Portal URL</label><input id="portalUrl" placeholder="https://..."></div>
+      <div><label>Status</label><select id="status"><option value="active">Active</option><option value="disabled">Disabled</option></select></div>
+      <div class="full"><label>Notes</label><textarea id="notes" placeholder="Any brand-specific details"></textarea></div>
+    </div>
+    <p class="muted">Known connectors refresh automatically only when the required backend/API method is available. Unknown brands can be registered now, but need a connector before live cloud refresh works.</p>
+    <button id="save">Save Plant Integration</button>
+    <span id="message" class="msg"></span>
+  </section>
+  <section class="panel">
+    <h2>Configured Plants</h2>
+    <table><thead><tr><th>Brand</th><th>Plant</th><th>Capacity</th><th>Auth</th><th>Connector</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table>
+  </section>
+</main>
+<script>
+let state={integrations:[],connectors:{}}, editing='';
+const $=s=>document.querySelector(s);
+function h(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+async function api(path,opt={}){const r=await fetch(path,{cache:'no-store',...opt,headers:{'Content-Type':'application/json','Cache-Control':'no-cache',...(opt.headers||{})}});const text=await r.text();const data=text?JSON.parse(text):{};if(!r.ok)throw new Error(data.error||text||r.status);return data}
+function setMessage(text,bad=false){$('#message').textContent=text||'';$('#message').className=bad?'err':'msg'}
+function brandValue(){return ($('#customBrand').value.trim()||$('#brand').value||'').trim()}
+function clearForm(){editing='';['customBrand','plantName','capacity','username','password','apiKeyId','plantIdentifier','portalUrl','notes'].forEach(id=>$('#'+id).value='');$('#status').value='active';$('#authType').value='username_password'}
+function render(){const brands=Object.keys(state.connectors||{});$('#brand').innerHTML=brands.map(key=>`<option value="${h(state.connectors[key].label.split(' ')[0])}">${h(state.connectors[key].label)}</option>`).join('')+'<option value="">Other brand</option>';$('#rows').innerHTML=(state.integrations||[]).map(row=>`<tr><td data-label="Brand">${h(row.brand)}</td><td data-label="Plant"><b>${h(row.plant_name)}</b><br><span class="muted">${h(row.plant_key)}</span></td><td data-label="Capacity">${Number(row.capacity_kw||0).toFixed(2)} kW</td><td data-label="Auth">${h(row.auth_type)}<br><span class="muted">${row.username?'Username saved':''} ${row.password_set?'Password saved':''} ${row.api_key_secret_set?'Secret saved':''}</span></td><td data-label="Connector"><span class="${row.connector_status==='Connector needed'?'need':'status'}">${h(row.connector_status)}</span></td><td data-label="Actions"><button class="alt" onclick="edit('${h(row.id)}')">Edit</button> <button class="warn" onclick="removeRow('${h(row.id)}')">Delete</button></td></tr>`).join('')||'<tr><td colspan="6">No plant integrations yet.</td></tr>'}
+window.edit=id=>{const row=(state.integrations||[]).find(x=>x.id===id);if(!row)return;editing=id;$('#customBrand').value=row.brand;$('#plantName').value=row.plant_name;$('#capacity').value=row.capacity_kw||0;$('#authType').value=row.auth_type||'username_password';$('#username').value=row.username||'';$('#password').value='';$('#apiKeyId').value=row.api_key_id||'';$('#plantIdentifier').value=row.plant_identifier||'';$('#portalUrl').value=row.portal_url||'';$('#status').value=row.status||'active';$('#notes').value=row.notes||'';window.scrollTo({top:0,behavior:'smooth'})}
+window.removeRow=async id=>{if(!confirm('Delete this plant integration?'))return;await api('/api/admin/integrations/delete',{method:'POST',body:JSON.stringify({id})});await load();setMessage('Plant integration deleted.')}
+async function load(){state=await api('/api/admin/integrations');render()}
+$('#save').onclick=async()=>{try{const body={id:editing||undefined,brand:brandValue(),plant_name:$('#plantName').value.trim(),capacity_kw:Number($('#capacity').value||0),auth_type:$('#authType').value,username:$('#username').value.trim(),password:$('#password').value,api_key_id:$('#apiKeyId').value.trim(),api_key_secret:$('#authType').value==='api_key'?$('#password').value:'',plant_identifier:$('#plantIdentifier').value.trim(),portal_url:$('#portalUrl').value.trim(),status:$('#status').value,notes:$('#notes').value.trim()};await api('/api/admin/integrations',{method:'POST',body:JSON.stringify(body)});clearForm();await load();setMessage('Plant integration saved. It will appear in the dashboard plant list.')}catch(e){setMessage(e.message,true)}}
+load().catch(e=>setMessage(e.message,true));
+</script>
+</body>
+</html>"""
+
+
 REPORT_VIEWER_HTML = r"""<!doctype html>
 <html lang="en">
 <head>
@@ -2942,7 +3232,7 @@ section.panel tr.open td:nth-child(3)::after{content:'-'}
 </style>
 </head>
 <body>
-<header><h1>NCE Live Solar App</h1><div class="meta"><div>Signed in: __USER__</div><div id="dateLine"></div><div id="versionLine"></div><div id="mobileLine"></div></div><a id="adminLink" class="admin-link hidden" href="/admin/users">Users</a><button id="changePassword" class="password-link">Change Password</button><a class="logout" href="/logout">Logout</a></header>
+<header><h1>NCE Live Solar App</h1><div class="meta"><div>Signed in: __USER__</div><div id="dateLine"></div><div id="versionLine"></div><div id="mobileLine"></div></div><a id="integrationsLink" class="admin-link hidden" href="/admin/integrations">Plants</a><a id="adminLink" class="admin-link hidden" href="/admin/users">Users</a><button id="changePassword" class="password-link">Change Password</button><a class="logout" href="/logout">Logout</a></header>
 <main>
   <div class="toolbar">
     <div><label>Search</label><input id="search" placeholder="Search any plant"></div>
@@ -3090,6 +3380,7 @@ const lastUpdatedEl=document.querySelector('#lastUpdated');
 const loadingIndicatorEl=document.querySelector('#loadingIndicator');
 const warningLineEl=document.querySelector('#warningLine');
 const adminLinkEl=document.querySelector('#adminLink');
+const integrationsLinkEl=document.querySelector('#integrationsLink');
 const changePasswordBtn=document.querySelector('#changePassword');
 function istParts(){const values={};new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date()).forEach(p=>{values[p.type]=p.value});return values}
 function todayText(){const p=istParts();return `${p.year}-${p.month}-${p.day}`}
@@ -3116,7 +3407,7 @@ function productionDateValue(){return productionDatePickEl.value||productionDate
 function productionYear(){return Number(productionDateValue().slice(0,4))||Number(todayText().slice(0,4))}
 function productionMonth(){return Number(productionDateValue().slice(5,7))||Number(todayText().slice(5,7))}
 function setLoading(on){loadingIndicatorEl.classList.toggle('hidden',!on);refreshBtn.disabled=on;refreshBtn.textContent=on?'Refreshing...':'Refresh now'}
-function applyRoleUi(){const role=String(statusData.user?.role||'admin').toLowerCase();const isAdmin=!!statusData.user?.is_admin||role==='admin';const canRefresh=isAdmin||role==='manager';const canReport=isAdmin||role==='manager'||role==='customer';adminLinkEl.classList.toggle('hidden',!isAdmin);refreshBtn.classList.toggle('hidden',!canRefresh);saveScheduleBtn.classList.toggle('hidden',!isAdmin);[autoDayEl,autoTimeEl,autoDatesEl,autoScopeEl].forEach(el=>{if(el)el.disabled=!isAdmin});[reportAllBtn,reportPlantBtn,reportBtn].forEach(btn=>btn.classList.toggle('hidden',!canReport));selectAllBtn.classList.toggle('hidden',!canReport)}
+function applyRoleUi(){const role=String(statusData.user?.role||'admin').toLowerCase();const isAdmin=!!statusData.user?.is_admin||role==='admin';const canRefresh=isAdmin||role==='manager';const canReport=isAdmin||role==='manager'||role==='customer';adminLinkEl.classList.toggle('hidden',!isAdmin);integrationsLinkEl.classList.toggle('hidden',!isAdmin);refreshBtn.classList.toggle('hidden',!canRefresh);saveScheduleBtn.classList.toggle('hidden',!isAdmin);[autoDayEl,autoTimeEl,autoDatesEl,autoScopeEl].forEach(el=>{if(el)el.disabled=!isAdmin});[reportAllBtn,reportPlantBtn,reportBtn].forEach(btn=>btn.classList.toggle('hidden',!canReport));selectAllBtn.classList.toggle('hidden',!canReport)}
 function setWarning(message){warningLineEl.textContent=message||'';warningLineEl.classList.toggle('hidden',!message)}
 function refreshWarning(r){const bad=(r.steps||[]).filter(s=>!s.ok && !String(s.label||'').toLowerCase().includes('skipped'));return bad.length?'Some inverter/API refreshes failed. Showing last successful data: '+bad.slice(0,2).map(s=>s.label).join(', '):''}
 function backendUpdatedText(s){const finished=s?.last_refresh?.finished, started=s?.last_refresh?.started, dataUpdated=s?.data_last_updated;if(finished)return finished.replace('T',' ')+' IST';if(started)return 'Refresh running since '+started.replace('T',' ')+' IST';if(dataUpdated)return String(dataUpdated).replace('T',' ')+' IST';return istNowText()}
