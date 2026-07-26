@@ -23,9 +23,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install supabase python-dotenv pandas requests
 
-      - name: Run Supabase Sync Script
+      - name: Run Solar Scraper & Supabase Sync
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
+          # If your scraper filename is different (e.g., scraper.py), change solar_scraper.py below
+          if [ -f "solar_scraper.py" ]; then python solar_scraper.py; fi
           python sync_to_supabase.py
