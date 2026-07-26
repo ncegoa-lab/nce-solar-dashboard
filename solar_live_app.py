@@ -1,3 +1,4 @@
+from __future__ import annotations
 import streamlit as st
 st.title("Solar Live Dashboard")
 #!/usr/bin/env python3
@@ -8,7 +9,6 @@ data from Supabase or existing project files, can refresh cloud data, and can ge
 one PDF report for all plants, a single plant, or any selected plants.
 """
 
-from __future__ import annotations
 
 import argparse
 import datetime as dt
