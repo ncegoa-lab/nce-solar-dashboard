@@ -27,13 +27,15 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          FRONIUS_USERNAME: ${{ secrets.FRONIUS_USERNAME }}
+          FRONIUS_PASSWORD: ${{ secrets.FRONIUS_PASSWORD }}
         run: |
-          # Run the scrapers for your active solar brands (uncomment/adjust as needed)
-          if [ -f "solis_capture_to_generation.py" ]; then python solis_capture_to_generation.py; fi
-          if [ -f "fronius_backend_current_generation.py" ]; then python fronius_backend_current_generation.py; fi
-          if [ -f "sems_daily_log.py" ]; then python sems_daily_log.py; fi
-          if [ -f "solax_capture_to_generation.py" ]; then python solax_capture_to_generation.py; fi
-          if [ -f "fimer_backend_export_generation.py" ]; then python fimer_backend_export_generation.py; fi
+          # Individual brand scrapers (use '|| true' so one brand failure doesn't halt the rest)
+          if [ -f "solis_capture_to_generation.py" ]; then python solis_capture_to_generation.py || true; fi
+          if [ -f "fronius_backend_current_generation.py" ]; then python fronius_backend_current_generation.py || true; fi
+          if [ -f "sems_daily_log.py" ]; then python sems_daily_log.py || true; fi
+          if [ -f "solax_capture_to_generation.py" ]; then python solax_capture_to_generation.py || true; fi
+          if [ -f "fimer_backend_export_generation.py" ]; then python fimer_backend_export_generation.py || true; fi
 
-          # Upload all newly generated data files to Supabase
+          # Upload generated files to Supabase
           python sync_to_supabase.py
