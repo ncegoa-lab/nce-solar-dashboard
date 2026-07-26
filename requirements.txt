@@ -1,3 +1,5 @@
 streamlit
 supabase
 pandas
+reportlab
+Pillow
