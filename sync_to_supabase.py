@@ -1,55 +1,63 @@
 import os
-import sys
+import json
+import glob
 import pandas as pd
-from dotenv import load_dotenv
-from supabase import create_client, Client
+from supabase import create_client
 
-# 1. Load environment variables from .env file
-load_dotenv()
+url = os.environ.get("SUPABASE_URL")
+key = os.environ.get("SUPABASE_KEY")
 
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+if not url or not key:
+    print("Error: SUPABASE_URL or SUPABASE_KEY environment variable missing.")
+    exit(1)
 
-if not SUPABASE_URL or not SUPABASE_KEY:
-    print("Error: SUPABASE_URL or SUPABASE_KEY missing from environment variables.")
-    print("Please check your .env file in the root directory.")
-    sys.exit(1)
+supabase = create_client(url, key)
 
-# 2. Initialize Supabase Client
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+# Define target table in Supabase
+TABLE_NAME = "solar_generation_hourly_history"
 
-def sync_data(file_path: str, table_name: str = "solar_data"):
-    """Reads a local dataset (CSV/JSON) and syncs it to Supabase."""
-    if not os.path.exists(file_path):
-        print(f"File not found: {file_path}")
-        return
-
-    print(f"Reading solar data from '{file_path}'...")
+def sync_data():
+    json_files = glob.glob("*.json")
+    csv_files = glob.glob("*.csv") + glob.glob("data/*.csv")
     
-    # Load data into pandas DataFrame
-    if file_path.endswith(".csv"):
-        df = pd.read_csv(file_path)
-    elif file_path.endswith(".json"):
-        df = pd.read_json(file_path)
-    else:
-        print("Unsupported file format. Please use .csv or .json.")
+    all_records = []
+    
+    # Process JSON outputs (Solis, SolaX, etc.)
+    for file in json_files:
+        if file in ["package.json", "tsconfig.json"]:  # Skip config files
+            continue
+        try:
+            with open(file, "r") as f:
+                data = json.load(f)
+                if isinstance(data, list):
+                    all_records.extend(data)
+                elif isinstance(data, dict):
+                    all_records.append(data)
+            print(f"Loaded records from {file}")
+        except Exception as e:
+            print(f"Error reading {file}: {e}")
+
+    # Process CSV outputs
+    for file in csv_files:
+        try:
+            df = pd.read_csv(file)
+            all_records.extend(df.to_dict(orient="records"))
+            print(f"Loaded records from {file}")
+        except Exception as e:
+            print(f"Error reading {file}: {e}")
+
+    if not all_records:
+        print("No scraped data files found to upload.")
         return
 
-    # Convert DataFrame records to Python list of dictionaries
-    records = df.to_dict(orient="records")
-    print(f"Syncing {len(records)} records to Supabase table '{table_name}'...")
-
+    print(f"Uploading {len(all_records)} total records to Supabase table '{TABLE_NAME}'...")
+    
+    # Batch upsert to Supabase
     try:
-        # Upsert inserts new rows or updates existing ones matching primary keys
-        response = supabase.table(table_name).upsert(records).execute()
-        print("Database sync completed successfully!")
-        return response.data
+        res = supabase.table(TABLE_NAME).upsert(all_records).execute()
+        print("Successfully synced data to Supabase!")
     except Exception as e:
-        print(f"Sync failed with error: {e}")
+        print(f"Failed to upsert records into {TABLE_NAME}: {e}")
 
 if __name__ == "__main__":
-    # Update these paths/names if your project uses different file or table names
-    DATA_FILE_PATH = "data/solar_data.csv"
-    TARGET_TABLE = "solar_data"
-
-    sync_data(DATA_FILE_PATH, TARGET_TABLE)
+    sync_data()
