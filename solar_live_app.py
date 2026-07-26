@@ -1,3 +1,5 @@
+import streamlit as st
+st.title("Solar Live Dashboard")
 #!/usr/bin/env python3
 """Local live solar dashboard app with Supabase DB integration.
 
