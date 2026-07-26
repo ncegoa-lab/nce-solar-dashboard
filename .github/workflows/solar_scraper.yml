@@ -21,7 +21,7 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install supabase python-dotenv pandas requests
+          pip install supabase python-dotenv pandas requests openpyxl beautifulsoup4
 
       - name: Run Solar Scrapers & Supabase Sync
         env:
@@ -29,8 +29,16 @@ jobs:
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           FRONIUS_USERNAME: ${{ secrets.FRONIUS_USERNAME }}
           FRONIUS_PASSWORD: ${{ secrets.FRONIUS_PASSWORD }}
+          FIMER_USERNAME: ${{ secrets.FIMER_USERNAME }}
+          FIMER_PASSWORD: ${{ secrets.FIMER_PASSWORD }}
+          SOLIS_USERNAME: ${{ secrets.SOLIS_USERNAME }}
+          SOLIS_PASSWORD: ${{ secrets.SOLIS_PASSWORD }}
+          SOLAX_USERNAME: ${{ secrets.SOLAX_USERNAME }}
+          SOLAX_PASSWORD: ${{ secrets.SOLAX_PASSWORD }}
+          SEMS_USERNAME: ${{ secrets.SEMS_USERNAME }}
+          SEMS_PASSWORD: ${{ secrets.SEMS_PASSWORD }}
         run: |
-          # Individual brand scrapers (use '|| true' so one brand failure doesn't halt the rest)
+          # Individual brand scrapers
           if [ -f "solis_capture_to_generation.py" ]; then python solis_capture_to_generation.py || true; fi
           if [ -f "fronius_backend_current_generation.py" ]; then python fronius_backend_current_generation.py || true; fi
           if [ -f "sems_daily_log.py" ]; then python sems_daily_log.py || true; fi
