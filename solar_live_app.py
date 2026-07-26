@@ -25,7 +25,7 @@ import threading
 import time
 import urllib.parse
 import webbrowser
-    # # from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+#     # # from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
@@ -726,15 +726,16 @@ def main() -> None:
     if APP.config.get("auto_refresh_on_open"):
         threading.Thread(target=APP.refresh, daemon=True).start()
     threading.Thread(target=APP.maybe_auto_run, daemon=True).start()
-    # #     server = ThreadingHTTPServer((args.host, args.port), Handler)
+#     # #     server = ThreadingHTTPServer((args.host, args.port), Handler)
     url = f"http://127.0.0.1:{args.port}"
     print(f"Solar Live App running: {url}")
     print(f"iPhone on same Wi-Fi: http://{local_ip()}:{args.port}")
     cloud_mode = any(os.environ.get(key) for key in ("PORT", "RENDER", "RAILWAY_ENVIRONMENT", "FLY_APP_NAME"))
     if not args.no_browser and not cloud_mode:
         webbrowser.open(url)
-    # #     server.serve_forever()
+#     # #     server.serve_forever()
+
 
 
 if __name__ == "__main__":
-#     main()
+    main()
