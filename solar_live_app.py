@@ -404,188 +404,188 @@ class SolarLiveApp:
 APP: SolarLiveApp | None = None
 
 
-class Handler(BaseHTTPRequestHandler):
-    def cookie_value(self, name: str) -> str:
-        cookie = self.headers.get("Cookie", "")
-        for part in cookie.split(";"):
-            key, _, value = part.strip().partition("=")
-            if key == name:
-                return urllib.parse.unquote(value)
-        return ""
-
-    def current_user(self) -> dict[str, Any] | None:
-        users = load_users()
-        if not users:
-            return None
-        username = read_session(self.cookie_value(SESSION_COOKIE))
-        if username and username in users:
-            return users[username]
-        header = self.headers.get("Authorization", "")
-        if header.startswith("Basic "):
-            try:
-                userpass = base64.b64decode(header.split(" ", 1)[1]).decode("utf-8")
-                username, _, password = userpass.partition(":")
-                user = users.get(username)
-                if user and verify_password(password, user.get("password_hash", "")):
-                    return user
-            except Exception:
-                return None
-        return None
-
-    def require_auth(self, html: bool = False) -> dict[str, Any] | None:
-        users = load_users()
-        if not users:
-            return None
-        user = self.current_user()
-        if user:
-            return user
-        if html:
-            self.send_response(302)
-            self.send_header("Location", "/login")
-            self.end_headers()
-            return None
-        body = json.dumps({"error": "Authentication required"}).encode("utf-8")
-        self.send_response(401)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
-        return None
-
-    def send_login_page(self, error: str = "") -> None:
-        body = LOGIN_HTML.replace("__ERROR__", error).encode("utf-8")
-        self.send_response(200)
-        self.send_header("Content-Type", "text/html; charset=utf-8")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
-
-    def send_json(self, payload: Any, status: int = 200) -> None:
-        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
-
-    def read_json(self) -> dict[str, Any]:
-        length = int(self.headers.get("Content-Length") or 0)
-        if not length:
-            return {}
-        return json.loads(self.rfile.read(length).decode("utf-8"))
-
-    def do_GET(self) -> None:
-        assert APP is not None
-        parsed = urllib.parse.urlparse(self.path)
-        if parsed.path == "/healthz":
-            self.send_json({"ok": True})
-        elif parsed.path == "/login":
-            self.send_login_page()
-        elif parsed.path == "/logout":
-            self.send_response(302)
-            self.send_header("Set-Cookie", f"{SESSION_COOKIE}=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax")
-            self.send_header("Location", "/login")
-            self.end_headers()
-        elif parsed.path == "/":
-            user = self.require_auth(html=True)
-            if load_users() and not user:
-                return
-            body = LIVE_HTML.replace("__USER__", (user or {}).get("username", "Local")).encode("utf-8")
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html; charset=utf-8")
-            self.send_header("Content-Length", str(len(body)))
-            self.end_headers()
-            self.wfile.write(body)
-        elif parsed.path.startswith("/api/") or parsed.path.startswith("/reports/"):
-            user = self.require_auth()
-            if load_users() and not user:
-                return
-            self.handle_authenticated_get(parsed, user)
-        else:
-            self.send_json({"error": "Not found"}, 404)
-
-    def handle_authenticated_get(self, parsed: urllib.parse.ParseResult, user: dict[str, Any] | None) -> None:
-        assert APP is not None
-        if parsed.path == "/api/plants":
-            self.send_json({"plants": APP.plant_payload(user), "today": dt.date.today().isoformat()})
-        elif parsed.path == "/api/status":
-            self.send_json(
-                {
-                    "auth_enabled": bool(load_users()),
-                    "user": {"username": (user or {}).get("username", "Local"), "role": (user or {}).get("role", "admin")},
-                    "config": APP.config,
-                    "last_refresh": APP.last_refresh,
-                    "local_url": f"http://127.0.0.1:{APP.port}",
-                    "mobile_url": f"http://{local_ip()}:{APP.port}",
-                }
-            )
-        elif parsed.path.startswith("/reports/"):
-            relative = urllib.parse.unquote(parsed.path[len("/reports/") :])
-            path = (APP.output_dir / relative).resolve()
-            try:
-                path.relative_to(APP.output_dir.resolve())
-            except ValueError:
-                self.send_json({"error": "Invalid report path"}, 400)
-                return
-            if not path.exists() or not path.is_file():
-                self.send_json({"error": "Report not found"}, 404)
-                return
-            body = path.read_bytes()
-            self.send_response(200)
-            self.send_header("Content-Type", mimetypes.guess_type(path.name)[0] or "application/octet-stream")
-            self.send_header("Content-Disposition", f'attachment; filename="{path.name}"')
-            self.send_header("Content-Length", str(len(body)))
-            self.end_headers()
-            self.wfile.write(body)
-        else:
-            self.send_json({"error": "Not found"}, 404)
-
-    def do_POST(self) -> None:
-        assert APP is not None
-        parsed = urllib.parse.urlparse(self.path)
-        if parsed.path == "/login":
-            raw = self.rfile.read(int(self.headers.get("Content-Length") or 0)).decode("utf-8")
-            form = urllib.parse.parse_qs(raw)
-            username = (form.get("username") or [""])[0].strip()
-            password = (form.get("password") or [""])[0]
-            user = load_users().get(username)
-            if not user or not verify_password(password, user.get("password_hash", "")):
-                self.send_login_page("Invalid username or password")
-                return
-            expires = int(time.time()) + SESSION_SECONDS
-            secure = " Secure;" if self.headers.get("X-Forwarded-Proto") == "https" else ""
-            self.send_response(302)
-            self.send_header("Set-Cookie", f"{SESSION_COOKIE}={sign_session(username, expires)}; Path=/; HttpOnly;{secure} SameSite=Lax; Max-Age={SESSION_SECONDS}")
-            self.send_header("Location", "/")
-            self.end_headers()
-            return
-
-        user = self.require_auth()
-        if load_users() and not user:
-            return
-        if parsed.path == "/api/refresh":
-            if not is_admin(user):
-                self.send_json({"error": "Admin access required"}, 403)
-                return
-            self.send_json(APP.refresh())
-        elif parsed.path == "/api/report":
-            payload = self.read_json()
-            self.send_json(APP.generate_selected_report(payload.get("plant_ids") or [], user))
-        elif parsed.path == "/api/config":
-            if not is_admin(user):
-                self.send_json({"error": "Admin access required"}, 403)
-                return
-            payload = self.read_json()
-            APP.config.update({key: value for key, value in payload.items() if key in DEFAULT_CONFIG})
-            save_config(APP.config)
-            self.send_json({"ok": True, "config": APP.config})
-        else:
-            self.send_json({"error": "Not found"}, 404)
-
-    def log_message(self, format: str, *args: Any) -> None:
-        return
-
-
+# class Handler(BaseHTTPRequestHandler):
+#     def cookie_value(self, name: str) -> str:
+#         cookie = self.headers.get("Cookie", "")
+#         for part in cookie.split(";"):
+#             key, _, value = part.strip().partition("=")
+#             if key == name:
+#                 return urllib.parse.unquote(value)
+#         return ""
+# 
+#     def current_user(self) -> dict[str, Any] | None:
+#         users = load_users()
+#         if not users:
+#             return None
+#         username = read_session(self.cookie_value(SESSION_COOKIE))
+#         if username and username in users:
+#             return users[username]
+#         header = self.headers.get("Authorization", "")
+#         if header.startswith("Basic "):
+#             try:
+#                 userpass = base64.b64decode(header.split(" ", 1)[1]).decode("utf-8")
+#                 username, _, password = userpass.partition(":")
+#                 user = users.get(username)
+#                 if user and verify_password(password, user.get("password_hash", "")):
+#                     return user
+#             except Exception:
+#                 return None
+#         return None
+# 
+#     def require_auth(self, html: bool = False) -> dict[str, Any] | None:
+#         users = load_users()
+#         if not users:
+#             return None
+#         user = self.current_user()
+#         if user:
+#             return user
+#         if html:
+#             self.send_response(302)
+#             self.send_header("Location", "/login")
+#             self.end_headers()
+#             return None
+#         body = json.dumps({"error": "Authentication required"}).encode("utf-8")
+#         self.send_response(401)
+#         self.send_header("Content-Type", "application/json; charset=utf-8")
+#         self.send_header("Content-Length", str(len(body)))
+#         self.end_headers()
+#         self.wfile.write(body)
+#         return None
+# 
+#     def send_login_page(self, error: str = "") -> None:
+#         body = LOGIN_HTML.replace("__ERROR__", error).encode("utf-8")
+#         self.send_response(200)
+#         self.send_header("Content-Type", "text/html; charset=utf-8")
+#         self.send_header("Content-Length", str(len(body)))
+#         self.end_headers()
+#         self.wfile.write(body)
+# 
+#     def send_json(self, payload: Any, status: int = 200) -> None:
+#         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+#         self.send_response(status)
+#         self.send_header("Content-Type", "application/json; charset=utf-8")
+#         self.send_header("Content-Length", str(len(body)))
+#         self.end_headers()
+#         self.wfile.write(body)
+# 
+#     def read_json(self) -> dict[str, Any]:
+#         length = int(self.headers.get("Content-Length") or 0)
+#         if not length:
+#             return {}
+#         return json.loads(self.rfile.read(length).decode("utf-8"))
+# 
+#     def do_GET(self) -> None:
+#         assert APP is not None
+#         parsed = urllib.parse.urlparse(self.path)
+#         if parsed.path == "/healthz":
+#             self.send_json({"ok": True})
+#         elif parsed.path == "/login":
+#             self.send_login_page()
+#         elif parsed.path == "/logout":
+#             self.send_response(302)
+#             self.send_header("Set-Cookie", f"{SESSION_COOKIE}=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax")
+#             self.send_header("Location", "/login")
+#             self.end_headers()
+#         elif parsed.path == "/":
+#             user = self.require_auth(html=True)
+#             if load_users() and not user:
+#                 return
+#             body = LIVE_HTML.replace("__USER__", (user or {}).get("username", "Local")).encode("utf-8")
+#             self.send_response(200)
+#             self.send_header("Content-Type", "text/html; charset=utf-8")
+#             self.send_header("Content-Length", str(len(body)))
+#             self.end_headers()
+#             self.wfile.write(body)
+#         elif parsed.path.startswith("/api/") or parsed.path.startswith("/reports/"):
+#             user = self.require_auth()
+#             if load_users() and not user:
+#                 return
+#             self.handle_authenticated_get(parsed, user)
+#         else:
+#             self.send_json({"error": "Not found"}, 404)
+# 
+#     def handle_authenticated_get(self, parsed: urllib.parse.ParseResult, user: dict[str, Any] | None) -> None:
+#         assert APP is not None
+#         if parsed.path == "/api/plants":
+#             self.send_json({"plants": APP.plant_payload(user), "today": dt.date.today().isoformat()})
+#         elif parsed.path == "/api/status":
+#             self.send_json(
+#                 {
+#                     "auth_enabled": bool(load_users()),
+#                     "user": {"username": (user or {}).get("username", "Local"), "role": (user or {}).get("role", "admin")},
+#                     "config": APP.config,
+#                     "last_refresh": APP.last_refresh,
+#                     "local_url": f"http://127.0.0.1:{APP.port}",
+#                     "mobile_url": f"http://{local_ip()}:{APP.port}",
+#                 }
+#             )
+#         elif parsed.path.startswith("/reports/"):
+#             relative = urllib.parse.unquote(parsed.path[len("/reports/") :])
+#             path = (APP.output_dir / relative).resolve()
+#             try:
+#                 path.relative_to(APP.output_dir.resolve())
+#             except ValueError:
+#                 self.send_json({"error": "Invalid report path"}, 400)
+#                 return
+#             if not path.exists() or not path.is_file():
+#                 self.send_json({"error": "Report not found"}, 404)
+#                 return
+#             body = path.read_bytes()
+#             self.send_response(200)
+#             self.send_header("Content-Type", mimetypes.guess_type(path.name)[0] or "application/octet-stream")
+#             self.send_header("Content-Disposition", f'attachment; filename="{path.name}"')
+#             self.send_header("Content-Length", str(len(body)))
+#             self.end_headers()
+#             self.wfile.write(body)
+#         else:
+#             self.send_json({"error": "Not found"}, 404)
+# 
+#     def do_POST(self) -> None:
+#         assert APP is not None
+#         parsed = urllib.parse.urlparse(self.path)
+#         if parsed.path == "/login":
+#             raw = self.rfile.read(int(self.headers.get("Content-Length") or 0)).decode("utf-8")
+#             form = urllib.parse.parse_qs(raw)
+#             username = (form.get("username") or [""])[0].strip()
+#             password = (form.get("password") or [""])[0]
+#             user = load_users().get(username)
+#             if not user or not verify_password(password, user.get("password_hash", "")):
+#                 self.send_login_page("Invalid username or password")
+#                 return
+#             expires = int(time.time()) + SESSION_SECONDS
+#             secure = " Secure;" if self.headers.get("X-Forwarded-Proto") == "https" else ""
+#             self.send_response(302)
+#             self.send_header("Set-Cookie", f"{SESSION_COOKIE}={sign_session(username, expires)}; Path=/; HttpOnly;{secure} SameSite=Lax; Max-Age={SESSION_SECONDS}")
+#             self.send_header("Location", "/")
+#             self.end_headers()
+#             return
+# 
+#         user = self.require_auth()
+#         if load_users() and not user:
+#             return
+#         if parsed.path == "/api/refresh":
+#             if not is_admin(user):
+#                 self.send_json({"error": "Admin access required"}, 403)
+#                 return
+#             self.send_json(APP.refresh())
+#         elif parsed.path == "/api/report":
+#             payload = self.read_json()
+#             self.send_json(APP.generate_selected_report(payload.get("plant_ids") or [], user))
+#         elif parsed.path == "/api/config":
+#             if not is_admin(user):
+#                 self.send_json({"error": "Admin access required"}, 403)
+#                 return
+#             payload = self.read_json()
+#             APP.config.update({key: value for key, value in payload.items() if key in DEFAULT_CONFIG})
+#             save_config(APP.config)
+#             self.send_json({"ok": True, "config": APP.config})
+#         else:
+#             self.send_json({"error": "Not found"}, 404)
+# 
+#     def log_message(self, format: str, *args: Any) -> None:
+#         return
+# 
+# 
 LOGIN_HTML = r"""<!doctype html>
 <html lang="en">
 <head>
