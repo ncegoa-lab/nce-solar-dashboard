@@ -13,8 +13,21 @@ if not url or not key:
 
 supabase = create_client(url, key)
 
-# Define target table in Supabase
 TABLE_NAME = "solar_generation_hourly_history"
+
+def clean_record(rec):
+    """Normalize dictionary keys to match Supabase schema standards."""
+    clean_rec = {}
+    for k, v in rec.items():
+        # Clean column name: lowercase, strip, replace spaces/dashes
+        clean_key = str(k).strip().lower()
+        clean_key = clean_key.replace(" (kw)", "").replace(" (kwh)", "").replace(" ", "_").replace("-", "_")
+        
+        # Skip empty values or NaN
+        if pd.isna(v):
+            continue
+        clean_rec[clean_key] = v
+    return clean_rec
 
 def sync_data():
     json_files = glob.glob("*.json")
@@ -22,17 +35,19 @@ def sync_data():
     
     all_records = []
     
-    # Process JSON outputs (Solis, SolaX, etc.)
+    # Process JSON outputs
     for file in json_files:
-        if file in ["package.json", "tsconfig.json"]:  # Skip config files
+        if file in ["package.json", "tsconfig.json"]:
             continue
         try:
             with open(file, "r") as f:
                 data = json.load(f)
                 if isinstance(data, list):
-                    all_records.extend(data)
+                    for item in data:
+                        if isinstance(item, dict):
+                            all_records.append(clean_record(item))
                 elif isinstance(data, dict):
-                    all_records.append(data)
+                    all_records.append(clean_record(data))
             print(f"Loaded records from {file}")
         except Exception as e:
             print(f"Error reading {file}: {e}")
@@ -41,7 +56,9 @@ def sync_data():
     for file in csv_files:
         try:
             df = pd.read_csv(file)
-            all_records.extend(df.to_dict(orient="records"))
+            records = df.to_dict(orient="records")
+            for rec in records:
+                all_records.append(clean_record(rec))
             print(f"Loaded records from {file}")
         except Exception as e:
             print(f"Error reading {file}: {e}")
@@ -52,7 +69,6 @@ def sync_data():
 
     print(f"Uploading {len(all_records)} total records to Supabase table '{TABLE_NAME}'...")
     
-    # Batch upsert to Supabase
     try:
         res = supabase.table(TABLE_NAME).upsert(all_records).execute()
         print("Successfully synced data to Supabase!")
