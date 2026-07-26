@@ -23,11 +23,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install supabase python-dotenv pandas requests
 
-      - name: Run Solar Scraper & Supabase Sync
+      - name: Run Solar Scrapers & Supabase Sync
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
-          # If your scraper filename is different (e.g., scraper.py), change solar_scraper.py below
-          if [ -f "solar_scraper.py" ]; then python solar_scraper.py; fi
+          # Run the scrapers for your active solar brands (uncomment/adjust as needed)
+          if [ -f "solis_capture_to_generation.py" ]; then python solis_capture_to_generation.py; fi
+          if [ -f "fronius_backend_current_generation.py" ]; then python fronius_backend_current_generation.py; fi
+          if [ -f "sems_daily_log.py" ]; then python sems_daily_log.py; fi
+          if [ -f "solax_capture_to_generation.py" ]; then python solax_capture_to_generation.py; fi
+          if [ -f "fimer_backend_export_generation.py" ]; then python fimer_backend_export_generation.py; fi
+
+          # Upload all newly generated data files to Supabase
           python sync_to_supabase.py
