@@ -26,7 +26,7 @@ supabase = get_supabase_client()
 @st.cache_data(ttl=300)
 def fetch_data():
     # Attempt to fetch from your solar data table (adjust table name if different)
-    response = supabase.table("solar_data").select("*").execute()
+    response = supabase.table("solar_generation_history").select("*").execute()
     return pd.DataFrame(response.data)
 
 try:
