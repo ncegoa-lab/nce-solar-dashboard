@@ -1,0 +1,199 @@
+{
+  "bodyText": " \n \n \n \n31841756\nBirla campus goa\n \n \n \nPortfolio Birla campus goa \nPlants\t2\t\nInstalled Capacity\t150.00\tkW\nProduced Energy\nToday\t0.00\tkWh\nThis Week\t1.15\tMWh\nThis Month\t267.04\tkWh\nThis Year\t106.84\tMWh\n List  Grid  Map\nSTATUS\t\n \n\tPERFORMANCE\tREGISTRATION DATE\tSYSTEM SIZE\tSTATE\n\nBirla campus goa\t\nClick to configure\n\t2022-05-08\t\n100.00 kW\n\tACTIVE\n\nBirla Campus Goa C-mess 50kw\t\nClick to configure\n\t2023-04-11\t\n50.00 kW\n\tACTIVE\nPlants: 2\n 1 \nPlant Portfolio Manager | MA Solar Italy Srl | ver. 3.23\nCookie Policy | Privacy Policy | Terms of Use | Submit Case",
+  "buttons": [
+    {
+      "aria": null,
+      "classes": "ui-btn ui-btn-primary ui-margin-remove",
+      "href": "",
+      "tag": "BUTTON",
+      "text": "Search",
+      "title": null,
+      "type": null
+    },
+    {
+      "aria": null,
+      "classes": "ui-btn ui-btn-normal ui-btn-bck-seamless ui-btn-round ui-btn-icon-32 ui-form-small fas fa-pen ui-margin-right",
+      "href": "",
+      "tag": "BUTTON",
+      "text": "",
+      "title": null,
+      "type": null
+    },
+    {
+      "aria": null,
+      "classes": "ui-btn ui-btn-normal ui-btn-bck-seamless ui-btn-round ui-btn-icon-32 ui-form-small fas fa-pen ui-margin-right",
+      "href": "",
+      "tag": "BUTTON",
+      "text": "",
+      "title": null,
+      "type": null
+    }
+  ],
+  "inputs": [
+    {
+      "id": "",
+      "name": "assetSelected",
+      "placeholder": null,
+      "tag": "SELECT",
+      "type": null,
+      "value": "Plant"
+    },
+    {
+      "id": "",
+      "name": "queryTypeSelected",
+      "placeholder": null,
+      "tag": "SELECT",
+      "type": null,
+      "value": "name"
+    },
+    {
+      "id": "",
+      "name": "q",
+      "placeholder": "enter search text",
+      "tag": "INPUT",
+      "type": "text",
+      "value": ""
+    },
+    {
+      "id": "",
+      "name": "0evc41f4khcu",
+      "placeholder": "Plant",
+      "tag": "INPUT",
+      "type": "text",
+      "value": ""
+    }
+  ],
+  "links": [
+    {
+      "href": "https://www.auroravision.net/home/",
+      "text": ""
+    },
+    {
+      "href": "javascript:;",
+      "text": ""
+    },
+    {
+      "href": "https://www.auroravision.net/dashboard/",
+      "text": "Dashboard"
+    },
+    {
+      "href": "https://www.auroravision.net/explorer/",
+      "text": "Management"
+    },
+    {
+      "href": "https://www.auroravision.net/eview/",
+      "text": "Energy Viewer Web"
+    },
+    {
+      "href": "https://www.auroravision.net/stringsizer/",
+      "text": "PowerPHAST"
+    },
+    {
+      "href": "javascript:;",
+      "text": ""
+    },
+    {
+      "href": "https://www.auroravision.net/events/log",
+      "text": "Event Log"
+    },
+    {
+      "href": "https://www.auroravision.net/events/definitions",
+      "text": "Definitions"
+    },
+    {
+      "href": "https://www.auroravision.net/events/profileAssign",
+      "text": "Profile Assign"
+    },
+    {
+      "href": "https://www.auroravision.net/events/profileConfig",
+      "text": "Profile Configuration"
+    },
+    {
+      "href": "https://www.auroravision.net/report/",
+      "text": ""
+    },
+    {
+      "href": "javascript:;",
+      "text": ""
+    },
+    {
+      "href": "https://www.fimer.com/contact/contact-us",
+      "text": "Submit Case"
+    },
+    {
+      "href": "https://documentation.auroravision.net/",
+      "text": "Documentation"
+    },
+    {
+      "href": "javascript:;",
+      "text": ""
+    },
+    {
+      "href": "javascript:;",
+      "text": ""
+    },
+    {
+      "href": "https://www.auroravision.net/explorer/preferences/account",
+      "text": "Account Preferences"
+    },
+    {
+      "href": "https://www.auroravision.net/ums/v1/logout",
+      "text": "Logout"
+    },
+    {
+      "href": "https://www.auroravision.net/dashboard/#31841757",
+      "text": "Birla campus goa"
+    },
+    {
+      "href": "https://www.auroravision.net/explorer/#31841757",
+      "text": "Click to configure"
+    },
+    {
+      "href": "https://www.auroravision.net/dashboard/#35553890",
+      "text": "Birla Campus Goa C-mess 50kw"
+    },
+    {
+      "href": "https://www.auroravision.net/explorer/#35553890",
+      "text": "Click to configure"
+    },
+    {
+      "href": "https://www.fimer.com/cookie-policy",
+      "text": "Cookie Policy"
+    },
+    {
+      "href": "https://www.fimer.com/privacy-policy",
+      "text": "Privacy Policy"
+    },
+    {
+      "href": "https://www.fimer.com/terms-and-conditions",
+      "text": "Terms of Use"
+    },
+    {
+      "href": "https://www.fimer.com/contact/contact-us",
+      "text": "Submit Case"
+    },
+    {
+      "href": "https://www.fimer.com/",
+      "text": ""
+    }
+  ],
+  "resources": [
+    "https://www.auroravision.net/home/node_modules/moment-timezone/builds/moment-timezone-with-data-10-year-range.min.js",
+    "https://www.google-analytics.com/g/collect?v=2&tid=G-H3LHNEQX48&gtm=45je66u0h1v896256172za200zd896256172&_p=1782932826051&gcd=13l3l3l3l1l1&npa=0&dma=0&are=1&cid=203736033.1782932827&frm=0&pscdl=noapi&rcb=10&sr=1440x900&uaa=arm&uab=64&uafvl=Chromium%3B148.0.7778.179%7CGoogle%2520Chrome%3B148.0.7778.179%7CNot%252FA)Brand%3B99.0.0.0&uam=&uamb=0&uap=macOS&uapv=26.5.2&uaw=0&ul=en-gb&_s=1&tag_exp=115938465~115938469~119027224~119576881~119576885~119576891~119576895&sid=1782932826&sct=1&seg=0&dl=https%3A%2F%2Fwww.auroravision.net%2Fhome%2F&dr=https%3A%2F%2Fwww.auroravision.net%2Fums%2Fv1%2FloginPage%3FredirectUrl%3Dhttps%3A%252F%252Fwww.auroravision.net%252Fhome%252F&dt=Aurora%20Vision%C2%AE%20Plant%20Portfolio%20Manager&en=page_view&_fv=1&_nsi=1&_ss=1&_ee=1&tfd=2723",
+    "https://www.auroravision.net/asset/v1/portfolios/31841756/plants?includePerformanceProfiles=true",
+    "https://www.auroravision.net/home/node_modules/av-api-v1/dist/es/i18n/json/en/menu.json",
+    "https://www.auroravision.net/home/node_modules/av-api-v1/dist/es/i18n/json/en/home.json",
+    "https://www.auroravision.net/home/node_modules/av-api-v1/dist/es/i18n/json/en/dashboard.json",
+    "https://www.auroravision.net/home/node_modules/av-api-v1/dist/es/i18n/json/en/explorer.json",
+    "https://www.auroravision.net/home/node_modules/av-api-v1/dist/es/i18n/json/en/events.json",
+    "https://www.auroravision.net/home/node_modules/av-api-v1/dist/es/i18n/json/en/customeradmin.json",
+    "https://www.auroravision.net/home/node_modules/av-api-v1/dist/es/i18n/json/en/footer.json",
+    "https://www.auroravision.net/telemetry/v1/plantGroups/31841756/energy/GenerationEnergy?sdt=2026-07-01T18%3A30%3A00.000Z&edt=2026-07-01T19%3A07%3A10.565Z",
+    "https://www.auroravision.net/telemetry/v1/plantGroups/31841756/energy/GenerationEnergy?sdt=2026-06-27T18%3A30%3A00.000Z&edt=2026-07-01T19%3A07%3A10.567Z",
+    "https://www.auroravision.net/telemetry/v1/plantGroups/31841756/energy/GenerationEnergy?sdt=2026-06-30T18%3A30%3A00.000Z&edt=2026-07-01T19%3A07%3A10.567Z",
+    "https://www.auroravision.net/telemetry/v1/plantGroups/31841756/energy/GenerationEnergy?sdt=2025-12-31T18%3A30%3A00.000Z&edt=2026-07-01T19%3A07%3A10.567Z",
+    "https://www.google-analytics.com/g/collect?v=2&tid=G-H3LHNEQX48&gtm=45je66u0h1v896256172za200zd896256172&_p=1782932826051&gcd=13l3l3l3l1l1&npa=0&dma=0&_eu=AEAAAAQ&ae=a&are=1&cid=203736033.1782932827&frm=0&pscdl=noapi&rcb=10&sr=1440x900&uaa=arm&uab=64&uafvl=Chromium%3B148.0.7778.179%7CGoogle%2520Chrome%3B148.0.7778.179%7CNot%252FA)Brand%3B99.0.0.0&uam=&uamb=0&uap=macOS&uapv=26.5.2&uaw=0&ul=en-gb&_s=2&tag_exp=115938465~115938469~119027224~119576881~119576885~119576891~119576895&sid=1782932826&sct=1&seg=0&dl=https%3A%2F%2Fwww.auroravision.net%2Fhome%2F&dr=https%3A%2F%2Fwww.auroravision.net%2Fums%2Fv1%2FloginPage%3FredirectUrl%3Dhttps%3A%252F%252Fwww.auroravision.net%252Fhome%252F&dt=Aurora%20Vision%C2%AE%20Plant%20Portfolio%20Manager&en=scroll&epn.percent_scrolled=90&_et=4&tfd=7729"
+  ],
+  "title": "Aurora Vision\u00ae Plant Portfolio Manager",
+  "url": "https://www.auroravision.net/home/"
+}

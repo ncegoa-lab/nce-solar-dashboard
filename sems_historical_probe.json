@@ -1,0 +1,2649 @@
+[
+  {
+    "endpoint": "v2/PowerStationMonitor/GetMonitorDetailByPowerstationId",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetMonitorDetailByPowerstationId",
+    "payload": {
+      "powerstation_id": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetMonitorDetailByPowerstationId",
+    "payload": {
+      "id": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetMonitorDetailByPowerstationId",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "date": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetMonitorDetailByPowerstationId",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "startDate": "2026-06-26",
+      "endDate": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetMonitorDetailByPowerstationId",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "start": "2026-06-26",
+      "end": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetMonitorDetailByPowerstationId",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "date": "2026-07-02",
+      "dateType": 1
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetMonitorDetailByPowerstationId",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "year": 2026,
+      "month": 7,
+      "day": 2
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationMonitorDetailByPowerstationId",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationMonitorDetailByPowerstationId",
+    "payload": {
+      "powerstation_id": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationMonitorDetailByPowerstationId",
+    "payload": {
+      "id": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationMonitorDetailByPowerstationId",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "date": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationMonitorDetailByPowerstationId",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "startDate": "2026-06-26",
+      "endDate": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationMonitorDetailByPowerstationId",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "start": "2026-06-26",
+      "end": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationMonitorDetailByPowerstationId",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "date": "2026-07-02",
+      "dateType": 1
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationMonitorDetailByPowerstationId",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "year": 2026,
+      "month": 7,
+      "day": 2
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationDetail",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationDetail",
+    "payload": {
+      "powerstation_id": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationDetail",
+    "payload": {
+      "id": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationDetail",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "date": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationDetail",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "startDate": "2026-06-26",
+      "endDate": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationDetail",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "start": "2026-06-26",
+      "end": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationDetail",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "date": "2026-07-02",
+      "dateType": 1
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationDetail",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "year": 2026,
+      "month": 7,
+      "day": 2
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationData",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationData",
+    "payload": {
+      "powerstation_id": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationData",
+    "payload": {
+      "id": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationData",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "date": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationData",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "startDate": "2026-06-26",
+      "endDate": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationData",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "start": "2026-06-26",
+      "end": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationData",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "date": "2026-07-02",
+      "dateType": 1
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationData",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "year": 2026,
+      "month": 7,
+      "day": 2
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationChart",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationChart",
+    "payload": {
+      "powerstation_id": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationChart",
+    "payload": {
+      "id": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationChart",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "date": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationChart",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "startDate": "2026-06-26",
+      "endDate": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationChart",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "start": "2026-06-26",
+      "end": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationChart",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "date": "2026-07-02",
+      "dateType": 1
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationChart",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "year": 2026,
+      "month": 7,
+      "day": 2
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationCurve",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationCurve",
+    "payload": {
+      "powerstation_id": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationCurve",
+    "payload": {
+      "id": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationCurve",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "date": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationCurve",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "startDate": "2026-06-26",
+      "endDate": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationCurve",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "start": "2026-06-26",
+      "end": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationCurve",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "date": "2026-07-02",
+      "dateType": 1
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationCurve",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "year": 2026,
+      "month": 7,
+      "day": 2
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationStatistics",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationStatistics",
+    "payload": {
+      "powerstation_id": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationStatistics",
+    "payload": {
+      "id": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationStatistics",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "date": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationStatistics",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "startDate": "2026-06-26",
+      "endDate": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationStatistics",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "start": "2026-06-26",
+      "end": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationStatistics",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "date": "2026-07-02",
+      "dateType": 1
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationStatistics",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "year": 2026,
+      "month": 7,
+      "day": 2
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationPowerAndIncome",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationPowerAndIncome",
+    "payload": {
+      "powerstation_id": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationPowerAndIncome",
+    "payload": {
+      "id": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationPowerAndIncome",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "date": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationPowerAndIncome",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "startDate": "2026-06-26",
+      "endDate": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationPowerAndIncome",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "start": "2026-06-26",
+      "end": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationPowerAndIncome",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "date": "2026-07-02",
+      "dateType": 1
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationPowerAndIncome",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "year": 2026,
+      "month": 7,
+      "day": 2
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationPowerAndIncomeByDay",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "en",
+      "function": null,
+      "hasError": true,
+      "msg": "system error",
+      "code": "100000",
+      "data": "",
+      "components": {
+        "para": "{\"data\":{\"powerstation_id\":null,\"date\":null,\"count\":0,\"id\":null,\"pw_id\":null,\"iscontinue\":false,\"is_secondaccount\":false}}",
+        "langVer": 179,
+        "timeSpan": 4,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationPowerAndIncomeByDay",
+    "payload": {
+      "powerstation_id": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "hasError": false,
+      "code": 0,
+      "msg": "Successful",
+      "data": [
+        {
+          "d": "06/02/2026",
+          "p": 22.2,
+          "i": 162.06
+        },
+        {
+          "d": "06/03/2026",
+          "p": 24.9,
+          "i": 181.77
+        },
+        {
+          "d": "06/04/2026",
+          "p": 22.2,
+          "i": 162.06
+        },
+        {
+          "d": "06/05/2026",
+          "p": 16.8,
+          "i": 122.64
+        },
+        {
+          "d": "06/06/2026",
+          "p": 26.3,
+          "i": 191.99
+        },
+        {
+          "d": "06/07/2026",
+          "p": 14.4,
+          "i": 105.12
+        },
+        {
+          "d": "06/08/2026",
+          "p": 15.1,
+          "i": 110.23
+        },
+        {
+          "d": "06/09/2026",
+          "p": 18.9,
+          "i": 137.97
+        },
+        {
+          "d": "06/10/2026",
+          "p": 18.0,
+          "i": 131.4
+        },
+        {
+          "d": "06/11/2026",
+          "p": 25.5,
+          "i": 186.15
+        },
+        {
+          "d": "06/12/2026",
+          "p": 27.1,
+          "i": 197.83
+        },
+        {
+          "d": "06/13/2026",
+          "p": 15.7,
+          "i": 114.61
+        },
+        {
+          "d": "06/14/2026",
+          "p": 26.8,
+          "i": 195.64
+        },
+        {
+          "d": "06/15/2026",
+          "p": 21.9,
+          "i": 159.87
+        },
+        {
+          "d": "06/16/2026",
+          "p": 26.1,
+          "i": 190.53
+        },
+        {
+          "d": "06/17/2026",
+          "p": 26.8,
+          "i": 195.64
+        },
+        {
+          "d": "06/18/2026",
+          "p": 27.4,
+          "i": 200.02
+        },
+        {
+          "d": "06/19/2026",
+          "p": 23.2,
+          "i": 169.36
+        },
+        {
+          "d": "06/20/2026",
+          "p": 29.0,
+          "i": 211.7
+        },
+        {
+          "d": "06/21/2026",
+          "p": 18.4,
+          "i": 134.32
+        },
+        {
+          "d": "06/22/2026",
+          "p": 11.0,
+          "i": 80.3
+        },
+        {
+          "d": "06/23/2026",
+          "p": 18.9,
+          "i": 137.97
+        },
+        {
+          "d": "06/24/2026",
+          "p": 7.1,
+          "i": 51.83
+        },
+        {
+          "d": "06/25/2026",
+          "p": 20.8,
+          "i": 151.84
+        },
+        {
+          "d": "06/26/2026",
+          "p": 22.3,
+          "i": 162.79
+        },
+        {
+          "d": "06/27/2026",
+          "p": 23.6,
+          "i": 172.28
+        },
+        {
+          "d": "06/28/2026",
+          "p": 8.9,
+          "i": 64.97
+        },
+        {
+          "d": "06/29/2026",
+          "p": 14.6,
+          "i": 106.58
+        },
+        {
+          "d": "06/30/2026",
+          "p": 16.8,
+          "i": 122.64
+        },
+        {
+          "d": "07/01/2026",
+          "p": 0.0,
+          "i": 0.0
+        },
+        {
+          "d": "07/02/2026",
+          "p": 0.0,
+          "i": 0.0
+        }
+      ],
+      "translationCode": "code_0",
+      "components": {
+        "para": null,
+        "langVer": 179,
+        "timeSpan": 0,
+        "msgSocketAdr": ""
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationPowerAndIncomeByDay",
+    "payload": {
+      "id": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "en",
+      "function": null,
+      "hasError": true,
+      "msg": "system error",
+      "code": "100000",
+      "data": "",
+      "components": {
+        "para": "{\"data\":{\"powerstation_id\":null,\"date\":null,\"count\":0,\"id\":\"5ea6f358-f38f-47ad-9e20-6ea0a0690889\",\"pw_id\":null,\"iscontinue\":false,\"is_secondaccount\":false}}",
+        "langVer": 179,
+        "timeSpan": 5,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationPowerAndIncomeByDay",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "date": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "en",
+      "function": null,
+      "hasError": true,
+      "msg": "system error",
+      "code": "100000",
+      "data": "",
+      "components": {
+        "para": "{\"data\":{\"powerstation_id\":null,\"date\":\"2026-07-02T00:00:00+08:00\",\"count\":0,\"id\":null,\"pw_id\":null,\"iscontinue\":false,\"is_secondaccount\":false}}",
+        "langVer": 179,
+        "timeSpan": 4,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationPowerAndIncomeByDay",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "startDate": "2026-06-26",
+      "endDate": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "en",
+      "function": null,
+      "hasError": true,
+      "msg": "system error",
+      "code": "100000",
+      "data": "",
+      "components": {
+        "para": "{\"data\":{\"powerstation_id\":null,\"date\":null,\"count\":0,\"id\":null,\"pw_id\":null,\"iscontinue\":false,\"is_secondaccount\":false}}",
+        "langVer": 179,
+        "timeSpan": 4,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationPowerAndIncomeByDay",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "start": "2026-06-26",
+      "end": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "en",
+      "function": null,
+      "hasError": true,
+      "msg": "system error",
+      "code": "100000",
+      "data": "",
+      "components": {
+        "para": "{\"data\":{\"powerstation_id\":null,\"date\":null,\"count\":0,\"id\":null,\"pw_id\":null,\"iscontinue\":false,\"is_secondaccount\":false}}",
+        "langVer": 179,
+        "timeSpan": 5,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationPowerAndIncomeByDay",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "date": "2026-07-02",
+      "dateType": 1
+    },
+    "status_code": 200,
+    "body": {
+      "language": "en",
+      "function": null,
+      "hasError": true,
+      "msg": "system error",
+      "code": "100000",
+      "data": "",
+      "components": {
+        "para": "{\"data\":{\"powerstation_id\":null,\"date\":\"2026-07-02T00:00:00+08:00\",\"count\":0,\"id\":null,\"pw_id\":null,\"iscontinue\":false,\"is_secondaccount\":false}}",
+        "langVer": 179,
+        "timeSpan": 4,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/GetPowerStationPowerAndIncomeByDay",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "year": 2026,
+      "month": 7,
+      "day": 2
+    },
+    "status_code": 200,
+    "body": {
+      "language": "en",
+      "function": null,
+      "hasError": true,
+      "msg": "system error",
+      "code": "100000",
+      "data": "",
+      "components": {
+        "para": "{\"data\":{\"powerstation_id\":null,\"date\":null,\"count\":0,\"id\":null,\"pw_id\":null,\"iscontinue\":false,\"is_secondaccount\":false}}",
+        "langVer": 179,
+        "timeSpan": 4,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/QueryPowerStationChart",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/QueryPowerStationChart",
+    "payload": {
+      "powerstation_id": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/QueryPowerStationChart",
+    "payload": {
+      "id": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/QueryPowerStationChart",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "date": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/QueryPowerStationChart",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "startDate": "2026-06-26",
+      "endDate": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/QueryPowerStationChart",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "start": "2026-06-26",
+      "end": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/QueryPowerStationChart",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "date": "2026-07-02",
+      "dateType": 1
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStationMonitor/QueryPowerStationChart",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "year": 2026,
+      "month": 7,
+      "day": 2
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/Statistics/GetPowerStationChart",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/Statistics/GetPowerStationChart",
+    "payload": {
+      "powerstation_id": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/Statistics/GetPowerStationChart",
+    "payload": {
+      "id": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/Statistics/GetPowerStationChart",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "date": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/Statistics/GetPowerStationChart",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "startDate": "2026-06-26",
+      "endDate": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/Statistics/GetPowerStationChart",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "start": "2026-06-26",
+      "end": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/Statistics/GetPowerStationChart",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "date": "2026-07-02",
+      "dateType": 1
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/Statistics/GetPowerStationChart",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "year": 2026,
+      "month": 7,
+      "day": 2
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/Statistics/GetPowerStationStatistics",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/Statistics/GetPowerStationStatistics",
+    "payload": {
+      "powerstation_id": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/Statistics/GetPowerStationStatistics",
+    "payload": {
+      "id": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/Statistics/GetPowerStationStatistics",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "date": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/Statistics/GetPowerStationStatistics",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "startDate": "2026-06-26",
+      "endDate": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/Statistics/GetPowerStationStatistics",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "start": "2026-06-26",
+      "end": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/Statistics/GetPowerStationStatistics",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "date": "2026-07-02",
+      "dateType": 1
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/Statistics/GetPowerStationStatistics",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "year": 2026,
+      "month": 7,
+      "day": 2
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/Statistics/GetPowerStationPowerAndIncome",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/Statistics/GetPowerStationPowerAndIncome",
+    "payload": {
+      "powerstation_id": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/Statistics/GetPowerStationPowerAndIncome",
+    "payload": {
+      "id": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/Statistics/GetPowerStationPowerAndIncome",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "date": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/Statistics/GetPowerStationPowerAndIncome",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "startDate": "2026-06-26",
+      "endDate": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/Statistics/GetPowerStationPowerAndIncome",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "start": "2026-06-26",
+      "end": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/Statistics/GetPowerStationPowerAndIncome",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "date": "2026-07-02",
+      "dateType": 1
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/Statistics/GetPowerStationPowerAndIncome",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "year": 2026,
+      "month": 7,
+      "day": 2
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStation/GetPowerStationPowerAndIncome",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStation/GetPowerStationPowerAndIncome",
+    "payload": {
+      "powerstation_id": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStation/GetPowerStationPowerAndIncome",
+    "payload": {
+      "id": "5ea6f358-f38f-47ad-9e20-6ea0a0690889"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStation/GetPowerStationPowerAndIncome",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "date": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStation/GetPowerStationPowerAndIncome",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "startDate": "2026-06-26",
+      "endDate": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStation/GetPowerStationPowerAndIncome",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "start": "2026-06-26",
+      "end": "2026-07-02"
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStation/GetPowerStationPowerAndIncome",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "date": "2026-07-02",
+      "dateType": 1
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  },
+  {
+    "endpoint": "v2/PowerStation/GetPowerStationPowerAndIncome",
+    "payload": {
+      "powerStationId": "5ea6f358-f38f-47ad-9e20-6ea0a0690889",
+      "year": 2026,
+      "month": 7,
+      "day": 2
+    },
+    "status_code": 200,
+    "body": {
+      "language": "zh_CN",
+      "function": null,
+      "hasError": true,
+      "msg": "ver is not fund",
+      "code": "100000",
+      "data": null,
+      "components": {
+        "para": null,
+        "langVer": 307,
+        "timeSpan": 0,
+        "msgSocketAdr": null
+      }
+    }
+  }
+]

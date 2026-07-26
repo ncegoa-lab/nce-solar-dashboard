@@ -1,0 +1,39 @@
+{
+  "bodyText": "",
+  "links": [],
+  "resources": [
+    "https://www.soliscloud.com/js/index-CqvhMJaa.js",
+    "https://www.soliscloud.com/css/index-CuYUNjuQ.css",
+    "https://www.soliscloud.com/js/en-B_Xb4iZ0.js",
+    "https://www.soliscloud.com/ttf/Manrope-VariableFont_wght-0N3pECc_.ttf"
+  ],
+  "storage": {
+    "localStorage": {
+      "accessType": "en",
+      "curNavselected": "1",
+      "headerDeviceId": "iS6yIOxRAzBTGsI18VNRQM6TtXvMAdHLotmRi6QOnynMTBbAhgiyvm86yggBACxP",
+      "iconUrl": "https://oss.soliscloud.com/systemIconLogo/20250804/2508041326000047-1300386381677705262-617.9312210559061.jpg",
+      "lang": "2",
+      "lastUsername": "ncegoa@gmail.com",
+      "level": "0",
+      "reconnectDataV": "{\"username\":\"ncegoa@gmail.com\"}",
+      "showSwitchVersionButton": "1",
+      "systemConfig": "{\"config\":{\"dataMigrationSwitch\":\"0\",\"odmConfig\":{\"bannerList\":[{\"id\":\"355\",\"createBy\":\"\",\"createDate\":1673504634000,\"up...",
+      "themeColor": "#F08519",
+      "tokenState": "true",
+      "useNew": "0",
+      "user": "{\"userInfo\":{\"id\":\"1300386381677705262\",\"userName\":\"ncegoa\",\"userType\":1,\"photoUrl\":\"https://ginlong-it-test.oss-eu-cent...",
+      "userFunctions": "A00,A0000,A000000,A0001,A0002,A0003,A0004,A000400,A000401,A00040100,A00040101,A00040102,A00040104,A00040105,A000402,A000...",
+      "userId": "1300386381677705262",
+      "userInfo": "{\"id\":\"1300386381677705262\",\"createDate\":1742583927000,\"updateDate\":1781606589000,\"deleteFlag\":0,\"jxbType\":0,\"jxbControl...",
+      "userPswStr": "2",
+      "userType": "1",
+      "username": "ncegoa"
+    },
+    "sessionStorage": {
+      "vuex": "{\"userInfo\":{\"id\":\"1300386381677705262\",\"createDate\":1742583927000,\"updateDate\":1781606589000,\"deleteFlag\":0,\"jxbType\":0..."
+    }
+  },
+  "title": "",
+  "url": "https://www.soliscloud.com/"
+}

@@ -1,0 +1,405 @@
+{
+  "bodyText": "Afley 6kw\nProduct registration \n 99+\nOVERVIEW\nANALYSIS\nENERGY BALANCE\nREPORTS\nSERVICE MESSAGES\nSETTINGS\nReports\nCREATE NEW REPORT\n\n\nAutomatic reports\nReport type\tReport name\tInterval\tFile format\nNo data available in table\n\u00a0\n\n\n\nCreated reports\n\u00a0\nSearch:\nCreation date\tReport name\tReport type\tFrom\tTo\t\n05/25/2026 08:31 AM\t\tServiceCode\t05/24/2026\t05/24/2026\t\n05/23/2026 08:34 AM\t\tServiceCode\t05/22/2026\t05/22/2026\t\n05/22/2026 08:31 AM\t\tServiceCode\t05/21/2026\t05/21/2026\t\n04/27/2026 08:31 AM\t\tServiceCode\t04/26/2026\t04/26/2026\t\n04/23/2026 08:31 AM\t\tServiceCode\t04/22/2026\t04/22/2026\t\n04/06/2026 08:31 AM\t\tServiceCode\t04/05/2026\t04/05/2026\t\n03/30/2026 08:31 AM\t\tServiceCode\t03/29/2026\t03/29/2026\t\n03/29/2026 08:31 AM\t\tServiceCode\t03/28/2026\t03/28/2026\t\n03/27/2026 08:31 AM\t\tServiceCode\t03/26/2026\t03/26/2026\t\n03/24/2026 08:30 AM\t\tServiceCode\t03/23/2026\t03/23/2026\t\n03/23/2026 08:31 AM\t\tServiceCode\t03/22/2026\t03/22/2026\t\n03/16/2026 08:31 AM\t\tServiceCode\t03/15/2026\t03/15/2026\t\n03/15/2026 08:31 AM\t\tServiceCode\t03/14/2026\t03/14/2026\t\n02/22/2026 08:31 AM\t\tServiceCode\t02/21/2026\t02/21/2026\t\n02/11/2026 08:31 AM\t\tServiceCode\t02/10/2026\t02/10/2026\t\n11/30/2025 08:31 AM\t\tServiceCode\t11/29/2025\t11/29/2025\t\n10/02/2025 11:58 AM\t\tServiceCode\t10/01/2025\t10/01/2025\t\n09/30/2025 08:30 AM\t\tServiceCode\t09/29/2025\t09/29/2025\t\n09/29/2025 08:31 AM\t\tServiceCode\t09/28/2025\t09/28/2025\t\n09/28/2025 08:31 AM\t\tServiceCode\t09/27/2025\t09/27/2025\t\nPrevious\n1\n2\n3\n4\nNext\n\u00a0\nMy PV systems\n\u203a\nAfley 6kw\n\u203a\n\nReports\n\nGo to top\nDOWNLOADS\nSolar.web App - Android\nSolar.web App - iOS\nSolar.start App - Android\nSolar.start App - iOS\nFRONIUS SERVICES\nReferences\nFind installers\nFronius Repowering Tool\nFronius Solar.creator\nSolar.web Premium\nFronius Warranty\nCONTACTS\nFAQ / Contact\nTerms and Conditions\nImprint\nData privacy statement\nCookie Policy\nAccessibility statement\nSOCIAL MEDIA\nfacebook_fFacebook\ninstagramInstagram\nyoutubeYouTube\n\u00a9 Fronius International GmbH\n3.23.114.0",
+  "buttons": [
+    {
+      "aria": "User settings",
+      "classes": "dropdown-toggle",
+      "tag": "A",
+      "text": "99+",
+      "title": "ncegoa@gmail.com",
+      "type": null
+    },
+    {
+      "aria": null,
+      "classes": "mod-notification js-formular-reset",
+      "tag": "A",
+      "text": "Reset",
+      "title": null,
+      "type": null
+    },
+    {
+      "aria": null,
+      "classes": "mod-notification js-formular-submit",
+      "tag": "A",
+      "text": "Save",
+      "title": null,
+      "type": null
+    },
+    {
+      "aria": null,
+      "classes": "dropdown-toggle",
+      "tag": "A",
+      "text": "More",
+      "title": null,
+      "type": null
+    },
+    {
+      "aria": null,
+      "classes": "btn btn-default",
+      "tag": "BUTTON",
+      "text": "CREATE NEW REPORT",
+      "title": null,
+      "type": null
+    },
+    {
+      "aria": null,
+      "classes": "btn btn-default js-editable-data-table--btn-edit hidden",
+      "tag": "BUTTON",
+      "text": "Edit",
+      "title": null,
+      "type": null
+    },
+    {
+      "aria": null,
+      "classes": "btn btn-default js-editable-data-table--btn-delete hidden",
+      "tag": "BUTTON",
+      "text": "Delete",
+      "title": null,
+      "type": null
+    },
+    {
+      "aria": null,
+      "classes": "btn btn-default js-editable-data-table--btn-info hidden-md hidden-lg hidden",
+      "tag": "BUTTON",
+      "text": "Info",
+      "title": null,
+      "type": null
+    },
+    {
+      "aria": null,
+      "classes": "btn btn-default js-editable-data-table--btn-edit hidden",
+      "tag": "BUTTON",
+      "text": "Edit",
+      "title": null,
+      "type": null
+    },
+    {
+      "aria": null,
+      "classes": "btn btn-default js-editable-data-table--btn-delete hidden",
+      "tag": "BUTTON",
+      "text": "Delete",
+      "title": null,
+      "type": null
+    },
+    {
+      "aria": null,
+      "classes": "btn btn-default js-editable-data-table--btn-info hidden-md hidden-lg hidden",
+      "tag": "BUTTON",
+      "text": "Info",
+      "title": null,
+      "type": null
+    },
+    {
+      "aria": null,
+      "classes": "btn btn-default js-editable-data-table--btn-info hidden-md hidden-lg",
+      "tag": "BUTTON",
+      "text": "Info",
+      "title": null,
+      "type": null
+    },
+    {
+      "aria": null,
+      "classes": "btn btn-default js-editable-data-table--btn-info hidden-md hidden-lg",
+      "tag": "BUTTON",
+      "text": "Info",
+      "title": null,
+      "type": null
+    }
+  ],
+  "links": [
+    {
+      "href": "https://www.solarweb.com/",
+      "text": ""
+    },
+    {
+      "href": "https://www.solarweb.com/PvSystems/PvSystem?pvSystemId=16458bb3-ba4f-4b01-a7be-90154a29ed4a",
+      "text": "Afley 6kw"
+    },
+    {
+      "href": "https://www.solarweb.com/ProductRegistration",
+      "text": "Product registration"
+    },
+    {
+      "href": "https://www.solarweb.com/Report/Reports?pvSystemId=16458bb3-ba4f-4b01-a7be-90154a29ed4a#",
+      "text": "99+"
+    },
+    {
+      "href": "https://www.solarweb.com/WebShop/GoToShop?entryPoint=Premium",
+      "text": "ncegoa@gmail.com\n                \n                  \n                    Premium"
+    },
+    {
+      "href": "https://www.solarweb.com/ProductRegistration",
+      "text": "Product registration"
+    },
+    {
+      "href": "https://www.solarweb.com/PvSystems/AddPvSystem",
+      "text": "Add PV system"
+    },
+    {
+      "href": "https://www.solarweb.com/UserPermissions",
+      "text": "Invitations & Permissions"
+    },
+    {
+      "href": "https://www.solarweb.com/MessageCenter/SystemMessages",
+      "text": "Message center\n              99+"
+    },
+    {
+      "href": "https://www.solarweb.com/UserSettings/UserProfile",
+      "text": "User settings"
+    },
+    {
+      "href": "https://www.solarweb.com/Account/LogOff",
+      "text": "Logout"
+    },
+    {
+      "href": "https://www.solarweb.com/Report/Reports?pvSystemId=16458bb3-ba4f-4b01-a7be-90154a29ed4a#",
+      "text": "Reset"
+    },
+    {
+      "href": "https://www.solarweb.com/Report/Reports?pvSystemId=16458bb3-ba4f-4b01-a7be-90154a29ed4a#",
+      "text": "Save"
+    },
+    {
+      "href": "https://www.solarweb.com/Report/Reports?pvSystemId=16458bb3-ba4f-4b01-a7be-90154a29ed4a#",
+      "text": "Cancel"
+    },
+    {
+      "href": "https://www.solarweb.com/PvSystems/Widgets",
+      "text": "Back"
+    },
+    {
+      "href": "https://www.solarweb.com/PvSystems/PvSystem?pvSystemId=16458bb3-ba4f-4b01-a7be-90154a29ed4a",
+      "text": "OVERVIEW"
+    },
+    {
+      "href": "https://www.solarweb.com/PvSystems/Realtime?pvSystemId=16458bb3-ba4f-4b01-a7be-90154a29ed4a",
+      "text": "ANALYSIS"
+    },
+    {
+      "href": "https://www.solarweb.com/Chart/Chart?pvSystemId=16458bb3-ba4f-4b01-a7be-90154a29ed4a",
+      "text": "ENERGY BALANCE"
+    },
+    {
+      "href": "https://www.solarweb.com/Report/Reports?pvSystemId=16458bb3-ba4f-4b01-a7be-90154a29ed4a",
+      "text": "REPORTS"
+    },
+    {
+      "href": "https://www.solarweb.com/MessageCenter/ServiceMessages?pvSystemId=16458bb3-ba4f-4b01-a7be-90154a29ed4a",
+      "text": "SERVICE MESSAGES"
+    },
+    {
+      "href": "https://www.solarweb.com/PvSystemSettings/PvSystemProfile?pvSystemId=16458bb3-ba4f-4b01-a7be-90154a29ed4a",
+      "text": "SETTINGS"
+    },
+    {
+      "href": "https://www.solarweb.com/Report/Reports?pvSystemId=16458bb3-ba4f-4b01-a7be-90154a29ed4a#",
+      "text": "More"
+    },
+    {
+      "href": "https://www.solarweb.com/Home/PremiumInfo",
+      "text": "Premium"
+    },
+    {
+      "href": "https://www.solarweb.com/Home/PremiumInfo",
+      "text": "Premium"
+    },
+    {
+      "href": "https://www.solarweb.com/Report/DownloadAuto?reportId=3484ec57-bf9d-44cc-b468-4f3f0503dea9",
+      "text": ""
+    },
+    {
+      "href": "https://www.solarweb.com/Report/DownloadAuto?reportId=f8c640ae-9f87-4cdb-bfb3-0fe37334d992",
+      "text": ""
+    },
+    {
+      "href": "https://www.solarweb.com/Report/DownloadAuto?reportId=9c4961ad-7c5b-425a-b34b-c754742c83b2",
+      "text": ""
+    },
+    {
+      "href": "https://www.solarweb.com/Report/DownloadAuto?reportId=1d589c87-9b5a-40a0-a0f9-be4e4d7cd5f9",
+      "text": ""
+    },
+    {
+      "href": "https://www.solarweb.com/Report/DownloadAuto?reportId=3b728714-5c5e-47aa-8ec4-c749eaaf412d",
+      "text": ""
+    },
+    {
+      "href": "https://www.solarweb.com/Report/DownloadAuto?reportId=72209e67-2ce8-4803-a0b4-141e692e79ce",
+      "text": ""
+    },
+    {
+      "href": "https://www.solarweb.com/Report/DownloadAuto?reportId=96aa6054-f578-4107-b072-0b2c411fc602",
+      "text": ""
+    },
+    {
+      "href": "https://www.solarweb.com/Report/DownloadAuto?reportId=f5800a41-45ef-47fd-9088-41d1f28953a1",
+      "text": ""
+    },
+    {
+      "href": "https://www.solarweb.com/Report/DownloadAuto?reportId=9be9e262-40c7-4f18-881e-909cf1b674e6",
+      "text": ""
+    },
+    {
+      "href": "https://www.solarweb.com/Report/DownloadAuto?reportId=7f85444e-7f8a-4081-904f-2ef3fa21812d",
+      "text": ""
+    },
+    {
+      "href": "https://www.solarweb.com/Report/DownloadAuto?reportId=073cd694-87ae-490a-97de-cb25b1e400ab",
+      "text": ""
+    },
+    {
+      "href": "https://www.solarweb.com/Report/DownloadAuto?reportId=f438b46b-0392-4274-8e5c-4ffac2701ee0",
+      "text": ""
+    },
+    {
+      "href": "https://www.solarweb.com/Report/DownloadAuto?reportId=10a66cd7-a62d-4321-b5c5-5c95195697e5",
+      "text": ""
+    },
+    {
+      "href": "https://www.solarweb.com/Report/DownloadAuto?reportId=b1aa3533-aa1a-4ac0-a1ad-88f659639eb8",
+      "text": ""
+    },
+    {
+      "href": "https://www.solarweb.com/Report/DownloadAuto?reportId=98dac39c-c938-4994-9871-afb4120f3d28",
+      "text": ""
+    },
+    {
+      "href": "https://www.solarweb.com/Report/DownloadAuto?reportId=b6632128-04ed-4a96-b4c1-eef476307b41",
+      "text": ""
+    },
+    {
+      "href": "https://www.solarweb.com/Report/DownloadAuto?reportId=762d9969-2676-4050-913a-a137011d4026",
+      "text": ""
+    },
+    {
+      "href": "https://www.solarweb.com/Report/DownloadAuto?reportId=ffb655a3-9969-4c99-beb7-d2309971a6dd",
+      "text": ""
+    },
+    {
+      "href": "https://www.solarweb.com/Report/DownloadAuto?reportId=f267f6c0-1054-463c-95b6-fabc42ace79b",
+      "text": ""
+    },
+    {
+      "href": "https://www.solarweb.com/Report/DownloadAuto?reportId=4fd69cc3-25b5-44c7-b1f8-0cd13e8f18a4",
+      "text": ""
+    },
+    {
+      "href": "https://www.solarweb.com/Report/Reports?pvSystemId=16458bb3-ba4f-4b01-a7be-90154a29ed4a#",
+      "text": "Previous"
+    },
+    {
+      "href": "https://www.solarweb.com/Report/Reports?pvSystemId=16458bb3-ba4f-4b01-a7be-90154a29ed4a#",
+      "text": "1"
+    },
+    {
+      "href": "https://www.solarweb.com/Report/Reports?pvSystemId=16458bb3-ba4f-4b01-a7be-90154a29ed4a#",
+      "text": "2"
+    },
+    {
+      "href": "https://www.solarweb.com/Report/Reports?pvSystemId=16458bb3-ba4f-4b01-a7be-90154a29ed4a#",
+      "text": "3"
+    },
+    {
+      "href": "https://www.solarweb.com/Report/Reports?pvSystemId=16458bb3-ba4f-4b01-a7be-90154a29ed4a#",
+      "text": "4"
+    },
+    {
+      "href": "https://www.solarweb.com/Report/Reports?pvSystemId=16458bb3-ba4f-4b01-a7be-90154a29ed4a#",
+      "text": "Next"
+    },
+    {
+      "href": "https://www.solarweb.com/PvSystems/Widgets",
+      "text": "My PV systems"
+    },
+    {
+      "href": "https://www.solarweb.com/PvSystems/PvSystem?pvSystemId=16458bb3-ba4f-4b01-a7be-90154a29ed4a",
+      "text": "Afley 6kw"
+    },
+    {
+      "href": "https://www.solarweb.com/Report/Reports?pvSystemId=16458bb3-ba4f-4b01-a7be-90154a29ed4a#page-top",
+      "text": "Go to top"
+    },
+    {
+      "href": "https://play.google.com/store/apps/details?id=com.fronius.solarweb",
+      "text": "Solar.web App - Android"
+    },
+    {
+      "href": "https://apps.apple.com/at/app/id1528302827",
+      "text": "Solar.web App - iOS"
+    },
+    {
+      "href": "https://play.google.com/store/apps/details?id=com.fronius.solarstart",
+      "text": "Solar.start App - Android"
+    },
+    {
+      "href": "https://apps.apple.com/at/app/solar-start/id1509399310",
+      "text": "Solar.start App - iOS"
+    },
+    {
+      "href": "https://www.fronius.com/se-references",
+      "text": "References"
+    },
+    {
+      "href": "https://www.fronius.com/fsp-search",
+      "text": "Find installers"
+    },
+    {
+      "href": "https://repowering.fronius.com/",
+      "text": "Fronius Repowering Tool"
+    },
+    {
+      "href": "https://creator.fronius.com/?login=true",
+      "text": "Fronius Solar.creator"
+    },
+    {
+      "href": "https://www.solarweb.com/Home/PremiumInfo",
+      "text": "Solar.web Premium"
+    },
+    {
+      "href": "https://www.fronius.com/solar/warranty",
+      "text": "Fronius Warranty"
+    },
+    {
+      "href": "https://www.fronius.com/en/faq-online-tools/faq-solar-energy/solarweb",
+      "text": "FAQ / Contact"
+    },
+    {
+      "href": "https://www.solarweb.com/Home/TermsAndConditions",
+      "text": "Terms and Conditions"
+    },
+    {
+      "href": "https://www.solarweb.com/Home/Imprint",
+      "text": "Imprint"
+    },
+    {
+      "href": "https://www.fronius.com/en/solar-energy-privacy-policy",
+      "text": "Data privacy statement"
+    },
+    {
+      "href": "https://www.solarweb.com/Home/CookiePolicy",
+      "text": "Cookie Policy"
+    },
+    {
+      "href": "https://www.fronius.com/en/accessibility-statement-fronius-int#anc_solar-web",
+      "text": "Accessibility statement"
+    },
+    {
+      "href": "https://www.fronius.com/solar-facebook",
+      "text": "facebook_fFacebook"
+    },
+    {
+      "href": "https://www.fronius.com/solar-instagram",
+      "text": "instagramInstagram"
+    },
+    {
+      "href": "https://www.fronius.com/solar-youtube",
+      "text": "youtubeYouTube"
+    },
+    {
+      "href": "https://www.fronius.com/en",
+      "text": "\u00a9 Fronius International GmbH"
+    }
+  ],
+  "title": "Reports",
+  "url": "https://www.solarweb.com/Report/Reports?pvSystemId=16458bb3-ba4f-4b01-a7be-90154a29ed4a"
+}

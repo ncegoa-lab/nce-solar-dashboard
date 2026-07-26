@@ -1,0 +1,21 @@
+{
+  "hasError": false,
+  "code": 0,
+  "msg": "Successful",
+  "data": {
+    "uid": "<redacted>",
+    "timestamp": 1782919950449,
+    "token": "<redacted>",
+    "client": "ios",
+    "version": "v2.1.0",
+    "language": "en"
+  },
+  "translationCode": "code_0",
+  "components": {
+    "para": null,
+    "langVer": 179,
+    "timeSpan": 0,
+    "msgSocketAdr": "https://hk-xxzx.semsportal.com"
+  },
+  "api": "https://hk.semsportal.com/api/"
+}

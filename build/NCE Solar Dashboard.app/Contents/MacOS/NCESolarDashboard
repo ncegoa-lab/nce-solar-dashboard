@@ -1,0 +1,17 @@
+#!/bin/zsh
+
+APP_URL="http://127.0.0.1:8765"
+PROJECT_DIR="/Users/sushil/Documents/GOODWE"
+PYTHON_BIN="/Users/sushil/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"
+LOG_FILE="/tmp/nce_solar_dashboard.log"
+
+if /usr/bin/curl -fsS "$APP_URL/api/status" >/dev/null 2>&1; then
+  /usr/bin/open "$APP_URL"
+  exit 0
+fi
+
+cd "$PROJECT_DIR" || exit 1
+PYTHONPYCACHEPREFIX="$PROJECT_DIR/.pycache" "$PYTHON_BIN" "$PROJECT_DIR/solar_live_app.py" >"$LOG_FILE" 2>&1 &
+
+sleep 2
+/usr/bin/open "$APP_URL"

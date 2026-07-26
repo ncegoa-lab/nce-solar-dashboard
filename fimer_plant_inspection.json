@@ -1,0 +1,189 @@
+{
+  "bodyText": " \n \n \n \n31841756\nBirla campus goa\n \n \n \nPlants  Dashboard\n2026-07-02 00:47 GMT+5:30\nPlant Info\nInstalled Capacity\t100.00\tkW\nLocation\t\nBirla campus goa\ngoa, 403726\nIndia\nGet Directions\n\t\nPlant Status\nNo Active Events\n\t\nProduced Energy\nToday\t168.99\tkWh\nThis Week\t660.00\tkWh\nThis Month\t168.99\tkWh\nLifetime\t128.22\tMWh\nWeather\n\t\n24.6 C\nCloudy High\n\t\n Plant Performance  Device Performance\nSelect Chart\nAC Output\n1D7D30D12MWTDMTDYTD\nCSV\n\tGenerated Energy\t1.11\tMWh\nkWh\n100\n-200\n-100\n0\n100\n200\n300\n400\n500\nL\nJun 26\nJun 28\nJun 30\nJul 02\nJul 04\nEnvironmentals\nGreenhouse Gases Avoided\n\nby use of renewable energy\n\nCO 2\n\t\nCarbon Dioxide\n\t227,089.37\tkg\n\nNO x\n\t\nNitrogen Oxide\n\t111.43\tkg\n\nSO 2\n\t\nSulfur Dioxide\n\t6.57\tkg\nEnvironmental Benefits\n\nobtained since 2022-05-08\n\n\tThe greenhouse gases that 50.06 passenger cars emit over 1 year\n\n\tThe energy to power 986.35 computers for 1 year\n\n\tThe energy to operate a TV for 891,163.69 hours\nPlant Portfolio Manager | MA Solar Italy Srl | ver. 3.23\nCookie Policy | Privacy Policy | Terms of Use | Submit Case",
+  "links": [
+    {
+      "href": "https://www.auroravision.net/home/",
+      "text": ""
+    },
+    {
+      "href": "javascript:;",
+      "text": ""
+    },
+    {
+      "href": "https://www.auroravision.net/dashboard/",
+      "text": "Dashboard"
+    },
+    {
+      "href": "https://www.auroravision.net/explorer/#31841757",
+      "text": "Management"
+    },
+    {
+      "href": "https://www.auroravision.net/eview/",
+      "text": "Energy Viewer Web"
+    },
+    {
+      "href": "https://www.auroravision.net/stringsizer/",
+      "text": "PowerPHAST"
+    },
+    {
+      "href": "javascript:;",
+      "text": ""
+    },
+    {
+      "href": "https://www.auroravision.net/events/log",
+      "text": "Event Log"
+    },
+    {
+      "href": "https://www.auroravision.net/events/definitions",
+      "text": "Definitions"
+    },
+    {
+      "href": "https://www.auroravision.net/events/profileAssign",
+      "text": "Profile Assign"
+    },
+    {
+      "href": "https://www.auroravision.net/events/profileConfig",
+      "text": "Profile Configuration"
+    },
+    {
+      "href": "https://www.auroravision.net/report/",
+      "text": ""
+    },
+    {
+      "href": "javascript:;",
+      "text": ""
+    },
+    {
+      "href": "https://www.fimer.com/contact/contact-us",
+      "text": "Submit Case"
+    },
+    {
+      "href": "https://documentation.auroravision.net/",
+      "text": "Documentation"
+    },
+    {
+      "href": "javascript:;",
+      "text": ""
+    },
+    {
+      "href": "javascript:;",
+      "text": ""
+    },
+    {
+      "href": "https://www.auroravision.net/explorer/preferences/account",
+      "text": "Account Preferences"
+    },
+    {
+      "href": "https://www.auroravision.net/ums/v1/logout",
+      "text": "Logout"
+    },
+    {
+      "href": "https://www.google.com/maps/place/Birla%20campus%20goa,+403726+goa+India",
+      "text": "Get Directions"
+    },
+    {
+      "href": "https://www.fimer.com/cookie-policy",
+      "text": "Cookie Policy"
+    },
+    {
+      "href": "https://www.fimer.com/privacy-policy",
+      "text": "Privacy Policy"
+    },
+    {
+      "href": "https://www.fimer.com/terms-and-conditions",
+      "text": "Terms of Use"
+    },
+    {
+      "href": "https://www.fimer.com/contact/contact-us",
+      "text": "Submit Case"
+    },
+    {
+      "href": "https://www.fimer.com/",
+      "text": ""
+    }
+  ],
+  "plant": {
+    "configuration": {
+      "firstReportedDate": "2022-04-30T08:19:04Z",
+      "installDate": "2022-05-08T18:30:00Z",
+      "monitoringOrganizationName": "Birla campus",
+      "panelsNominalPower": 100
+    },
+    "description": "Primary Residence",
+    "entityID": 31841757,
+    "fields": [
+      "Derating",
+      "VoltageBC",
+      "GenerationPower",
+      "EarliestCommunicationTime",
+      "GenerationEnergy",
+      "DeviceTemp",
+      "EarliestDate",
+      "EarliestSampleTime",
+      "EarliestDataReceiptTime",
+      "PVPower",
+      "RatedCapacity",
+      "Voltage",
+      "LatestDataUpdateTime",
+      "RenewablePower",
+      "DCVoltage",
+      "PVEnergy",
+      "InverterDirectPower",
+      "VoltageAB",
+      "VoltageCA",
+      "LatestDate",
+      "LatestCommunicationTime",
+      "LineFrequency",
+      "3PhaseVoltage",
+      "LatestDataReceiptTime",
+      "LatestSampleTime",
+      "DCGenerationPower",
+      "InverterDirectEnergy",
+      "Current",
+      "RenewableEnergy"
+    ],
+    "kpis": [],
+    "location": {
+      "city": "goa",
+      "country": "India",
+      "countryEntityID": 1787352,
+      "elevation": 103.0730819702148,
+      "latitude": 15.2993265,
+      "longitude": 74.12399599999999,
+      "postalCode": "403726",
+      "region": "Goa",
+      "regionEntityID": 1787363,
+      "street1": "Birla campus goa",
+      "timeZone": "Asia/Kolkata",
+      "timeZoneOffset": 19800000
+    },
+    "name": "Birla campus goa",
+    "performanceProfiles": [],
+    "publicViewEnabled": false,
+    "state": "ACTIVE"
+  },
+  "resources": [
+    "https://www.auroravision.net/dashboard/node_modules/moment-timezone/builds/moment-timezone-with-data-10-year-range.min.js",
+    "https://www.auroravision.net/dashboard/node_modules/av-api-v1/dist/es/i18n/json/en/menu.json",
+    "https://www.auroravision.net/dashboard/node_modules/av-api-v1/dist/es/i18n/json/en/dashboard.json",
+    "https://www.auroravision.net/dashboard/node_modules/av-api-v1/dist/es/i18n/json/en/fields.json",
+    "https://www.auroravision.net/dashboard/node_modules/av-api-v1/dist/es/i18n/json/en/home.json",
+    "https://www.google-analytics.com/g/collect?v=2&tid=G-H3LHNEQX48&gtm=45je66u0h1v896256172za200zd896256172&_p=1782933453231&gcd=13l3l3l3l1l1&npa=0&dma=0&_eu=AAAAAAQ&are=1&cid=203736033.1782932827&frm=0&pscdl=noapi&rcb=14&sr=1440x900&uaa=arm&uab=64&uafvl=Chromium%3B148.0.7778.179%7CGoogle%2520Chrome%3B148.0.7778.179%7CNot%252FA)Brand%3B99.0.0.0&uam=&uamb=0&uap=macOS&uapv=26.5.2&uaw=0&ul=en-gb&_s=1&tag_exp=115938466~115938468~119027224~119576881~119576885~119576891~119576895&sid=1782932826&sct=1&seg=1&dl=https%3A%2F%2Fwww.auroravision.net%2Fdashboard%2F&dt=Aurora%20Vision%C2%AE%20Plant%20Portfolio%20Manager&en=page_view&_ee=1&tfd=1928",
+    "https://www.auroravision.net/dashboard/node_modules/av-api-v1/dist/es/i18n/json/en/footer.json",
+    "https://www.auroravision.net/dashboard/node_modules/av-api-v1/dist/es/i18n/json/en/events.json",
+    "https://www.auroravision.net/asset/v1/portfolios/31841756/plants?includePerformanceProfiles=true&includePollutionConstants=true",
+    "https://www.auroravision.net/event/v1/plants/31841757/events/PROFILE?eventState=ACTIVE&sdt=1970-01-01T00%3A00%3A00.000Z&edt=2026-07-01T19%3A17%3A34.853Z",
+    "https://www.auroravision.net/weather/v1/plants/31841757/status?includeForecasts=true",
+    "https://www.auroravision.net/telemetry/v1/plants/31841757/energy/GenerationEnergy?agp=All&afx=Delta&sdt=2026-06-30T18%3A30%3A00.000Z&edt=2026-07-01T19%3A17%3A34.854Z",
+    "https://www.auroravision.net/telemetry/v1/plants/31841757/energy/GenerationEnergy?agp=All&afx=Delta&sdt=2026-06-27T18%3A30%3A00.000Z&edt=2026-07-01T19%3A17%3A34.855Z",
+    "https://www.auroravision.net/telemetry/v1/plants/31841757/energy/GenerationEnergy?agp=All&afx=Delta&sdt=2026-06-30T18%3A30%3A00.000Z&edt=2026-07-01T19%3A17%3A34.855Z",
+    "https://www.auroravision.net/telemetry/v1/plants/31841757/energy/GenerationEnergy?agp=All&afx=Delta&sdt=2022-05-08T18%3A30%3A00.000Z&edt=2026-07-01T19%3A17%3A34.855Z",
+    "https://www.auroravision.net/asset/v1/plants/31841757/hierarchy",
+    "https://www.auroravision.net/event/v1/plants/31841757/events/PROFILE?eventState=ACTIVE&sdt=1970-01-01T00%3A00%3A00.000Z&edt=2026-07-01T19%3A17%3A34.856Z",
+    "https://www.auroravision.net/telemetry/v1/plants/31841757/energy/GenerationEnergy?agp=All&afx=Delta&sdt=2026-06-25T18%3A30%3A00.999Z&edt=2026-07-02T18%3A29%3A59.999Z",
+    "https://www.auroravision.net/telemetry/v1/plants/31841757/energy/GenerationEnergy?agp=Day&afx=Delta&sdt=2026-06-25T18%3A30%3A00.999Z&edt=2026-07-02T18%3A29%3A59.999Z",
+    "https://www.google-analytics.com/g/collect?v=2&tid=G-H3LHNEQX48&gtm=45je66u0h1v896256172za200zd896256172&_p=1782933453231&gcd=13l3l3l3l1l1&npa=0&dma=0&_eu=AEAAAAQ&ae=a&are=1&cid=203736033.1782932827&frm=0&pscdl=noapi&rcb=14&sr=1440x900&uaa=arm&uab=64&uafvl=Chromium%3B148.0.7778.179%7CGoogle%2520Chrome%3B148.0.7778.179%7CNot%252FA)Brand%3B99.0.0.0&uam=&uamb=0&uap=macOS&uapv=26.5.2&uaw=0&ul=en-gb&_s=2&tag_exp=115938466~115938468~119027224~119576881~119576885~119576891~119576895&sid=1782932826&sct=1&seg=1&dl=https%3A%2F%2Fwww.auroravision.net%2Fdashboard%2F&dt=Aurora%20Vision%C2%AE%20Plant%20Portfolio%20Manager&en=scroll&epn.percent_scrolled=90&tfd=6929"
+  ],
+  "title": "Aurora Vision\u00ae Plant Portfolio Manager",
+  "url": "https://www.auroravision.net/dashboard/#31841757"
+}

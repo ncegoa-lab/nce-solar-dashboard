@@ -1,0 +1,54 @@
+{
+  "source": "Fronius Solar.web",
+  "page": "https://www.solarweb.com/PvSystems/Widgets",
+  "systems": [
+    {
+      "system_id": "16458bb3-ba4f-4b01-a7be-90154a29ed4a",
+      "name": "Afley 6kw",
+      "status": "Afley 6kw --.- kW",
+      "url": "https://www.solarweb.com/PvSystems/PvSystem?pvSystemId=16458bb3-ba4f-4b01-a7be-90154a29ed4a"
+    },
+    {
+      "system_id": "648a750c-efd3-4750-a677-d58132e12439",
+      "name": "BITS D-Mess 21kw",
+      "status": "BITS D-Mess 21kw --.- kW",
+      "url": "https://www.solarweb.com/PvSystems/PvSystem?pvSystemId=648a750c-efd3-4750-a677-d58132e12439"
+    },
+    {
+      "system_id": "4e6e1c7a-4825-4071-a2b7-169d05aca7aa",
+      "name": "BITS- PCC 1-10Kw",
+      "status": "BITS- PCC 1-10Kw --.- kW",
+      "url": "https://www.solarweb.com/PvSystems/PvSystem?pvSystemId=4e6e1c7a-4825-4071-a2b7-169d05aca7aa"
+    },
+    {
+      "system_id": "4af46242-64c4-4172-ba77-83a62e7edad2",
+      "name": "BITS-Amess 50kw",
+      "status": "BITS-Amess 50kw --.- kW",
+      "url": "https://www.solarweb.com/PvSystems/PvSystem?pvSystemId=4af46242-64c4-4172-ba77-83a62e7edad2"
+    },
+    {
+      "system_id": "e137fe90-9a4f-411d-8501-79bb8227ba06",
+      "name": "BITS-PCC1-10kw",
+      "status": "BITS-PCC1-10kw --.- kW",
+      "url": "https://www.solarweb.com/PvSystems/PvSystem?pvSystemId=e137fe90-9a4f-411d-8501-79bb8227ba06"
+    },
+    {
+      "system_id": "a3407d4f-1944-4e9c-936a-fd5c17035c6a",
+      "name": "Dr Buvaji res6kw",
+      "status": "Dr Buvaji res6kw --.- kW",
+      "url": "https://www.solarweb.com/PvSystems/PvSystem?pvSystemId=a3407d4f-1944-4e9c-936a-fd5c17035c6a"
+    },
+    {
+      "system_id": "354b9b12-eb59-4ceb-9c05-f565383fd472",
+      "name": "Xisto 10Kw",
+      "status": "Xisto 10Kw --.- kW",
+      "url": "https://www.solarweb.com/PvSystems/PvSystem?pvSystemId=354b9b12-eb59-4ceb-9c05-f565383fd472"
+    },
+    {
+      "system_id": "97342531-f774-4ba6-8a90-47d38ac3b2e2",
+      "name": "Dr Oween 10.0",
+      "status": "Dr Oween 10.0 --.- kW",
+      "url": "https://www.solarweb.com/PvSystems/PvSystem?pvSystemId=97342531-f774-4ba6-8a90-47d38ac3b2e2"
+    }
+  ]
+}

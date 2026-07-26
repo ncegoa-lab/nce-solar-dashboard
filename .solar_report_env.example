@@ -1,0 +1,17 @@
+# Copy this file to .solar_report_env and fill values to allow live refresh.
+# Keep .solar_report_env private; it contains portal passwords.
+
+SEMS_USERNAME=
+SEMS_PASSWORD=
+
+FRONIUS_USERNAME=
+FRONIUS_PASSWORD=
+
+FIMER_USERNAME=
+FIMER_PASSWORD=
+
+SOLIS_USERNAME=
+SOLIS_PASSWORD=
+
+SOLAX_USERNAME=
+SOLAX_PASSWORD=
