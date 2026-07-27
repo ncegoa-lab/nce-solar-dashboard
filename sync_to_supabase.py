@@ -1,6 +1,7 @@
 import os
 import json
 import glob
+from datetime import datetime
 import pandas as pd
 from supabase import create_client
 
@@ -13,47 +14,70 @@ if not url or not key:
 
 supabase = create_client(url, key)
 
-# Pointing directly to your active table from the screenshot
 TABLE_NAME = "solar_generation_history"
 
-def clean_record(rec):
-    """Normalize dictionary keys to match Supabase schema standard."""
+# Confirmed columns in your table
+VALID_DB_COLUMNS = {
+    "date", "brand", "site", "plant_key", "status"
+}
+
+def clean_record(rec, default_brand="Unknown", default_site="Unknown Site", default_key="unknown_key"):
+    """Filter for core columns and enforce NOT NULL constraints for date, brand, site, and plant_key."""
     clean_rec = {}
     
-    # Common mapping from scraper fields to DB columns
     field_mapping = {
-        "capacity (kw)": "capacity_kw",
-        "capacity": "capacity_kw",
-        "current power (kw)": "current_power_kw",
-        "current_power": "current_power_kw",
-        "daily generation (kwh)": "daily_kwh",
-        "daily": "daily_kwh",
-        "weekly generation (kwh)": "weekly_kwh",
-        "weekly": "weekly_kwh",
-        "total generation (kwh)": "total_kwh",
-        "total": "total_kwh",
         "plant name": "site",
+        "plant_name": "site",
         "system_name": "site",
-        "plant_key": "plant_key",
+        "station_name": "site",
+        "name": "site",
+        "site": "site",
         "brand": "brand",
         "status": "status",
-        "date": "date"
+        "date": "date",
+        "time": "date",
+        "timestamp": "date",
+        "plant_key": "plant_key",
+        "plant_id": "plant_key",
+        "station_id": "plant_key",
+        "key": "plant_key"
     }
 
     for k, v in rec.items():
         raw_key = str(k).strip().lower()
         
-        # Handle lists/arrays to prevent pandas boolean ambiguity
         if isinstance(v, (list, tuple)):
             v = str(v)
         elif pd.isna(v):
             continue
 
-        # Use mapped key if found, otherwise sanitize key name
-        clean_key = field_mapping.get(raw_key, raw_key.replace(" ", "_").replace("-", "_"))
-        clean_rec[clean_key] = v
+        clean_key = field_mapping.get(raw_key, raw_key)
+        
+        if clean_key in VALID_DB_COLUMNS:
+            clean_rec[clean_key] = v
+
+    # Enforce NOT NULL constraints across required columns
+    if not clean_rec.get("brand") or pd.isna(clean_rec.get("brand")):
+        clean_rec["brand"] = default_brand
+
+    if not clean_rec.get("site") or pd.isna(clean_rec.get("site")):
+        clean_rec["site"] = default_site
+
+    if not clean_rec.get("plant_key") or pd.isna(clean_rec.get("plant_key")):
+        clean_rec["plant_key"] = default_key
+
+    if not clean_rec.get("date") or pd.isna(clean_rec.get("date")):
+        clean_rec["date"] = datetime.now().strftime("%Y-%m-%d")
 
     return clean_rec
+
+def deduplicate_records(records):
+    """Ensure no duplicate (plant_key, date) combinations exist in the upload batch."""
+    deduped = {}
+    for rec in records:
+        key = (rec["plant_key"], rec["date"])
+        deduped[key] = rec  # Overwrites earlier duplicate entries, leaving unique keys
+    return list(deduped.values())
 
 def sync_data():
     json_files = glob.glob("*.json")
@@ -66,37 +90,56 @@ def sync_data():
     for file in json_files:
         if file in ignore_files or "probe" in file or "inspection" in file:
             continue
+        
+        brand_guess = file.split("_")[0].capitalize()
+        site_guess = file.replace(".json", "").replace("_", " ").title()
+        key_guess = file.replace(".json", "")
+        
         try:
             with open(file, "r") as f:
                 data = json.load(f)
                 if isinstance(data, list):
                     for item in data:
                         if isinstance(item, dict):
-                            all_records.append(clean_record(item))
+                            cleaned = clean_record(item, default_brand=brand_guess, default_site=site_guess, default_key=key_guess)
+                            if cleaned:
+                                all_records.append(cleaned)
                 elif isinstance(data, dict):
-                    all_records.append(clean_record(data))
+                    cleaned = clean_record(data, default_brand=brand_guess, default_site=site_guess, default_key=key_guess)
+                    if cleaned:
+                        all_records.append(cleaned)
             print(f"Loaded records from {file}")
         except Exception as e:
             print(f"Error reading {file}: {e}")
 
     # Process CSV outputs
     for file in csv_files:
+        base_name = os.path.basename(file)
+        brand_guess = base_name.split("_")[0].capitalize()
+        site_guess = base_name.replace(".csv", "").replace("_", " ").title()
+        key_guess = base_name.replace(".csv", "")
+        
         try:
             df = pd.read_csv(file)
             for rec in df.to_dict(orient="records"):
-                all_records.append(clean_record(rec))
+                cleaned = clean_record(rec, default_brand=brand_guess, default_site=site_guess, default_key=key_guess)
+                if cleaned:
+                    all_records.append(cleaned)
             print(f"Loaded records from {file}")
         except Exception as e:
             print(f"Error reading {file}: {e}")
 
     if not all_records:
-        print("No valid plant data records found to upload.")
+        print("No valid records found.")
         return
 
-    print(f"Uploading {len(all_records)} records to Supabase table '{TABLE_NAME}'...")
+    # Deduplicate before sending to Supabase
+    unique_records = deduplicate_records(all_records)
+
+    print(f"Uploading {len(unique_records)} unique records (deduplicated from {len(all_records)}) to Supabase table '{TABLE_NAME}'...")
     
     try:
-        res = supabase.table(TABLE_NAME).upsert(all_records).execute()
+        res = supabase.table(TABLE_NAME).upsert(unique_records, on_conflict="plant_key,date").execute()
         print("Successfully synced data to Supabase!")
     except Exception as e:
         print(f"Failed to upsert records into {TABLE_NAME}: {e}")
