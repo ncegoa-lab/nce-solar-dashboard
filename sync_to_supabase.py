@@ -16,16 +16,18 @@ supabase = create_client(url, key)
 
 TABLE_NAME = "solar_generation_history"
 
-# Confirmed columns in your table
+# All exact column names visible in your Supabase table screenshots
 VALID_DB_COLUMNS = {
-    "date", "brand", "site", "plant_key", "status"
+    "date", "brand", "site", "plant_key", "status",
+    "capacity", "daily", "weekly", "year", "total", "cuf", "current_power"
 }
 
 def clean_record(rec, default_brand="Unknown", default_site="Unknown Site", default_key="unknown_key"):
-    """Filter for core columns and enforce NOT NULL constraints for date, brand, site, and plant_key."""
+    """Map incoming JSON/CSV fields directly to Supabase metric columns."""
     clean_rec = {}
     
     field_mapping = {
+        # String/Ident fields
         "plant name": "site",
         "plant_name": "site",
         "system_name": "site",
@@ -40,7 +42,29 @@ def clean_record(rec, default_brand="Unknown", default_site="Unknown Site", defa
         "plant_key": "plant_key",
         "plant_id": "plant_key",
         "station_id": "plant_key",
-        "key": "plant_key"
+        "key": "plant_key",
+        
+        # Metric field mappings matching your table headers
+        "capacity (kw)": "capacity",
+        "capacity_kw": "capacity",
+        "capacity": "capacity",
+        "daily generation (kwh)": "daily",
+        "daily_kwh": "daily",
+        "daily": "daily",
+        "weekly generation (kwh)": "weekly",
+        "weekly_kwh": "weekly",
+        "weekly": "weekly",
+        "year generation (kwh)": "year",
+        "year_kwh": "year",
+        "year": "year",
+        "total generation (kwh)": "total",
+        "total_kwh": "total",
+        "total": "total",
+        "cuf (%)": "cuf",
+        "cuf": "cuf",
+        "current power (kw)": "current_power",
+        "current_power_kw": "current_power",
+        "current_power": "current_power"
     }
 
     for k, v in rec.items():
@@ -54,9 +78,16 @@ def clean_record(rec, default_brand="Unknown", default_site="Unknown Site", defa
         clean_key = field_mapping.get(raw_key, raw_key)
         
         if clean_key in VALID_DB_COLUMNS:
-            clean_rec[clean_key] = v
+            # Cast numerical metrics to float/int where possible
+            if clean_key in {"capacity", "daily", "weekly", "year", "total", "cuf", "current_power"}:
+                try:
+                    clean_rec[clean_key] = float(v)
+                except (ValueError, TypeError):
+                    clean_rec[clean_key] = v
+            else:
+                clean_rec[clean_key] = v
 
-    # Enforce NOT NULL constraints across required columns
+    # Fallbacks for NOT NULL constraints
     if not clean_rec.get("brand") or pd.isna(clean_rec.get("brand")):
         clean_rec["brand"] = default_brand
 
@@ -76,7 +107,7 @@ def deduplicate_records(records):
     deduped = {}
     for rec in records:
         key = (rec["plant_key"], rec["date"])
-        deduped[key] = rec  # Overwrites earlier duplicate entries, leaving unique keys
+        deduped[key] = rec
     return list(deduped.values())
 
 def sync_data():
@@ -133,14 +164,13 @@ def sync_data():
         print("No valid records found.")
         return
 
-    # Deduplicate before sending to Supabase
     unique_records = deduplicate_records(all_records)
 
-    print(f"Uploading {len(unique_records)} unique records (deduplicated from {len(all_records)}) to Supabase table '{TABLE_NAME}'...")
+    print(f"Uploading {len(unique_records)} records with generation data to Supabase table '{TABLE_NAME}'...")
     
     try:
         res = supabase.table(TABLE_NAME).upsert(unique_records, on_conflict="plant_key,date").execute()
-        print("Successfully synced data to Supabase!")
+        print("Successfully synced generation data to Supabase!")
     except Exception as e:
         print(f"Failed to upsert records into {TABLE_NAME}: {e}")
 
